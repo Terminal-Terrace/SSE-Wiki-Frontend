@@ -1,0 +1,38 @@
+{
+  "name": "@terminal-terrace/sse-space",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "run-p type-check \"build-only {@}\" --",
+    "preview": "vite preview",
+    "test:unit": "vitest",
+    "build-only": "vite build",
+    "type-check": "vue-tsc --build",
+    "cz": "cz",
+    "lint": "eslint --ext .ts,.tsx,.vue src --fix"
+  },
+  "dependencies": {
+    "pinia": "^3.0.3",
+    "vue": "^3.5.21",
+    "vue-router": "^4.5.1"
+  },
+  "devDependencies": {
+    "@tsconfig/node22": "^22.0.2",
+    "@types/jsdom": "^21.1.7",
+    "@types/node": "^24.3.1",
+    "@vitejs/plugin-vue": "^6.0.1",
+    "@vitejs/plugin-vue-jsx": "^5.1.1",
+    "@vue/tsconfig": "^0.8.1",
+    "jsdom": "^27.0.0",
+    "npm-run-all2": "^8.0.4",
+    "sass": "^1.92.1",
+    "unocss": "^66.5.1",
+    "vite": "^7.1.5",
+    "vue-tsc": "^3.0.6"
+  }
+}

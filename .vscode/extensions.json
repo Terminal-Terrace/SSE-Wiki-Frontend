@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "Vue.volar",
+    "vitest.explorer",
+    "antfu.unocss",
+    "dbaeumer.vscode-eslint"
+  ]
+}

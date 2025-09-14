@@ -1,0 +1,12 @@
+{
+  "name": "软工智库",
+  "short_name": "软工智库",
+  "description": "从信息流到知识库，构建一个为软件工程学习者量身定做的、活的、可传承的结构化知识生态系统",
+  "scope": "/",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "icons": []
+}

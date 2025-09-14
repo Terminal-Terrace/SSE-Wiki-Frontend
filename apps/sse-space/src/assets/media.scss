@@ -1,0 +1,27 @@
+@use 'sass:map';
+@use 'sass:meta';
+@use 'sass:list';
+
+// 这个断点可以之后看情况调整
+$breakPoints: (
+  'phone': (
+    0px,
+    768px,
+  ),
+  'desktop': 768px,
+);
+
+@mixin QueryMedia($name) {
+  $bp: map.get($breakPoints, $name);
+  @if meta.type-of($bp) == 'list' {
+    $min: list.nth($bp, 1);
+    $max: list.nth($bp, 2);
+    @media (min-width: $min) and (max-width: $max) {
+      @content;
+    }
+  } @else {
+    @media (min-width: $bp) {
+      @content;
+    }
+  }
+}
