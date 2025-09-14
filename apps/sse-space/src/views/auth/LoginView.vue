@@ -3,6 +3,6 @@
 
 <template>
   <div>
-    login
+    LoginView
   </div>
 </template>
