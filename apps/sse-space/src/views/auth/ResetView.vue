@@ -3,6 +3,6 @@
 
 <template>
   <div>
-    reset
+    ResetView
   </div>
 </template>

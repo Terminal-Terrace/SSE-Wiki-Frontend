@@ -3,6 +3,6 @@
 
 <template>
   <div>
-    register
+    RegisterView
   </div>
 </template>
