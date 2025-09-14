@@ -13,7 +13,6 @@
     "test:unit": "vitest",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
-    "cz": "cz",
     "lint": "eslint --ext .ts,.tsx,.vue src --fix"
   },
   "dependencies": {

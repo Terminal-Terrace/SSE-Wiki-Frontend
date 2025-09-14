@@ -21,5 +21,5 @@ pnpm lint
 ## 提交代码
 
 ```sh
-pnpm cz
+pnpm -w cz
 ```

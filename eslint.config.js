@@ -4,7 +4,7 @@ export default antfu({
   formatters: true,
   unocss: true,
   vue: true,
-  ignores: [
-    '',
-  ],
+  rules: {
+    'no-console': 'off',
+  },
 })
