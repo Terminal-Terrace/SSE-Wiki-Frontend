@@ -7,4 +7,7 @@ export default antfu({
   rules: {
     'no-console': 'off',
   },
+  ignores: [
+    '.github',
+  ],
 })
