@@ -1,10 +1,24 @@
 import { execSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
 function getCurrentPackageDir() {
   // 获取当前执行脚本的包目录
   return process.cwd()
+}
+
+function getPackageName() {
+  try {
+    const packageJsonPath = join(getCurrentPackageDir(), 'package.json')
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'))
+    return packageJson.name
+  }
+  catch (error) {
+    console.warn('Could not read package.json:', error.message)
+    return null
+  }
 }
 
 function hasChangesInPackage() {
@@ -24,6 +38,13 @@ function hasChangesInPackage() {
 
 function deployIfChanged() {
   const currentDir = getCurrentPackageDir()
+  const packageName = getPackageName()
+
+  // 检查包名是否为 template
+  if (packageName === 'template') {
+    console.log('Package name is "template", skipping deployment.')
+    return
+  }
 
   if (hasChangesInPackage()) {
     console.log('Changes detected, starting deployment...')
@@ -49,4 +70,4 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   deployIfChanged()
 }
 
-export { deployIfChanged, hasChangesInPackage }
+export { deployIfChanged, getPackageName, hasChangesInPackage }
