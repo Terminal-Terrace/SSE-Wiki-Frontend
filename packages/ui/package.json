@@ -24,11 +24,14 @@
     "vue": "^3.5.0"
   },
   "dependencies": {
+    "@vueuse/core": "^13.9.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-vue-next": "^0.544.0",
     "radix-vue": "^1.9.11",
-    "tailwind-merge": "^3.3.1"
+    "reka-ui": "^2.5.1",
+    "tailwind-merge": "^3.3.1",
+    "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
     "@types/node": "^24.3.3",
