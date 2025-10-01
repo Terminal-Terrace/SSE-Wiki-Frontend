@@ -1,16 +1,12 @@
 <script setup lang="ts">
-import { Button } from '@sse-wiki/ui'
-
-function handleClick() {
-  console.log('点击按钮')
-}
 </script>
 
 <template>
-  <div>
-    <h1>HomeView</h1>
-    <Button @click="handleClick">
-      点击我
-    </Button>
-  </div>
+  <section class="space-y-6">
+    <header class="space-y-2">
+      <h1 class="text-3xl font-semibold tracking-tight text-foreground">
+        主页
+      </h1>
+    </header>
+  </section>
 </template>
