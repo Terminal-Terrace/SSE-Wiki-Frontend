@@ -17,6 +17,7 @@
     "dist"
   ],
   "scripts": {
+    "prebuild": "pnpm run sync-exports",
     "build": "vite build",
     "type-check": "vue-tsc --noEmit",
     "sync-exports": "node scripts/sync-exports.js"
