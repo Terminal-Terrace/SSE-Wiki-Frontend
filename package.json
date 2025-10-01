@@ -15,7 +15,7 @@
     "prepare": "husky",
     "cz": "cz",
     "deploy": "pnpm -r run deploy",
-    "postinstall": "pnpm --filter @sse-wiki/ui build"
+    "postinstall": "pnpm --filter @sse-wiki/ui sync-exports && pnpm --filter @sse-wiki/ui build"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^5.3.0",
