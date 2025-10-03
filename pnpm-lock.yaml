@@ -50,6 +50,9 @@ importers:
 
   apps/auth:
     dependencies:
+      '@sse-wiki/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       vue:
         specifier: ^3.5.21
         version: 3.5.21(typescript@5.9.2)
@@ -72,12 +75,21 @@ importers:
       '@vue/tsconfig':
         specifier: ^0.8.1
         version: 0.8.1(typescript@5.9.2)(vue@3.5.21(typescript@5.9.2))
+      autoprefixer:
+        specifier: ^10.4.21
+        version: 10.4.21(postcss@8.5.6)
       npm-run-all2:
         specifier: ^8.0.4
         version: 8.0.4
+      postcss:
+        specifier: ^8.5.6
+        version: 8.5.6
       sass:
         specifier: ^1.92.1
         version: 1.92.1
+      tailwindcss:
+        specifier: ^3.4.17
+        version: 3.4.17(ts-node@10.9.2(@types/node@24.4.0)(typescript@5.9.2))
       typescript:
         specifier: ~5.9.2
         version: 5.9.2
@@ -173,12 +185,21 @@ importers:
       '@vue/tsconfig':
         specifier: ^0.8.1
         version: 0.8.1(typescript@5.9.2)(vue@3.5.21(typescript@5.9.2))
+      autoprefixer:
+        specifier: ^10.4.21
+        version: 10.4.21(postcss@8.5.6)
       npm-run-all2:
         specifier: ^8.0.4
         version: 8.0.4
+      postcss:
+        specifier: ^8.5.6
+        version: 8.5.6
       sass:
         specifier: ^1.92.1
         version: 1.92.1
+      tailwindcss:
+        specifier: ^3.4.17
+        version: 3.4.17(ts-node@10.9.2(@types/node@24.4.0)(typescript@5.9.2))
       typescript:
         specifier: ~5.9.2
         version: 5.9.2
