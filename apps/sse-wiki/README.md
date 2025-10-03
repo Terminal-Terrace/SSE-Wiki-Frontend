@@ -11,6 +11,13 @@ cd apps/sse-wiki
 pnpm dev
 ```
 
+### 环境变量
+
+```sh
+# 设置单点登录应用地址
+echo "VITE_AUTH_APP_URL=https://auth.example.com" >> .env
+```
+
 ## 常用脚本
 
 ```sh

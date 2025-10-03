@@ -9,7 +9,20 @@ import {
 
 import { RouterLink } from 'vue-router'
 
-const navItems = [
+type NavItem
+  = | {
+    label: string
+    to: { name: string }
+  }
+  | {
+    label: string
+    href: string
+  }
+
+// auth 模块端口为 8080
+const authBaseUrl = (import.meta.env.VITE_AUTH_APP_URL ?? 'http://localhost:8080').replace(/\/$/, '')
+
+const navItems: NavItem[] = [
   {
     label: '知识空间',
     to: { name: 'knowledge-space' },
@@ -24,9 +37,13 @@ const navItems = [
   },
   {
     label: '登录',
-    to: { name: 'login' },
+    href: `${authBaseUrl}/login`,
   },
 ]
+
+function isRouteItem(item: NavItem): item is Extract<NavItem, { to: { name: string } }> {
+  return 'to' in item
+}
 </script>
 
 <template>
@@ -45,13 +62,21 @@ const navItems = [
       <NavigationMenu class="hidden lg:flex">
         <NavigationMenuList class="items-center gap-1">
           <NavigationMenuItem v-for="item in navItems" :key="item.label">
-            <NavigationMenuLink as-child>
+            <NavigationMenuLink v-if="isRouteItem(item)" as-child>
               <RouterLink
                 :to="item.to"
                 class="min-w-[120px] justify-center" :class="[navigationMenuTriggerStyle()]"
               >
                 {{ item.label }}
               </RouterLink>
+            </NavigationMenuLink>
+            <NavigationMenuLink v-else as-child>
+              <a
+                :href="item.href"
+                class="min-w-[120px] justify-center" :class="[navigationMenuTriggerStyle()]"
+              >
+                {{ item.label }}
+              </a>
             </NavigationMenuLink>
           </NavigationMenuItem>
         </NavigationMenuList>
