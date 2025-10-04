@@ -14,6 +14,10 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: LoginView,
+      props: route => ({
+        state: route.query.state,
+        redirect: route.query.redirect,
+      }),
     },
     {
       path: '/register',

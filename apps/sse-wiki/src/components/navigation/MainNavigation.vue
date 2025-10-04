@@ -1,5 +1,11 @@
 <script setup lang="ts">
 import {
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   NavigationMenu,
   NavigationMenuItem,
   NavigationMenuLink,
@@ -7,20 +13,16 @@ import {
   navigationMenuTriggerStyle,
 } from '@sse-wiki/ui'
 
+import { LogOut, User } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
+import { useAuth } from '../../composables/useAuth'
 
-type NavItem
-  = | {
-    label: string
-    to: { name: string }
-  }
-  | {
-    label: string
-    href: string
-  }
+interface NavItem {
+  label: string
+  to: { name: string }
+}
 
-// auth 模块端口为 8080
-const authBaseUrl = (import.meta.env.VITE_AUTH_APP_URL ?? 'http://localhost:8080').replace(/\/$/, '')
+const { startLogin, logout, loading, isAuthenticated, user } = useAuth()
 
 const navItems: NavItem[] = [
   {
@@ -35,14 +37,14 @@ const navItems: NavItem[] = [
     label: '搜索',
     to: { name: 'search' },
   },
-  {
-    label: '登录',
-    href: `${authBaseUrl}/login`,
-  },
 ]
 
-function isRouteItem(item: NavItem): item is Extract<NavItem, { to: { name: string } }> {
-  return 'to' in item
+async function handleLogin() {
+  await startLogin()
+}
+
+function handleLogout() {
+  logout()
 }
 </script>
 
@@ -59,10 +61,11 @@ function isRouteItem(item: NavItem): item is Extract<NavItem, { to: { name: stri
           </span>
         </span>
       </RouterLink>
+
       <NavigationMenu class="hidden lg:flex">
         <NavigationMenuList class="items-center gap-1">
           <NavigationMenuItem v-for="item in navItems" :key="item.label">
-            <NavigationMenuLink v-if="isRouteItem(item)" as-child>
+            <NavigationMenuLink as-child>
               <RouterLink
                 :to="item.to"
                 class="min-w-[120px] justify-center" :class="[navigationMenuTriggerStyle()]"
@@ -70,23 +73,52 @@ function isRouteItem(item: NavItem): item is Extract<NavItem, { to: { name: stri
                 {{ item.label }}
               </RouterLink>
             </NavigationMenuLink>
-            <NavigationMenuLink v-else as-child>
-              <a
-                :href="item.href"
-                class="min-w-[120px] justify-center" :class="[navigationMenuTriggerStyle()]"
-              >
-                {{ item.label }}
-              </a>
-            </NavigationMenuLink>
           </NavigationMenuItem>
         </NavigationMenuList>
       </NavigationMenu>
-      <RouterLink
-        :to="{ name: 'search' }"
-        class="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium transition-colors hover:border-primary hover:text-primary lg:hidden"
-      >
-        快速导航
-      </RouterLink>
+
+      <!-- 登录/用户菜单 -->
+      <div class="flex items-center gap-2">
+        <!-- 未登录状态 -->
+        <Button
+          v-if="!isAuthenticated"
+          :disabled="loading"
+          variant="outline"
+          size="sm"
+          @click="handleLogin"
+        >
+          {{ loading ? '登录中...' : '登录' }}
+        </Button>
+
+        <!-- 已登录状态 -->
+        <DropdownMenu v-else>
+          <DropdownMenuTrigger as-child>
+            <Button variant="ghost" size="sm" class="flex items-center gap-2">
+              <User class="h-4 w-4" />
+              <span>{{ user?.username || '用户' }}</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem>
+              <User class="mr-2 h-4 w-4" />
+              <span>个人资料</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem @click="handleLogout">
+              <LogOut class="mr-2 h-4 w-4" />
+              <span>退出登录</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <!-- 移动端导航 -->
+        <RouterLink
+          :to="{ name: 'search' }"
+          class="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium transition-colors hover:border-primary hover:text-primary lg:hidden"
+        >
+          快速导航
+        </RouterLink>
+      </div>
     </div>
   </header>
 </template>
