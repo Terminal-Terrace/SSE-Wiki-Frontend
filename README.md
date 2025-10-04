@@ -18,7 +18,7 @@ pnpm install
 
 在启动应用前，需要配置环境变量：
 
-目前无特殊配置，直接把 `apps/sse-wiki/.env.example`, `apps/auth/.env` 复制并重命名为 `.env` 即可 
+目前无特殊配置，直接把 `apps/sse-wiki/.env.example`, `apps/auth/.env` 复制并重命名为 `.env` 即可
 
 ### 首次构建 UI 包
 
@@ -73,7 +73,6 @@ pnpm build
 - **SSE-Wiki 主应用** (`apps/sse-wiki`): 端口 3000
   - 主要的知识库功能
   - 包含登录按钮和认证状态显示
-  
 - **认证应用** (`apps/auth`): 端口 3001
   - 独立的登录/注册页面
   - 处理用户认证流程
