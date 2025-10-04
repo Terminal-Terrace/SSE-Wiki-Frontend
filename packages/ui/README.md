@@ -21,7 +21,7 @@ SSE Wiki 项目的 UI 组件库，基于 shadcn/ui 和 Tailwind CSS。
 在你的主应用入口文件中导入全局样式：
 
 ```ts
-import '@sse-wiki/ui/src/styles/globals.css'
+import '@sse-wiki/ui/dist/style.css'
 ```
 
 ### 使用组件

@@ -14,8 +14,8 @@
     "lint": "eslint --ext .ts,.tsx,.vue . --fix",
     "prepare": "husky",
     "cz": "cz",
-    "deploy": "pnpm -r run deploy",
-    "postinstall": "pnpm --filter @sse-wiki/ui build"
+    "build": "pnpm --filter @sse-wiki/ui run build && pnpm --filter @terminal-terrace/sse-wiki run build",
+    "deploy": "pnpm -r run deploy"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^5.3.0",

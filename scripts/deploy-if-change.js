@@ -49,7 +49,7 @@ function deployIfChanged() {
   if (hasChangesInPackage()) {
     console.log('Changes detected, starting deployment...')
     try {
-      execSync('pnpm run build && wrangler deploy', {
+      execSync('pnpm --filter @sse-wiki/ui run build && pnpm run build && wrangler deploy', {
         stdio: 'inherit',
         cwd: currentDir,
       })

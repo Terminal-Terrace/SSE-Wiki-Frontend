@@ -8,6 +8,11 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // 请配置以下配置项！
+  // server: {
+  //   port: ,// 自定义端口
+  //   strictPort: true // 端口占用时报错
+  // },
   plugins: [
     vue(),
     vueDevTools(),
