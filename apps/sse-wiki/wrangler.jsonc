@@ -12,6 +12,10 @@
   },
   "observability": {
     "enabled": true
+  },
+  "route": {
+    "pattern": "sse-wiki.watering.top", // 可用的有*.watering.top
+    "custom_domain": true
   }
   /**
    * Smart Placement
