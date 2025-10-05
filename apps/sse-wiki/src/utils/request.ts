@@ -20,8 +20,12 @@ export const ErrorCode = {
 } as const
 
 // 创建 axios 实例
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+if (typeof apiBaseUrl === 'undefined' || apiBaseUrl === '') {
+  throw new Error('VITE_API_BASE_URL environment variable is not set. Please define it in your environment configuration.');
+}
 const request: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '', // 使用相对路径，让 Vite 代理生效
+  baseURL: apiBaseUrl, // 使用相对路径，让 Vite 代理生效
   timeout: 30000,
   withCredentials: true, // 允许跨域携带 cookie
   headers: {
