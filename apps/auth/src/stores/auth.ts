@@ -1,48 +1,40 @@
 import type { User } from '../types/auth'
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
-
-const STORAGE_KEY_REFRESH_TOKEN = 'refresh_token'
+import { ref } from 'vue'
 
 export const useAuthStore = defineStore('auth', () => {
   // 状态
-  const refreshToken = ref<string | null>(
-    localStorage.getItem(STORAGE_KEY_REFRESH_TOKEN),
-  )
-  const accessToken = ref<string | null>(null)
   const user = ref<User | null>(null)
 
-  // 计算属性
-  const isAuthenticated = computed(() => !!refreshToken.value)
-
   // 方法
-  function setTokens(refresh: string, access?: string) {
-    refreshToken.value = refresh
-    accessToken.value = access || null
-    localStorage.setItem(STORAGE_KEY_REFRESH_TOKEN, refresh)
-  }
-
-  function clearTokens() {
-    refreshToken.value = null
-    accessToken.value = null
-    user.value = null
-    localStorage.removeItem(STORAGE_KEY_REFRESH_TOKEN)
-  }
-
   function setUser(userData: User) {
     user.value = userData
   }
 
+  function clearUser() {
+    user.value = null
+  }
+
+  // 兼容旧代码的空方法
+  function setTokens(_refresh: string, _access: string) {
+    // Token 现在通过 HttpOnly Cookie 管理，无需前端存储
+    console.warn('setTokens is deprecated: tokens are now managed via HttpOnly cookies')
+  }
+
+  function clearTokens() {
+    // 清除用户信息即可
+    clearUser()
+  }
+
   return {
     // 状态
-    refreshToken,
-    accessToken,
     user,
-    // 计算属性
-    isAuthenticated,
+    // 计算属性（暂时保留兼容性）
+    isAuthenticated: ref(false),
     // 方法
     setTokens,
     clearTokens,
     setUser,
+    clearUser,
   }
 })
