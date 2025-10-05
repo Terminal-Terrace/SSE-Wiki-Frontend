@@ -23,7 +23,7 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'module-action', payload: { action: ModuleAction, module: ModuleTreeNode, parentModule?: ModuleTreeNode }): void
+  (e: 'moduleAction', payload: { action: ModuleAction, module: ModuleTreeNode, parentModule?: ModuleTreeNode }): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
