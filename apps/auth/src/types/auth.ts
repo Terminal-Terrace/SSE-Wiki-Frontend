@@ -19,8 +19,7 @@ export interface LoginRequest {
 
 // 登录响应
 export interface LoginResponse {
-  refresh_token?: string
-  redirect_url?: string
+  redirect_url: string
 }
 
 // API 响应包装
@@ -32,8 +31,9 @@ export interface ApiResponse<T = any> {
 
 // 用户信息
 export interface User {
-  id: string
+  id: number
   username: string
   email?: string
   avatar?: string
+  role?: string
 }

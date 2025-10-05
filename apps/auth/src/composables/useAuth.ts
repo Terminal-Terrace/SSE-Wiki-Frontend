@@ -65,38 +65,13 @@ export function useAuth() {
       // 调用登录接口
       const response = await AuthAPI.loginWithPassword(state, username, password)
 
-      // 处理重定向逻辑
-      const redirectUrl = response.redirect_url || sessionStorage.getItem(STORAGE_KEY_REDIRECT_URL)
+      // 清理临时数据
+      sessionStorage.removeItem(STORAGE_KEY_AUTH_STATE)
+      sessionStorage.removeItem(STORAGE_KEY_REDIRECT_URL)
 
-      if (response.refresh_token) {
-        // TODO: 存储token！
-        authStore.setTokens(response.refresh_token)
-
-        // 清理临时数据
-        sessionStorage.removeItem(STORAGE_KEY_AUTH_STATE)
-        sessionStorage.removeItem(STORAGE_KEY_REDIRECT_URL)
-
-        if (redirectUrl && redirectUrl !== window.location.origin) {
-          // 重定向并携带 refresh_token
-          const url = new URL(redirectUrl)
-          url.searchParams.set('refresh_token', response.refresh_token)
-          window.location.href = url.toString()
-        }
-        else {
-          await router.push('/')
-        }
-      }
-      else if (redirectUrl) {
-        // 清理临时数据
-        sessionStorage.removeItem(STORAGE_KEY_AUTH_STATE)
-        sessionStorage.removeItem(STORAGE_KEY_REDIRECT_URL)
-
-        // 直接重定向
-        window.location.href = redirectUrl
-      }
-      else {
-        throw new Error('登录响应缺少必要信息')
-      }
+      // Token 已通过 HttpOnly Cookie 返回，直接重定向即可
+      const redirectUrl = response.redirect_url || window.location.origin
+      window.location.href = redirectUrl
     }
     catch (err: any) {
       error.value = err.message || '登录失败'

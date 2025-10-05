@@ -16,14 +16,29 @@ export interface ApiResponse<T = any> {
   data: T
 }
 
+export interface UserInfo {
+  user_id: number
+  username: string
+  email?: string
+  role?: string
+}
+
 const AUTH_BASE_URL = import.meta.env.VITE_AUTH_API_PATH || '/api/v1/auth'
 
-export class AuthService {
+/**
+ * 认证API类
+ * 包含所有认证相关的API接口调用方法
+ */
+export class AuthAPI {
   /**
    * 预登录 - 获取 state 用于 CSRF 防护
+   * POST /api/v1/auth/prelogin
    * 这个方法在 sse-wiki 应用的登录按钮点击时调用
+   *
+   * @param redirectUrl 登录成功后的重定向地址
+   * @returns Promise<PreLoginResponse> 包含 state 的响应
    */
-  static async prelogin(redirectUrl: string): Promise<PreLoginResponse> {
+  static async preLogin(redirectUrl: string): Promise<PreLoginResponse> {
     const response = await authHttp.post<ApiResponse<PreLoginResponse>>(
       `${AUTH_BASE_URL}/prelogin`,
       { redirect_url: redirectUrl },
@@ -43,7 +58,47 @@ export class AuthService {
   }
 
   /**
+   * 获取当前用户信息
+   * GET /api/v1/auth/me
+   * 从 Cookie 中的 access_token 自动验证用户
+   *
+   * @returns Promise<UserInfo> 用户信息
+   */
+  static async getMe(): Promise<UserInfo> {
+    const response = await authHttp.get<ApiResponse<UserInfo>>(
+      `${AUTH_BASE_URL}/me`,
+    )
+
+    if (response.data.code !== 100) {
+      throw new Error(response.data.message || '获取用户信息失败')
+    }
+
+    return response.data.data
+  }
+
+  /**
+   * 退出登录
+   * POST /api/v1/auth/logout
+   * 清除服务器端的 access_token 和 refresh_token Cookie
+   *
+   * @returns Promise<void>
+   */
+  static async logout(): Promise<void> {
+    const response = await authHttp.post<ApiResponse<null>>(
+      `${AUTH_BASE_URL}/logout`,
+      {},
+    )
+
+    if (response.data.code !== 100) {
+      throw new Error(response.data.message || '退出登录失败')
+    }
+  }
+
+  /**
    * 跳转到认证应用的登录页面
+   *
+   * @param state CSRF 防护用的 state
+   * @param redirectUrl 登录成功后的重定向地址
    */
   static redirectToLogin(state: string, redirectUrl: string) {
     const authAppUrl = import.meta.env.VITE_AUTH_APP_URL
@@ -58,3 +113,9 @@ export class AuthService {
     window.location.href = loginUrl.toString()
   }
 }
+
+// 导出单例实例（可选，根据项目风格决定）
+// export const authApi = new AuthAPI()
+
+// 默认导出
+export default AuthAPI

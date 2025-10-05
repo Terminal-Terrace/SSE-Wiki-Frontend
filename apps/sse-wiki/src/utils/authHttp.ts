@@ -5,6 +5,7 @@ import axios from 'axios'
 const authHttp = axios.create({
   baseURL: '',
   timeout: Number(import.meta.env.VITE_API_TIMEOUT) || 10000,
+  withCredentials: true, // 允许跨域携带 cookie
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
