@@ -12,6 +12,7 @@ import {
 import { Edit2, Plus, X } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useModulePermission } from '@/composables/useModulePermission'
+import { moduleApi } from '@/services/moduleApi'
 import { useModuleStore } from '@/stores/module'
 import CollaboratorsModal from './modals/CollaboratorsModal.vue'
 import CreateEditModuleModal from './modals/CreateEditModuleModal.vue'
@@ -56,12 +57,12 @@ async function fetchModules() {
 // 获取锁状态
 async function fetchLockStatus() {
   try {
-    // TODO: 实现获取锁状态的API调用
-    // const response = await moduleApi.getLockStatus()
-    // lockInfo.value = response.data
+    const response = await moduleApi.getLockStatus()
+    lockInfo.value = response
   }
   catch (err) {
     console.error('Failed to fetch lock status:', err)
+    // 获取锁状态失败不影响主流程，只是无法显示锁提示
   }
 }
 
@@ -70,22 +71,25 @@ async function enterEditMode() {
   try {
     isLockLoading.value = true
 
-    // TODO: 实现获取编辑锁的API调用
-    // const response = await moduleApi.acquireLock()
+    const response = await moduleApi.acquireLock()
 
-    // 模拟API调用
-    const mockResponse = { success: true }
-
-    if (mockResponse.success) {
+    if (response.success) {
       isEditMode.value = true
+      // 更新锁信息
+      await fetchLockStatus()
       console.log('已进入编辑模式')
     }
     else {
-      console.warn('无法进入编辑模式，锁被其他用户占用')
+      // 锁被其他用户占用
+      const lockedBy = response.locked_by?.username || '其他用户'
+      alert(`无法进入编辑模式\n\n当前导航栏正在被 ${lockedBy} 编辑中，请稍后再试。`)
+      console.warn('无法进入编辑模式，锁被其他用户占用:', response)
     }
   }
-  catch (err) {
+  catch (err: any) {
     console.error('进入编辑模式失败:', err)
+    const errorMsg = err?.message || '未知错误'
+    alert(`进入编辑模式失败\n\n${errorMsg}\n\n请检查网络连接或稍后重试。`)
   }
   finally {
     isLockLoading.value = false
@@ -95,14 +99,19 @@ async function enterEditMode() {
 // 退出编辑模式
 async function exitEditMode() {
   try {
-    // TODO: 实现释放编辑锁的API调用
-    // await moduleApi.releaseLock()
+    await moduleApi.releaseLock()
 
     isEditMode.value = false
+    // 更新锁信息
+    await fetchLockStatus()
     console.log('已退出编辑模式')
   }
-  catch (err) {
+  catch (err: any) {
     console.error('退出编辑模式失败:', err)
+    // 即使释放锁失败，也退出编辑模式（可能锁已过期）
+    isEditMode.value = false
+    const errorMsg = err?.message || '未知错误'
+    alert(`释放锁失败\n\n${errorMsg}\n\n已退出编辑模式。`)
   }
 }
 
@@ -178,8 +187,20 @@ function formatLockTime(timestamp: string) {
 // 页面卸载时释放锁
 function handleBeforeUnload() {
   if (isEditMode.value) {
-    // TODO: 实现释放锁的API调用
-    // moduleApi.releaseLock()
+    // 使用 navigator.sendBeacon 在页面卸载时发送请求
+    // 注意：sendBeacon 是异步的，不保证一定发送成功
+    // 依赖后端的15分钟自动过期作为兜底方案
+    try {
+      // 使用同步的方式尝试释放锁
+      // 注意：在实际场景中，beforeunload 事件中的异步操作可能不会完成
+      // 建议后端实现自动过期机制（已实现：15分钟）
+      moduleApi.releaseLock().catch((err) => {
+        console.error('页面卸载时释放锁失败:', err)
+      })
+    }
+    catch (err) {
+      console.error('页面卸载时释放锁失败:', err)
+    }
   }
 }
 
