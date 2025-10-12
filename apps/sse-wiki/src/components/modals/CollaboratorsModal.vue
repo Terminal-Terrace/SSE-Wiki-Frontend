@@ -8,12 +8,17 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@sse-wiki/ui'
-import { Trash2, Users } from 'lucide-vue-next'
+import { Plus, Trash2, Users } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 import { useModuleStore } from '@/stores/module'
-
-// TODO：当前modal有bug，打开了关不掉！
 
 interface Props {
   modalState: ModuleModalState
@@ -32,6 +37,12 @@ const moduleStore = useModuleStore()
 // 响应式状态
 const collaborators = ref<ModuleModerator[]>([])
 const isLoadingCollaborators = ref(false)
+const isAddingCollaborator = ref(false)
+
+// 添加协作者表单
+const newCollaboratorUserId = ref('')
+const newCollaboratorRole = ref<'admin' | 'moderator'>('moderator')
+const addError = ref('')
 
 // 计算属性
 const isOpen = computed(() =>
@@ -59,7 +70,8 @@ async function loadCollaborators(moduleId: number) {
 
     // 调用真实API
     const data = await moduleStore.getModerators(moduleId)
-    collaborators.value = data
+    // 处理后端返回 null 的情况
+    collaborators.value = data || []
   }
   catch (error) {
     console.error('❌ 加载协作者列表失败:', error)
@@ -88,6 +100,65 @@ async function removeCollaborator(userId: number) {
   }
   catch (error) {
     console.error('❌ 移除协作者失败:', error)
+    alert('移除协作者失败，请重试')
+  }
+}
+
+// TODO: 后续需要实现用户搜索功能，目前让用户直接输入 user_id
+// 添加协作者
+async function addCollaborator() {
+  if (!targetModule.value)
+    return
+
+  // 清除之前的错误信息
+  addError.value = ''
+
+  // 验证输入
+  const userId = Number.parseInt(newCollaboratorUserId.value.trim())
+  if (!newCollaboratorUserId.value.trim() || Number.isNaN(userId)) {
+    addError.value = '请输入有效的用户 ID（数字）'
+    return
+  }
+
+  try {
+    isAddingCollaborator.value = true
+
+    // 调用 API 添加协作者
+    await moduleStore.addModerator(targetModule.value.id, {
+      user_id: userId,
+      role: newCollaboratorRole.value,
+    })
+
+    // 重置表单
+    resetForm()
+
+    // 重新加载协作者列表
+    await loadCollaborators(targetModule.value.id)
+
+    alert('添加协作者成功')
+  }
+  catch (error: any) {
+    console.error('❌ 添加协作者失败:', error)
+    const errorMsg = error?.message || '添加协作者失败'
+    addError.value = errorMsg
+    alert(errorMsg)
+  }
+  finally {
+    isAddingCollaborator.value = false
+  }
+}
+
+// 重置表单
+function resetForm() {
+  newCollaboratorUserId.value = ''
+  newCollaboratorRole.value = 'moderator'
+  addError.value = ''
+}
+
+// 处理对话框打开状态变化
+function handleOpenChange(open: boolean) {
+  if (!open) {
+    emit('close')
   }
 }
 
@@ -98,7 +169,7 @@ function formatDate(dateString: string) {
 </script>
 
 <template>
-  <Dialog :open="isOpen" @update:open="(open) => !open && emit('close')">
+  <Dialog :open="isOpen" @update:open="handleOpenChange">
     <DialogContent class="sm:max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
       <DialogHeader>
         <DialogTitle class="flex items-center gap-2">
@@ -111,6 +182,68 @@ function formatDate(dateString: string) {
       </DialogHeader>
 
       <div class="flex-1 overflow-y-auto space-y-6">
+        <!-- 添加协作者表单 -->
+        <div class="space-y-4 p-4 border rounded-lg bg-muted/30">
+          <h4 class="text-sm font-medium flex items-center gap-2">
+            <Plus class="w-4 h-4" />
+            添加协作者
+          </h4>
+
+          <div class="space-y-3">
+            <!-- TODO: 后续需要实现用户搜索功能 -->
+            <div class="space-y-2">
+              <Label for="user-id">用户 ID</Label>
+              <Input
+                id="user-id"
+                v-model="newCollaboratorUserId"
+                type="text"
+                placeholder="请输入用户 ID（暂时直接输入数字 ID）"
+                :disabled="isAddingCollaborator"
+              />
+              <p class="text-xs text-muted-foreground">
+                提示：后续会实现用户搜索功能，目前请直接输入用户的数字 ID
+              </p>
+            </div>
+
+            <div class="space-y-2">
+              <Label for="role">角色</Label>
+              <Select v-model="newCollaboratorRole" :disabled="isAddingCollaborator">
+                <SelectTrigger id="role">
+                  <SelectValue placeholder="选择角色" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="moderator">
+                    协作者
+                  </SelectItem>
+                  <SelectItem value="admin">
+                    管理员
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <!-- 错误提示 -->
+            <div v-if="addError" class="text-sm text-destructive">
+              {{ addError }}
+            </div>
+
+            <Button
+              class="w-full"
+              :disabled="isAddingCollaborator || !newCollaboratorUserId.trim()"
+              @click="addCollaborator"
+            >
+              <div v-if="isAddingCollaborator" class="flex items-center gap-2">
+                <div class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                <span>添加中...</span>
+              </div>
+              <div v-else class="flex items-center gap-2">
+                <Plus class="w-4 h-4" />
+                <span>添加协作者</span>
+              </div>
+            </Button>
+          </div>
+        </div>
+
         <!-- 现有协作者列表 -->
         <div class="space-y-4">
           <h4 class="text-sm font-medium">
