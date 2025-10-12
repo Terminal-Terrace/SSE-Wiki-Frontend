@@ -33,15 +33,15 @@ const router = createRouter({
         {
           path: 'modules/:moduleId',
           name: 'ModuleDetail',
-          component: () => import('@/views/ModuleDetail.vue'),
+          component: () => import('@/views/ModuleDetailView.vue'),
           props: true,
           meta: { requiresAuth: true },
         },
-        // 文章详情页面（预留，暂未实现）
+        // 文章详情页面
         {
           path: 'articles/:articleId',
           name: 'ArticleDetail',
-          component: () => import('@/views/ArticleDetail.vue'),
+          component: () => import('@/views/article/ArticleDetailView.vue'),
           props: true,
           meta: { requiresAuth: true },
         },
