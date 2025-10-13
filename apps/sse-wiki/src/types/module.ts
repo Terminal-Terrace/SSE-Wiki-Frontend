@@ -4,6 +4,7 @@ export interface Module {
   id: number
   module_name: string
   name?: string // 用于兼容性，实际使用 module_name
+  description: string
   parent_id: number | null
   owner_id: number
   created_at: string
@@ -23,6 +24,7 @@ export interface ModuleTreeNode {
   id: number
   name: string
   module_name?: string
+  description?: string
   owner_id: number
   parent_id?: number | null
   created_at?: string
@@ -87,11 +89,13 @@ export interface NavigationLock {
 // API 请求/响应类型
 export interface CreateModuleRequest {
   name: string
+  description?: string
   parent_id?: number | null
 }
 
 export interface UpdateModuleRequest {
   name?: string
+  description?: string
   parent_id?: number | null
 }
 

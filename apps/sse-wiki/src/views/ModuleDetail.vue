@@ -400,6 +400,11 @@ onUnmounted(() => {
               {{ moduleInfo?.module_name }}
             </h1>
 
+            <!-- 模块描述 -->
+            <p v-if="moduleInfo?.description" class="text-gray-700 mb-4">
+              {{ moduleInfo.description }}
+            </p>
+
             <!-- 模块统计信息 -->
             <div v-if="moduleInfo" class="flex flex-wrap items-center gap-6 text-sm text-gray-600">
               <div class="flex items-center gap-2">
