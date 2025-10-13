@@ -123,11 +123,16 @@ async function handleSubmit() {
       })
     }
     else {
+      if (!targetModule.value) {
+        throw new Error('目标模块不存在')
+      }
+
       await moduleStore.updateModule(targetModule.value.id, {
         name: formData.value.name.trim(),
         description: formData.value.description.trim(),
       })
     }
+
     emit('success')
   }
   catch (error) {
