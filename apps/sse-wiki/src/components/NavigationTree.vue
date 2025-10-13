@@ -138,7 +138,7 @@ function deleteModule() {
           </DropdownMenuItem>
           <DropdownMenuItem v-if="canEdit" @click="rename">
             <Edit2 class="mr-2 w-4 h-4" />
-            <span>重命名</span>
+            <span>编辑信息</span>
           </DropdownMenuItem>
           <DropdownMenuItem v-if="canManageCollaborators" @click="manageCollaborators">
             <Users class="mr-2 w-4 h-4" />
@@ -188,7 +188,7 @@ function deleteModule() {
           </DropdownMenuItem>
           <DropdownMenuItem v-if="canEdit" @click="rename">
             <Edit2 class="mr-2 w-4 h-4" />
-            <span>重命名</span>
+            <span>编辑信息</span>
           </DropdownMenuItem>
           <DropdownMenuItem v-if="canManageCollaborators" @click="manageCollaborators">
             <Users class="mr-2 w-4 h-4" />

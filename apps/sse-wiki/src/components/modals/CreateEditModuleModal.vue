@@ -10,6 +10,7 @@ import {
   DialogTitle,
   Input,
   Label,
+  Textarea,
 } from '@sse-wiki/ui'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useModuleStore } from '@/stores/module'
@@ -29,7 +30,7 @@ const emit = defineEmits<Emits>()
 const moduleStore = useModuleStore()
 
 // 响应式状态
-const formData = ref({ name: '' })
+const formData = ref({ name: '', description: '' })
 const errors = ref<Record<string, string>>({})
 const isSubmitting = ref(false)
 
@@ -58,6 +59,7 @@ watch(
       // 如果是编辑模式，填充现有数据
       if (newState.type === 'edit' && newState.targetModule) {
         formData.value.name = newState.targetModule.name || newState.targetModule.module_name || ''
+        formData.value.description = newState.targetModule.description || ''
       }
 
       // 自动聚焦输入框
@@ -74,7 +76,7 @@ watch(
 
 // 重置表单
 function resetForm() {
-  formData.value = { name: '' }
+  formData.value = { name: '', description: '' }
   errors.value = {}
   isSubmitting.value = false
 }
@@ -95,6 +97,13 @@ function validateForm() {
     errors.value.name = '模块名称不能超过100个字符'
   }
 
+  if (!formData.value.description.trim()) {
+    errors.value.description = '模块描述不能为空'
+  }
+  else if (formData.value.description.trim().length > 512) {
+    errors.value.description = '模块描述不能超过512个字符'
+  }
+
   return Object.keys(errors.value).length === 0
 }
 
@@ -109,17 +118,16 @@ async function handleSubmit() {
     if (isCreateModal.value) {
       await moduleStore.createModule({
         name: formData.value.name.trim(),
+        description: formData.value.description.trim(),
         parent_id: props.modalState.parentModule?.id,
       })
     }
     else {
-      if (!targetModule.value)
-        return
       await moduleStore.updateModule(targetModule.value.id, {
         name: formData.value.name.trim(),
+        description: formData.value.description.trim(),
       })
     }
-
     emit('success')
   }
   catch (error) {
@@ -155,6 +163,19 @@ async function handleSubmit() {
           />
           <p v-if="errors.name" class="text-sm text-destructive">
             {{ errors.name }}
+          </p>
+        </div>
+        <div class="space-y-2">
+          <Label for="module-description">模块描述</Label>
+          <Textarea
+            id="module-description"
+            v-model="formData.description"
+            placeholder="请输入模块描述（不超过512字符）"
+            :class="{ 'border-destructive': errors.description }"
+            @input="clearError('description')"
+          />
+          <p v-if="errors.description" class="text-sm text-destructive">
+            {{ errors.description }}
           </p>
         </div>
       </div>
