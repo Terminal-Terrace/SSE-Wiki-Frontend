@@ -162,6 +162,7 @@ async function fetchModuleInfo(moduleId: string) {
       moduleInfo.value = {
         id: foundModule.id,
         module_name: foundModule.name,
+        description: foundModule.description ?? '',
         parent_id: 1, // TODO: 从模块树结构中获取正确的parent_id
         owner_id: foundModule.owner_id,
         created_at: '2024-01-15T08:00:00Z', // TODO: 从API获取实际时间
