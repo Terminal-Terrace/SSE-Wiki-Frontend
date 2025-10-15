@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Page } from '@/types'
-import { Badge, Button, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger } from '@sse-wiki/ui'
+import { Badge, Button, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, toast } from '@sse-wiki/ui'
 import { Bot, Edit } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
@@ -11,7 +11,7 @@ import ArticleDiscussionList from '@/components/ArticleDiscussionList.vue'
 import ArticleEditCard from '@/components/ArticleEditCard.vue'
 import ArticleHistoryList from '@/components/ArticleHistoryList.vue'
 import OutlineCard from '@/components/OutlineCard.vue'
-import { mockApi } from '@/mock/data'
+import { articleApi } from '@/services/articleApi'
 import { useAuthStore } from '@/stores/auth'
 import { formatDate } from '@/utils/format'
 
@@ -51,10 +51,23 @@ onMounted(async () => {
     activeTab.value = tabFromQuery
   }
 
-  await loadPage()
+  // 调试信息：打印 props 和路由参数，便于排查 pageId 为空的原因
+  console.debug('ArticleDetail mounted', {
+    props,
+    routeParams: route.params,
+    routeQuery: route.query,
+    fullPath: route.fullPath,
+    pageId: pageId.value,
+  })
+
+  // 仅在 pageId 可用时加载页面数据，若为空则等待 watcher 触发
+  if (pageId.value) {
+    await loadPage()
+  }
 })
 
 watch(() => pageId.value, async (newId, oldId) => {
+  console.debug('ArticleDetail: pageId changed', { newId, oldId })
   if (newId && newId !== oldId) {
     await loadPage()
   }
@@ -67,10 +80,45 @@ watch(() => route.query.tab, (newTab) => {
   }
 })
 
+function mapArticleToPage(article: any): Page {
+  // 将后端 ArticleDetailResponse 映射为本地 Page 结构，兼容现有组件
+  const content = article.content ?? article.current_version?.content ?? article.versions?.[0]?.content ?? ''
+  const lastEditedAt = article.updated_at ?? article.current_version?.created_at ?? new Date().toISOString()
+  const editor = article.current_version?.author ? { id: article.current_version.author.id, username: article.current_version.author.username } : (article.author ? { id: article.author.id, username: article.author.username } : { id: 0, username: 'unknown' })
+  // 处理标签：如果是字符串数组，转换为对象数组
+  const tags = (article.tags ?? []).map((t: any) => {
+    if (typeof t === 'string') {
+      return { id: t, name: t } // 字符串标签，用名称作为ID
+    }
+    return { id: t.id, name: t.name } // 对象标签
+  })
+  const versions = (article.versions ?? []).map((v: any) => ({
+    id: v.id,
+    commitMessage: v.commit_message ?? v.commitMessage ?? '',
+    editor: v.author?.username ?? String(v.author_id ?? ''),
+    timestamp: v.created_at ?? v.timestamp,
+    content: v.content ?? '',
+  }))
+
+  return {
+    id: article.id,
+    title: article.title,
+    content,
+    lastEditedAt,
+    editor,
+    viewCount: article.view_count ?? article.viewCount ?? 0,
+    tags,
+    versions,
+    currentVersionId: article.current_version_id, // 保存当前版本ID
+  }
+}
+
 async function loadPage() {
   loading.value = true
   try {
-    page.value = await mockApi.getPage(pageId.value)
+    console.debug('ArticleDetail: loading page', pageId.value)
+    const data = await articleApi.getArticle(pageId.value)
+    page.value = mapArticleToPage(data)
   }
   catch (error) {
     console.error('Failed to load page:', error)
@@ -99,28 +147,62 @@ function toggleAiChat() {
   showAiChat.value = !showAiChat.value
 }
 
-async function handleSave(updatedPage: Partial<Page>) {
+async function handleSave(updatedPage: Partial<Page> & { commitMessage?: string }) {
   if (!page.value)
     return
 
   try {
     const pageId = page.value.id ? String(page.value.id) : 'unknown'
     const content = updatedPage.content ?? page.value.content ?? ''
-    const commitMessage = '内容更新'
-    const editorId = page.value.editor?.id ? String(page.value.editor.id) : '1'
+    const commitMessage = updatedPage.commitMessage || '内容更新'
 
-    const savedPage = await mockApi.savePageContent(pageId, content, commitMessage, editorId)
-    if (savedPage) {
-      page.value = savedPage
-      activeTab.value = 'content'
+    // 获取正确的 base_version_id：优先使用 currentVersionId，回退到第一个版本
+    const baseVersionId = (page.value as any).currentVersionId ?? page.value?.versions?.[0]?.id ?? 0
+
+    if (!baseVersionId) {
+      toast({
+        title: '保存失败',
+        description: '无法获取当前版本ID，请刷新页面后重试',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    // 处理标签：从 Tag[] 转换为字符串数组
+    const tags = updatedPage.tags?.map(t => t.name) || []
+
+    // 使用创建提交的方式保存修改（后端会返回 ReviewSubmission）
+    const submission = await articleApi.createSubmission(pageId, {
+      content,
+      commit_message: commitMessage,
+      base_version_id: baseVersionId,
+      tags: tags.length > 0 ? tags : undefined,
+    })
+
+    if (submission) {
+      // 刷新页面数据并切换到历史页
+      await loadPage()
+      activeTab.value = 'history'
+      toast({
+        title: '保存成功',
+        description: '您的修改已提交审核',
+      })
     }
     else {
-      alert('保存失败，请重试')
+      toast({
+        title: '保存失败',
+        description: '请重试',
+        variant: 'destructive',
+      })
     }
   }
   catch (error) {
     console.error('Failed to save page:', error)
-    alert('保存失败，请重试')
+    toast({
+      title: '保存失败',
+      description: '请重试',
+      variant: 'destructive',
+    })
   }
 }
 </script>
@@ -229,7 +311,7 @@ async function handleSave(updatedPage: Partial<Page>) {
               </TabsContent>
 
               <!-- Edit Tab -->
-              <TabsContent value="edit">
+              <TabsContent value="edit" class="h-[calc(100vh-20rem)] overflow-hidden">
                 <div v-if="!canEdit" class="text-center py-8">
                   <p class="text-muted-foreground">
                     您需要登录才能编辑此页面
