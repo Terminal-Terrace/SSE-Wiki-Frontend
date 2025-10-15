@@ -15,6 +15,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  toast,
 } from '@sse-wiki/ui'
 import { Plus, Trash2, Users } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
@@ -100,7 +101,11 @@ async function removeCollaborator(userId: number) {
   }
   catch (error) {
     console.error('❌ 移除协作者失败:', error)
-    alert('移除协作者失败，请重试')
+    toast({
+      title: '移除协作者失败',
+      description: '请重试',
+      variant: 'destructive',
+    })
   }
 }
 
@@ -135,13 +140,19 @@ async function addCollaborator() {
     // 重新加载协作者列表
     await loadCollaborators(targetModule.value.id)
 
-    alert('添加协作者成功')
+    toast({
+      title: '添加协作者成功',
+    })
   }
   catch (error: any) {
     console.error('❌ 添加协作者失败:', error)
     const errorMsg = error?.message || '添加协作者失败'
     addError.value = errorMsg
-    alert(errorMsg)
+    toast({
+      title: '添加协作者失败',
+      description: errorMsg,
+      variant: 'destructive',
+    })
   }
   finally {
     isAddingCollaborator.value = false
