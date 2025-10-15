@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { Page } from '@/types'
-import { Input, Label, Textarea, toast } from '@sse-wiki/ui'
+import { Input, Label, toast } from '@sse-wiki/ui'
 import { ref, watch } from 'vue'
+import ArticleEditor from './ArticleEditor.vue'
 
 interface Props {
   page: Page
@@ -109,13 +110,7 @@ function handleCancel() {
 
           <div>
             <Label for="edit-content">内容</Label>
-            <Textarea
-              id="edit-content"
-              v-model="formData.content"
-              rows="20"
-              class="font-mono text-sm resize-none"
-              placeholder="输入 Markdown 内容..."
-            />
+            <ArticleEditor v-model="formData.content" />
           </div>
 
           <div class="flex justify-end gap-2 pt-4 border-t">
