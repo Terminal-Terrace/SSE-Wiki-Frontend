@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Article, BreadcrumbItem, Module, ModuleTreeNode } from '@/types/module'
-import { Button } from '@sse-wiki/ui'
+import { Button, toast } from '@sse-wiki/ui'
 import {
   Calendar,
   ChevronDown,
@@ -279,6 +279,17 @@ function changePage(page: number) {
 
 // 操作方法
 function createArticle() {
+  // 检查登录状态
+  if (!authStore.isAuthenticated) {
+    toast({
+      title: '请先登录',
+      description: '登录后才能创建文章',
+      variant: 'destructive',
+    })
+    router.push('/login')
+    return
+  }
+
   router.push({
     name: 'ArticleEditor',
     query: { moduleId: route.params.moduleId },
@@ -550,6 +561,16 @@ onUnmounted(() => {
               <p class="text-gray-600 text-sm line-clamp-3 mb-4">
                 {{ article.summary }}
               </p>
+              <!-- 标签 -->
+              <div v-if="article.tags && article.tags.length > 0" class="flex flex-wrap gap-2 mb-4">
+                <span
+                  v-for="tag in article.tags"
+                  :key="tag"
+                  class="px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded-md"
+                >
+                  {{ tag }}
+                </span>
+              </div>
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                   <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
@@ -581,6 +602,16 @@ onUnmounted(() => {
                 <p class="text-gray-600 text-sm mb-3 line-clamp-2">
                   {{ article.summary }}
                 </p>
+                <!-- 标签 -->
+                <div v-if="article.tags && article.tags.length > 0" class="flex flex-wrap gap-2 mb-3">
+                  <span
+                    v-for="tag in article.tags"
+                    :key="tag"
+                    class="px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded-md"
+                  >
+                    {{ tag }}
+                  </span>
+                </div>
                 <div class="flex items-center gap-2 text-xs text-gray-500">
                   <span>{{ article.author?.username || '未知作者' }}</span>
                   <span>·</span>
