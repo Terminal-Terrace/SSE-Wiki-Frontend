@@ -11,6 +11,7 @@ export interface Page {
   viewCount: number
   tags: Tag[]
   versions?: PageVersion[]
+  currentVersionId?: number | null // 当前版本ID，用于提交时指定 base_version_id
 }
 
 export interface Tag {
