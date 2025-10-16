@@ -17,8 +17,10 @@ import {
 } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import OverflowText from '@/components/common/OverflowText.vue'
 import { moduleApi } from '@/services/moduleApi'
 import { useAuthStore } from '@/stores/auth'
+
 import { useModuleStore } from '@/stores/module'
 
 const route = useRoute()
@@ -378,19 +380,25 @@ onUnmounted(() => {
       <!-- 页面头部 -->
       <div class="space-y-4">
         <!-- 面包屑导航  -->
-        <nav class="h-6 flex items-center space-x-2 text-base text-gray-600 transition-opacity duration-200" :class="{ 'opacity-0': breadcrumbs.length <= 1 }">
-          <router-link
-            v-for="(crumb, index) in breadcrumbs"
-            :key="crumb.id"
-            :to="{ name: 'ModuleDetail', params: { moduleId: crumb.id } }"
-            :class="{ 'text-gray-900 font-medium': index === breadcrumbs.length - 1 }"
-          >
-            {{ crumb.name }}
+        <nav class="h-6 flex items-center space-x-2 text-base text-gray-600">
+          <template v-for="(crumb, index) in breadcrumbs" :key="crumb.id">
+            <router-link
+              :to="{ name: 'ModuleDetail', params: { moduleId: crumb.id } }"
+              :class="{ 'text-gray-900 font-medium': index === breadcrumbs.length - 1 }"
+              class="flex items-center hover:text-gray-900 transition-colors"
+            >
+              <OverflowText
+                :text="crumb.name"
+                max-width="250px"
+                tooltip-max-width="250px"
+                placement="bottom"
+              />
+            </router-link>
             <ChevronRight
               v-if="index < breadcrumbs.length - 1"
-              class="w-4 h-4 inline ml-2"
+              class="w-4 h-4 flex-shrink-0"
             />
-          </router-link>
+          </template>
         </nav>
 
         <!-- 模块标题和操作按钮 -->
