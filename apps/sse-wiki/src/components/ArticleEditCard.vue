@@ -2,7 +2,7 @@
 import type { Page, Tag } from '@/types'
 import { Button, Input, Label, toast } from '@sse-wiki/ui'
 import { ref, watch } from 'vue'
-import ArticleEditor from './ArticleEditor.vue'
+import ContentEditor from './ContentEditor.vue'
 
 interface Props {
   page: Page
@@ -138,7 +138,7 @@ function handleCancel() {
       <div>
         <Label for="edit-content" class="text-base">内容</Label>
         <div class="mt-1 border rounded-md">
-          <ArticleEditor v-model="formData.content" />
+          <ContentEditor v-model="formData.content" />
         </div>
       </div>
     </div>
