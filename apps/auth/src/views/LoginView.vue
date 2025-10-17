@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Button } from '@sse-wiki/ui'
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, onUnmounted, reactive, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import TextAnime from '@/components/TextAnime.vue'
 
@@ -13,6 +13,15 @@ const showAnime = ref(true)
 
 function toggleAnime() {
   showAnime.value = !showAnime.value
+}
+
+function checkWindowSize() {
+  if (window.innerWidth < 1024) {
+    showAnime.value = false
+  }
+  else {
+    showAnime.value = true
+  }
 }
 
 interface Props {
@@ -57,11 +66,17 @@ onMounted(() => {
     console.log('GitHub code:', code)
     // TODO: 实现 GitHub 登录逻辑
   }
+  checkWindowSize()
+  window.addEventListener('resize', checkWindowSize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkWindowSize)
 })
 </script>
 
 <template>
-  <div class="relative flex bg-gray-50">
+  <div class="relative flex justify-center bg-gray-50 min-h-screen">
     <button
       class="absolute top-4 right-4 z-10 rounded-md bg-gray-100 p-2 text-gray-600 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
       @click="toggleAnime"
@@ -103,11 +118,11 @@ onMounted(() => {
       </svg>
     </button>
     <TextAnime v-if="showAnime" maxwidth="25%" />
-    <div v-else class="w-1/4 bg-gray-50" />
     <div
-      class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 w-1/2"
+      class="flex items-center justify-center bg-gray-50 py-12 px-4"
+      :class="showAnime ? 'w-1/2' : 'w-full'"
     >
-      <div class="space-y-8 w-1/2">
+      <div class="space-y-8 w-full max-w-md">
         <div class="text-center">
           <h2 class="text-3xl font-bold">
             SSE-Wiki 登录
