@@ -35,15 +35,15 @@ watch(() => props.modelValue, (newValue) => {
 </script>
 
 <template>
-  <div class="border rounded-lg overflow-hidden">
-    <EditorContent :editor="editor" class="editor-content prose max-w-none p-4 min-h-[500px] focus:outline-none" />
+  <div class="border rounded-lg">
+    <EditorContent :editor="editor" class="editor-content prose max-w-none p-4 min-h-[40vh] focus:outline-none" />
   </div>
 </template>
 
 <style scoped>
 .editor-content :deep(.ProseMirror) {
   outline: none;
-  min-height: 500px;
+  min-height: 300px;
 }
 
 .editor-content :deep(.ProseMirror p.is-editor-empty:first-child::before) {

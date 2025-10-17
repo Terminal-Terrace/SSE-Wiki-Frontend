@@ -45,14 +45,14 @@ const router = createRouter({
           props: true,
           meta: { requiresAuth: true },
         },
-        // // 文章编辑器页面（预留，暂未实现）
-        // {
-        //   path: 'articles/edit/:articleId?',
-        //   name: 'ArticleEditor',
-        //   component: () => import('@/views/ArticleEditor.vue'),
-        //   props: true,
-        //   meta: { requiresAuth: true },
-        // },
+        // 文章编辑器页面（预留，暂未实现）
+        {
+          path: 'articles/edit/:articleId?',
+          name: 'ArticleEditor',
+          component: () => import('@/views/article/ArticleEditor.vue'),
+          props: true,
+          meta: { requiresAuth: true },
+        },
       ],
     },
   ],
