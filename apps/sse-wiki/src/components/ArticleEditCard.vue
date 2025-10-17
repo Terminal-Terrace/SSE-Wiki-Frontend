@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { Page, Tag } from '@/types'
 import { Button, Input, Label, toast } from '@sse-wiki/ui'
-import { X } from 'lucide-vue-next'
 import { ref, watch } from 'vue'
 import ArticleEditor from './ArticleEditor.vue'
 
