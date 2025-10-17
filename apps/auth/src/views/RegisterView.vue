@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { Button } from '@sse-wiki/ui'
 import { RouterLink } from 'vue-router'
-import BallAnime from '@/components/BallAnime.vue'
+import Robot from '../components/Robot.vue'
 </script>
 
 <template>
-  <div class="flex bg-gray-50">
-    <BallAnime class="w-1/2 h-screen" />
-    <div class="min-h-screen flex items-center justify-center bg-gray-50 px-4 w-1/2">
+  <div class="min-h-screen flex bg-gray-50">
+    <div class="w-1/2 flex items-center justify-center">
+      <Robot />
+    </div>
+    <div class="w-1/2 min-h-screen flex items-center justify-center py-12 px-4">
       <div class="max-w-md w-full space-y-8">
         <div class="text-center">
           <h2 class="text-3xl font-bold text-gray-900">
