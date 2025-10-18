@@ -1,36 +1,23 @@
 <script setup lang="ts">
-import type { ArticleVersion, ReviewSubmission } from '@/types/article'
+import type { HistoryEntry } from '@/types/article'
 import { Badge, Button } from '@sse-wiki/ui'
-import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { articleApi } from '@/services/articleApi'
-import { useAuthStore } from '@/stores/auth'
-
-interface HistoryItem {
-  type: 'pending' | 'version'
-  id: number
-  title: string
-  subtitle: string
-  timestamp: string
-  isCurrent?: boolean
-  hasConflict?: boolean
-  status?: string
-}
+import { getSubmissionStatusConfig, getVersionStatusConfig } from '@/types/article'
 
 interface Props {
   pageId: string | number
-  versions?: any[]
+  versions?: any[] // 已废弃，保留以兼容旧代码
 }
 
 const props = defineProps<Props>()
 const router = useRouter()
-const authStore = useAuthStore()
-const { user } = storeToRefs(authStore)
 
 const loading = ref(false)
-const historyItems = ref<HistoryItem[]>([])
+const historyItems = ref<HistoryEntry[]>([])
 const currentUserRole = ref<string | null>(null)
+const currentVersionId = ref<number | null>(null)
 
 // 判断当前用户是否有审核权限
 const canReview = computed(() => {
@@ -38,73 +25,112 @@ const canReview = computed(() => {
   return role === 'admin' || role === 'moderator' || role === 'owner'
 })
 
-// 格式化日期
+/**
+ * 格式化日期为本地化字符串
+ * @param date - ISO 格式的日期字符串
+ * @returns 本地化的日期时间字符串
+ */
 function formatDate(date: string) {
   return new Date(date).toLocaleString('zh-CN')
 }
 
-// 加载历史记录（包括待审核提交和已发布版本）
+/**
+ * 获取历史条目的显示标题
+ * @param entry - 历史条目数据
+ * @returns 提交信息或默认文本
+ */
+function getTitle(entry: HistoryEntry): string {
+  return entry.commit_message || '未命名修改'
+}
+
+/**
+ * 获取历史条目的副标题（作者信息）
+ * @param entry - 历史条目数据
+ * @returns 格式化的作者和操作类型文本
+ */
+function getSubtitle(entry: HistoryEntry): string {
+  const author = entry.author?.username || `用户${entry.author_id}`
+  return `由 ${author} ${entry.entry_type === 'submission' ? '提交' : '编辑'}`
+}
+
+/**
+ * 判断条目是否为当前版本
+ * @param entry - 历史条目数据
+ * @returns 如果是当前版本返回 true
+ */
+function isCurrent(entry: HistoryEntry): boolean {
+  return entry.entry_type === 'version' && entry.version_id === currentVersionId.value
+}
+
+/**
+ * 获取状态徽章配置
+ * @param entry - 历史条目数据
+ * @returns Badge 配置对象或 null
+ */
+function getBadgeConfig(entry: HistoryEntry) {
+  if (entry.entry_type === 'submission' && entry.submission_status) {
+    return getSubmissionStatusConfig(entry.submission_status)
+  }
+  if (entry.entry_type === 'version' && entry.status) {
+    return getVersionStatusConfig(entry.status)
+  }
+  return null
+}
+
+/**
+ * 获取操作按钮的配置
+ * 根据条目类型、状态和用户权限决定按钮文本和样式
+ * @param entry - 历史条目数据
+ * @returns 包含按钮文本和变体的对象
+ */
+function getActionButton(entry: HistoryEntry): { text: string, variant: 'default' | 'outline' } {
+  // 提交类型
+  if (entry.entry_type === 'submission') {
+    // 有审核权限
+    if (canReview.value) {
+      if (entry.submission_status === 'pending') {
+        return { text: '审核', variant: 'default' }
+      }
+      if (entry.submission_status === 'conflict_detected') {
+        return { text: '继续审核', variant: 'default' }
+      }
+    }
+    // 无权限或其他状态
+    return { text: '查看', variant: 'outline' }
+  }
+
+  // 版本类型
+  return { text: '查看', variant: 'outline' }
+}
+
+/**
+ * 加载文章历史记录
+ * 从 API 获取文章详情，包含统一的 history 字段
+ * history 字段包含版本和提交的统一列表
+ */
 async function loadHistory() {
   if (!props.pageId)
     return
 
   loading.value = true
   try {
-    // 从文章详情获取完整信息（包含 pending_submissions 和 current_user_role）
+    // 获取文章详情（包含 history 和 current_user_role）
     const article = await articleApi.getArticle(props.pageId)
 
-    // 保存当前用户角色
+    // 保存当前用户角色和当前版本ID
     currentUserRole.value = article.current_user_role || null
+    currentVersionId.value = article.current_version_id
 
-    const items: HistoryItem[] = []
-
-    // 1. 添加待审核的提交（只有登录用户可见）
-    if (user.value && article.pending_submissions && article.pending_submissions.length > 0) {
-      article.pending_submissions.forEach((submission: ReviewSubmission) => {
-        // 只显示 pending 状态的提交
-        if (submission.status === 'pending') {
-          items.push({
-            type: 'pending',
-            id: submission.id,
-            title: submission.proposed_version?.commit_message || '待审核的修改',
-            subtitle: `由 ${submission.submitter?.username || `用户${submission.submitted_by}`} 提交`,
-            timestamp: submission.created_at,
-            hasConflict: submission.has_conflict,
-            status: submission.status,
-          })
-        }
-      })
+    // 使用统一的 history 字段
+    if (article.history && article.history.length > 0) {
+      // 按时间倒序排序（最新的在前）
+      historyItems.value = [...article.history].sort((a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      )
     }
-
-    // 2. 添加当前版本
-    if (article.current_version) {
-      items.push({
-        type: 'version',
-        id: article.current_version.id,
-        title: article.current_version.commit_message,
-        subtitle: `由 ${article.current_version.author?.username || '未知'} 编辑`,
-        timestamp: article.current_version.created_at,
-        isCurrent: true,
-      })
+    else {
+      historyItems.value = []
     }
-
-    // 3. 添加历史版本
-    const versions = await articleApi.getVersions(props.pageId)
-    versions.forEach((v: ArticleVersion) => {
-      // 排除当前版本（已经添加过了）
-      if (article.current_version && v.id === article.current_version.id)
-        return
-
-      items.push({
-        type: 'version',
-        id: v.id,
-        title: v.commit_message,
-        subtitle: `由 ${v.author?.username || `用户${v.author_id}`} 编辑`,
-        timestamp: v.created_at,
-      })
-    })
-
-    historyItems.value = items
   }
   catch (error) {
     console.error('Failed to load history:', error)
@@ -115,24 +141,39 @@ async function loadHistory() {
   }
 }
 
-// 查看版本详情
-function viewVersion(item: HistoryItem) {
-  router.push({
-    path: `/articles/${props.pageId}/version`,
-    query: {
-      versionId: String(item.id),
-    },
-  })
-}
-
-// 审核待提交的修改
-function reviewSubmission(item: HistoryItem) {
-  router.push({
-    path: `/articles/${props.pageId}/version`,
-    query: {
-      submissionId: String(item.id),
-    },
-  })
+/**
+ * 处理历史条目的点击操作
+ * 根据条目类型和用户权限跳转到相应页面（审核或查看）
+ * @param entry - 被点击的历史条目
+ */
+function handleAction(entry: HistoryEntry) {
+  if (entry.entry_type === 'submission' && entry.submission_id) {
+    // 审核或查看提交
+    if (canReview.value && (entry.submission_status === 'pending' || entry.submission_status === 'conflict_detected')) {
+      // 跳转到审核页面
+      router.push({
+        path: `/articles/${props.pageId}/review/${entry.submission_id}`,
+      })
+    }
+    else {
+      // 跳转到查看页面
+      router.push({
+        path: `/articles/${props.pageId}/version`,
+        query: {
+          submissionId: String(entry.submission_id),
+        },
+      })
+    }
+  }
+  else if (entry.entry_type === 'version' && entry.version_id) {
+    // 查看版本
+    router.push({
+      path: `/articles/${props.pageId}/version`,
+      query: {
+        versionId: String(entry.version_id),
+      },
+    })
+  }
 }
 
 // 组件挂载时加载历史记录
@@ -163,64 +204,46 @@ watch(() => props.pageId, () => {
 
       <div v-else class="space-y-3">
         <div
-          v-for="item in historyItems"
-          :key="`${item.type}-${item.id}`"
+          v-for="entry in historyItems"
+          :key="`${entry.entry_type}-${entry.entry_id}`"
           class="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
         >
           <div class="flex-1">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
               <div class="font-medium">
-                {{ item.title }}
+                {{ getTitle(entry) }}
               </div>
 
-              <!-- 待审核标识 -->
-              <Badge v-if="item.type === 'pending'" variant="outline" class="bg-yellow-500/10 text-yellow-600 border-yellow-600">
-                待审核
-              </Badge>
-
               <!-- 当前版本标识 -->
-              <Badge v-if="item.isCurrent" class="bg-primary text-primary-foreground">
+              <Badge v-if="isCurrent(entry)" class="bg-primary text-primary-foreground">
                 当前版本
               </Badge>
 
+              <!-- 状态标识 -->
+              <Badge
+                v-if="getBadgeConfig(entry)"
+                :variant="getBadgeConfig(entry)?.variant"
+              >
+                {{ getBadgeConfig(entry)?.label }}
+              </Badge>
+
               <!-- 冲突标识 -->
-              <Badge v-if="item.hasConflict" variant="destructive">
+              <Badge v-if="entry.has_conflict" variant="destructive">
                 有冲突
               </Badge>
             </div>
             <div class="text-sm text-muted-foreground mt-1">
-              {{ item.subtitle }} 于 {{ formatDate(item.timestamp) }}
+              {{ getSubtitle(entry) }} 于 {{ formatDate(entry.created_at) }}
             </div>
           </div>
 
-          <!-- 待审核：显示"审核"按钮（仅有权限用户可见） -->
+          <!-- 操作按钮 -->
           <Button
-            v-if="item.type === 'pending' && canReview"
             size="sm"
-            variant="default"
-            @click="reviewSubmission(item)"
+            :variant="getActionButton(entry).variant"
+            @click="handleAction(entry)"
           >
-            审核
-          </Button>
-
-          <!-- 待审核：无权限用户显示"查看"按钮 -->
-          <Button
-            v-else-if="item.type === 'pending' && !canReview"
-            size="sm"
-            variant="outline"
-            @click="reviewSubmission(item)"
-          >
-            查看
-          </Button>
-
-          <!-- 已发布版本：显示"查看"按钮 -->
-          <Button
-            v-else
-            size="sm"
-            variant="outline"
-            @click="viewVersion(item)"
-          >
-            查看
+            {{ getActionButton(entry).text }}
           </Button>
         </div>
       </div>
