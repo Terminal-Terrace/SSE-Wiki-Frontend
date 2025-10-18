@@ -1,4 +1,24 @@
 <script setup lang="ts">
+/**
+ * TODO: 独立的文章编辑器页面（未实现）
+ *
+ * 当前状态：占位符实现，显示示例数据
+ * 优先级：P2
+ *
+ * 需求：
+ * 1. 接收路由参数 articleId（可选，无 ID 表示创建新文章）
+ * 2. 加载文章数据（如果是编辑模式）
+ * 3. 提供全屏编辑体验（与 ArticleDetailView 的编辑标签页分离）
+ * 4. 支持自动保存草稿（LocalStorage/IndexedDB）
+ * 5. 支持实时预览
+ * 6. 保存后跳转到文章详情页
+ *
+ * 实现建议：
+ * - 复用 ArticleEditCard 组件
+ * - 添加全屏布局和工具栏
+ * - 集成快捷键支持（Ctrl+S 保存等）
+ * - 添加离线编辑支持
+ */
 import type { Page } from '@/types'
 import ArticleEditCard from '@/components/ArticleEditCard.vue'
 

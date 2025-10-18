@@ -291,7 +291,7 @@ function createArticle() {
   }
 
   router.push({
-    name: 'ArticleEditor',
+    name: 'ArticleCreate',
     query: { moduleId: route.params.moduleId },
   })
 }
