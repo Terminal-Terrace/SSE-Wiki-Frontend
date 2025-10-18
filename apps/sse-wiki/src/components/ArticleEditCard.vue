@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Page, Tag } from '@/types'
 import { Button, Input, Label, toast } from '@sse-wiki/ui'
+import { X } from 'lucide-vue-next'
 import { ref, watch } from 'vue'
 import ContentEditor from './ContentEditor.vue'
 
@@ -138,7 +139,7 @@ function handleCancel() {
       <div>
         <Label for="edit-content" class="text-base">内容</Label>
         <div class="mt-1 border rounded-md">
-          <ContentEditor v-model="formData.content" />
+          <ContentEditor v-model="formData.content" min-height="400px" />
         </div>
       </div>
     </div>

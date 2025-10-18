@@ -6,7 +6,7 @@ import { ArrowLeft, Loader2, Save } from 'lucide-vue-next'
 
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import MarkdownEditor from '@/components/article/MarkdownEditor.vue'
+import ContentEditor from '@/components/ContentEditor.vue'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { articleApi } from '@/services/articleApi'
 import { moduleApi } from '@/services/moduleApi'
@@ -314,10 +314,10 @@ function goBack() {
           <CardTitle>
             文章内容 <span class="text-red-500">*</span>
           </CardTitle>
-          <CardDescription>使用 Markdown 格式编写文章内容</CardDescription>
+          <CardDescription>使用富文本编辑器编写文章内容</CardDescription>
         </CardHeader>
         <CardContent>
-          <MarkdownEditor
+          <ContentEditor
             v-model="formData.content"
             :readonly="isLoading"
             min-height="500px"
