@@ -2,7 +2,6 @@
 import type {
   ArticleDetailResponse,
   ArticleVersion,
-  ReviewSubmission,
 } from '@/types/article'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
@@ -14,11 +13,9 @@ export const useArticleStore = defineStore('article', () => {
   // 当前文章详情
   const currentArticle = ref<ArticleDetailResponse | null>(null)
 
-  // 当前文章的版本列表
+  // 当前文章的版本列表（已废弃，改用 history 字段）
+  // TODO: 考虑移除此字段，使用 currentArticle.history 替代
   const versions = ref<ArticleVersion[]>([])
-
-  // 当前文章的待审核提交
-  const pendingSubmissions = ref<ReviewSubmission[]>([])
 
   // 标签已改为用户自定义输入，不再需要全局标签列表
 
@@ -227,7 +224,6 @@ export const useArticleStore = defineStore('article', () => {
       if (currentArticle.value?.id === articleId) {
         currentArticle.value = null
         versions.value = []
-        pendingSubmissions.value = []
       }
     }
     catch (err: any) {
@@ -280,7 +276,6 @@ export const useArticleStore = defineStore('article', () => {
   function clearCurrentArticle() {
     currentArticle.value = null
     versions.value = []
-    pendingSubmissions.value = []
     error.value = null
   }
 
@@ -319,16 +314,24 @@ export const useArticleStore = defineStore('article', () => {
 
   /**
    * 是否有待审核的提交
+   * 检查 history 中是否有 pending 或 conflict_detected 状态的提交
    */
   function hasPendingReviews(): boolean {
-    return (currentArticle.value?.pending_submissions?.length || 0) > 0
+    if (!currentArticle.value?.history) {
+      return false
+    }
+
+    return currentArticle.value.history.some(
+      entry =>
+        entry.entry_type === 'submission'
+        && (entry.submission_status === 'pending' || entry.submission_status === 'conflict_detected'),
+    )
   }
 
   return {
     // State
     currentArticle,
-    versions,
-    pendingSubmissions,
+    versions, // TODO: 考虑废弃，使用 currentArticle.history
     loading,
     error,
 
