@@ -60,24 +60,14 @@ function handleCancel() {
           required
           class="mt-2"
         />
-        <p class="text-xs text-muted-foreground mt-2">
-          简要说明您所做的更改。
-        </p>
       </div>
 
       <!-- 内容编辑器 -->
-      <div>
+      <div class="flex-1">
         <Label for="edit-content" class="text-base font-semibold">文章内容</Label>
         <div class="mt-2 border rounded-md">
-          <ContentEditor v-model="formData.content" min-height="500px" />
+          <ContentEditor v-model="formData.content" min-height="400px" />
         </div>
-      </div>
-
-      <!-- 提示信息 -->
-      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p class="text-sm text-blue-800">
-          <strong>提示：</strong>标题和标签只能在创建文章时设置，编辑时仅能修改文章内容。
-        </p>
       </div>
     </div>
 
@@ -87,7 +77,7 @@ function handleCancel() {
         取消
       </Button>
       <Button size="lg" @click="handleSave">
-        保存并提交审核
+        提交
       </Button>
     </div>
   </div>

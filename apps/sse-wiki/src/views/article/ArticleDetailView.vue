@@ -415,7 +415,7 @@ function handleConflictCancel() {
               </TabsContent>
 
               <!-- Edit Tab -->
-              <TabsContent value="edit" class="h-[calc(100vh-20rem)] overflow-hidden">
+              <TabsContent value="edit" class="overflow-y-auto">
                 <div v-if="!canEdit" class="text-center py-8">
                   <p class="text-muted-foreground">
                     您需要登录才能编辑此页面
