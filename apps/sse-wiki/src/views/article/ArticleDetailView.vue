@@ -47,7 +47,6 @@ const pendingSubmissionData = ref<{
   content: string
   commitMessage: string
   baseVersionId: number
-  tags?: string[]
 } | null>(null)
 
 // 兼容路由 param 名称：优先使用 props.id, 然后 props.articleId, 最后退回到 route.params.articleId
@@ -192,15 +191,11 @@ async function handleSave(updatedPage: Partial<Page> & { commitMessage?: string 
       return
     }
 
-    // 处理标签：从 Tag[] 转换为字符串数组
-    const tags = updatedPage.tags?.map(t => t.name) || []
-
     // 保存提交数据，以便冲突解决后重新提交
     pendingSubmissionData.value = {
       content,
       commitMessage,
       baseVersionId,
-      tags: tags.length > 0 ? tags : undefined,
     }
 
     // 使用创建提交的方式保存修改（后端会返回 ReviewSubmission）
@@ -208,7 +203,6 @@ async function handleSave(updatedPage: Partial<Page> & { commitMessage?: string 
       content,
       commit_message: commitMessage,
       base_version_id: baseVersionId,
-      tags: tags.length > 0 ? tags : undefined,
     })
 
     if (submission) {
@@ -280,7 +274,6 @@ async function handleConflictResolve(mergedContent: string) {
       content: mergedContent,
       commit_message: pendingSubmissionData.value.commitMessage,
       base_version_id: pendingSubmissionData.value.baseVersionId,
-      tags: pendingSubmissionData.value.tags,
     })
 
     toast({

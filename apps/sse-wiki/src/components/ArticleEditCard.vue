@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import type { Page, Tag } from '@/types'
+import type { Page } from '@/types'
 import { Button, Input, Label, toast } from '@sse-wiki/ui'
-import { X } from 'lucide-vue-next'
 import { ref, watch } from 'vue'
 import ContentEditor from './ContentEditor.vue'
 
@@ -16,33 +15,14 @@ const emit = defineEmits<{
 }>()
 
 const formData = ref({
-  title: props.page.title || '',
   content: props.page.content || '',
-  tags: props.page.tags || [],
   commitMessage: '',
 })
 
-const newTag = ref('')
-
 watch(() => props.page, (newPage) => {
-  formData.value.title = newPage.title || ''
   formData.value.content = newPage.content || ''
-  formData.value.tags = newPage.tags || []
   formData.value.commitMessage = ''
-  newTag.value = ''
 })
-
-function addTag() {
-  const tagName = newTag.value.trim()
-  if (tagName && !formData.value.tags.some(tag => tag.name === tagName)) {
-    formData.value.tags.push({ id: tagName, name: tagName }) // Use name as temp id
-    newTag.value = ''
-  }
-}
-
-function removeTag(tagToRemove: Tag) {
-  formData.value.tags = formData.value.tags.filter(tag => tag.name !== tagToRemove.name)
-}
 
 function handleSave() {
   if (!formData.value.commitMessage.trim()) {
@@ -54,9 +34,7 @@ function handleSave() {
   }
 
   emit('save', {
-    title: formData.value.title,
     content: formData.value.content,
-    tags: formData.value.tags,
     commitMessage: formData.value.commitMessage,
   })
 }
@@ -67,83 +45,43 @@ function handleCancel() {
 </script>
 
 <template>
-  <div class="space-y-8 pb-6">
-    <div class="space-y-4">
-      <div class="flex items-center justify-center gap-8">
-        <h1 class="m-0">
-          标题
-        </h1>
-        <Input
-          id="edit-title"
-          v-model="formData.title"
-          type="text"
-          placeholder="输入标题"
-          readonly
-          disabled
-          class="text-lg h-12 w-[60vw] border-gray-500 border-2"
-        />
-      </div>
-      <p class="text-muted-foreground">
-        注意：标题不可修改
-      </p>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <Label for="edit-tags" class="text-base">标签</Label>
-          <div class="flex items-center gap-2 mt-1">
-            <Input
-              id="edit-tags"
-              v-model="newTag"
-              type="text"
-              placeholder="输入新标签"
-              class="flex-grow"
-              @keydown.enter.prevent="addTag"
-            />
-            <Button variant="outline" @click="addTag">
-              添加
-            </Button>
-          </div>
-          <div v-if="formData.tags.length" class="flex flex-wrap gap-2 mt-3">
-            <span
-              v-for="tag in formData.tags"
-              :key="tag.id"
-              class="flex items-center gap-1.5 bg-secondary text-secondary-foreground text-sm px-2.5 py-1 rounded-full"
-            >
-              {{ tag.name }}
-              <button class="rounded-full hover:bg-secondary-foreground/20" @click="removeTag(tag)">
-                <X class="h-3.5 w-3.5" />
-              </button>
-            </span>
-          </div>
-          <p class="text-xs text-muted-foreground mt-2">
-            添加相关标签以提高可发现性。
-          </p>
-        </div>
-
-        <div>
-          <Label for="edit-commit" class="text-base">提交说明 *</Label>
-          <Input
-            id="edit-commit"
-            v-model="formData.commitMessage"
-            type="text"
-            placeholder="描述本次修改的内容..."
-            required
-            class="mt-1"
-          />
-          <p class="text-xs text-muted-foreground mt-2">
-            简要说明您所做的更改。
-          </p>
-        </div>
-      </div>
-
+  <div class="space-y-6 pb-6">
+    <div class="space-y-6">
+      <!-- 提交说明（移到顶部） -->
       <div>
-        <Label for="edit-content" class="text-base">内容</Label>
-        <div class="mt-1 border rounded-md">
-          <ContentEditor v-model="formData.content" min-height="400px" />
+        <Label for="edit-commit" class="text-base font-semibold">
+          提交说明 <span class="text-red-500">*</span>
+        </Label>
+        <Input
+          id="edit-commit"
+          v-model="formData.commitMessage"
+          type="text"
+          placeholder="描述本次修改的内容..."
+          required
+          class="mt-2"
+        />
+        <p class="text-xs text-muted-foreground mt-2">
+          简要说明您所做的更改。
+        </p>
+      </div>
+
+      <!-- 内容编辑器 -->
+      <div>
+        <Label for="edit-content" class="text-base font-semibold">文章内容</Label>
+        <div class="mt-2 border rounded-md">
+          <ContentEditor v-model="formData.content" min-height="500px" />
         </div>
+      </div>
+
+      <!-- 提示信息 -->
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <p class="text-sm text-blue-800">
+          <strong>提示：</strong>标题和标签只能在创建文章时设置，编辑时仅能修改文章内容。
+        </p>
       </div>
     </div>
 
+    <!-- 操作按钮 -->
     <div class="flex justify-end gap-3 pt-4 border-t">
       <Button variant="outline" size="lg" @click="handleCancel">
         取消

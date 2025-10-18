@@ -119,7 +119,6 @@ export const useArticleStore = defineStore('article', () => {
       content: string
       commit_message: string
       base_version_id: number
-      tags?: string[]
     },
   ) {
     try {

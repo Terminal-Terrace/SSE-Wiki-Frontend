@@ -229,7 +229,6 @@ export interface SubmissionRequest {
   content: string
   commit_message: string
   base_version_id: number
-  tags?: string[] // 用户自定义标签，字符串数组
 }
 
 // 审核操作请求
