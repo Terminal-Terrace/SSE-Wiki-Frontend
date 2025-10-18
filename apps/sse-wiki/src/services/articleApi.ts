@@ -12,10 +12,12 @@ import type {
   ResolveConflictRequest,
   ReviewActionRequest,
   ReviewActionResponse,
+  ReviewDetailResponse,
   ReviewListQuery,
   ReviewSubmission,
   SubmissionRequest,
   UpdateArticleSettingsRequest,
+  VersionDiffResponse,
 } from '@/types/article'
 import request from '@/utils/request'
 
@@ -92,7 +94,19 @@ export class ArticleAPI {
   }
 
   /**
-   * 比较两个版本
+   * 获取版本差异对比
+   * GET /api/v1/versions/:id/diff?against=:againstVersionId
+   */
+  async getVersionDiff(
+    versionId: number | string,
+    againstVersionId?: number | string,
+  ): Promise<VersionDiffResponse> {
+    const params = againstVersionId ? { against: againstVersionId } : {}
+    return request.get(`${this.versionURL}/${versionId}/diff`, { params })
+  }
+
+  /**
+   * 比较两个版本（旧接口，保留兼容）
    * GET /api/v1/versions/compare?from=:fromId&to=:toId
    */
   async compareVersions(
@@ -136,7 +150,7 @@ export class ArticleAPI {
    * 获取审核详情
    * GET /api/v1/reviews/:id
    */
-  async getReview(reviewId: number | string): Promise<ReviewSubmission> {
+  async getReview(reviewId: number | string): Promise<ReviewDetailResponse> {
     return request.get(`${this.reviewURL}/${reviewId}`)
   }
 
@@ -176,6 +190,12 @@ export class ArticleAPI {
   /**
    * 批量审核
    * POST /api/v1/reviews/batch-action
+   *
+   * TODO: 前端 UI 未实现
+   * 建议实现：
+   * 1. 在审核列表页添加批量选择功能
+   * 2. 添加批量操作按钮（批量通过/批量驳回）
+   * 3. 显示批量操作结果（成功/失败列表）
    */
   async batchReview(data: BatchReviewRequest): Promise<{ success: boolean, results: any[] }> {
     return request.post(`${this.reviewURL}/batch-action`, data)
