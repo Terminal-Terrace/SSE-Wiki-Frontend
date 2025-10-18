@@ -213,11 +213,6 @@ export interface CreateArticleRequest {
   tags?: string[] // 用户自定义标签，字符串数组
 }
 
-// 更新文章设置请求
-export interface UpdateArticleSettingsRequest {
-  is_review_required?: boolean
-}
-
 // 添加协作者请求
 export interface AddCollaboratorRequest {
   user_id: number

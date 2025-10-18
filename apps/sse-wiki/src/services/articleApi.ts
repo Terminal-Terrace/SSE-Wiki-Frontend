@@ -16,7 +16,6 @@ import type {
   ReviewListQuery,
   ReviewSubmission,
   SubmissionRequest,
-  UpdateArticleSettingsRequest,
   VersionDiffResponse,
 } from '@/types/article'
 import request from '@/utils/request'
@@ -65,14 +64,19 @@ export class ArticleAPI {
   }
 
   /**
-   * 更新文章设置
-   * PATCH /api/v1/articles/:id/settings
+   * 更新文章基础信息（标题、标签、审核设置）
+   * PATCH /api/v1/articles/:id/basic-info
+   * 权限要求：moderator 或更高权限
    */
-  async updateSettings(
+  async updateBasicInfo(
     id: number | string,
-    data: UpdateArticleSettingsRequest,
-  ): Promise<{ success: boolean }> {
-    return request.patch(`${this.baseURL}/${id}/settings`, data)
+    data: {
+      title?: string
+      tags?: string[]
+      is_review_required?: boolean
+    },
+  ): Promise<{ success: boolean, message: string }> {
+    return request.patch(`${this.baseURL}/${id}/basic-info`, data)
   }
 
   // ========== 版本管理 ==========

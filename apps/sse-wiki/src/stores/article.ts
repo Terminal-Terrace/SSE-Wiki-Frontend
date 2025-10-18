@@ -184,32 +184,6 @@ export const useArticleStore = defineStore('article', () => {
   }
 
   /**
-   * 更新文章设置
-   */
-  async function updateSettings(
-    articleId: number | string,
-    settings: { is_review_required?: boolean },
-  ) {
-    try {
-      loading.value = true
-      error.value = null
-
-      await articleApi.updateSettings(articleId, settings)
-
-      // 重新加载文章详情
-      await fetchArticle(articleId)
-    }
-    catch (err: any) {
-      error.value = err.message || '更新设置失败'
-      console.error('Failed to update settings:', err)
-      throw err
-    }
-    finally {
-      loading.value = false
-    }
-  }
-
-  /**
    * 删除文章
    */
   async function deleteArticle(articleId: number | string) {
@@ -341,7 +315,6 @@ export const useArticleStore = defineStore('article', () => {
     createArticle,
     submitArticle,
     reviewSubmission,
-    updateSettings,
     deleteArticle,
     compareVersions,
     incrementViewCount,

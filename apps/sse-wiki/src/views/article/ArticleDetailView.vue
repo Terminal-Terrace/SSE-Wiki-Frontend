@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { Page } from '@/types'
 import type { ThreeWayMergeData } from '@/types/article'
-import { Badge, Button, Dialog, DialogContent, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, toast } from '@sse-wiki/ui'
+import { Badge, Button, Dialog, DialogContent, Input, Label, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, toast } from '@sse-wiki/ui'
 
-import { Bot, Edit } from 'lucide-vue-next'
+import { Bot, Check, Save, X } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 
 import { computed, onMounted, ref, watch } from 'vue'
@@ -49,6 +49,15 @@ const pendingSubmissionData = ref<{
   baseVersionId: number
 } | null>(null)
 
+// 基础信息编辑状态
+const isEditingBasicInfo = ref(false)
+const basicInfoForm = ref({
+  title: '',
+  tags: [] as string[],
+  isReviewRequired: false,
+})
+const newTagInput = ref('')
+
 // 兼容路由 param 名称：优先使用 props.id, 然后 props.articleId, 最后退回到 route.params.articleId
 const pageId = computed(() => String(props.id ?? props.articleId ?? route.params.articleId ?? ''))
 
@@ -59,7 +68,16 @@ const tabs = [
   { label: '讨论', value: 'discussion' },
 ]
 
-const canEdit = computed(() => isAuthenticated.value)
+// 判断是否可以管理基础信息（需要 moderator 或更高权限）
+const canManageBasicInfo = computed(() => {
+  if (!page.value || !isAuthenticated.value) {
+    console.debug('[canManageBasicInfo] 未登录或页面未加载')
+    return false
+  }
+  const role = (page.value as any).current_user_role
+  console.debug('[canManageBasicInfo] 当前用户角色:', role, '是否可编辑:', ['admin', 'owner', 'moderator'].includes(role))
+  return role === 'admin' || role === 'owner' || role === 'moderator'
+})
 
 // 从 URL 查询参数初始化 activeTab
 onMounted(async () => {
@@ -128,7 +146,10 @@ function mapArticleToPage(article: any): Page {
     tags,
     versions,
     currentVersionId: article.current_version_id, // 保存当前版本ID
-  }
+    // 保留权限和设置信息，用于管理基础信息
+    current_user_role: article.current_user_role,
+    is_review_required: article.is_review_required,
+  } as any // 使用 any 类型避免 Page 接口限制
 }
 
 async function loadPage() {
@@ -151,10 +172,6 @@ function handleTabChange(tab: string | number) {
   const tabValue = String(tab)
   activeTab.value = tabValue
   // 不修改 URL,仅在组件内部切换 tab
-}
-
-function navigateToEdit() {
-  router.push(`/edit/${pageId.value}`)
 }
 
 async function showLoginPrompt() {
@@ -309,6 +326,104 @@ function handleConflictCancel() {
   currentConflictData.value = null
   // 不清空 pendingSubmissionData，用户可能想再次尝试
 }
+
+/**
+ * 进入基础信息编辑模式
+ * 仅管理员可以双击进入编辑
+ */
+function enterEditBasicInfo() {
+  console.log('[enterEditBasicInfo] 双击触发，canManageBasicInfo:', canManageBasicInfo.value, 'page:', !!page.value)
+
+  if (!canManageBasicInfo.value || !page.value) {
+    console.warn('[enterEditBasicInfo] 无权限或页面未加载，取消进入编辑模式')
+    return
+  }
+
+  console.log('[enterEditBasicInfo] 进入编辑模式')
+
+  // 初始化表单数据
+  basicInfoForm.value = {
+    title: page.value.title || '',
+    tags: (page.value.tags || []).map(t => t.name),
+    isReviewRequired: (page.value as any).is_review_required ?? false,
+  }
+  newTagInput.value = ''
+  isEditingBasicInfo.value = true
+}
+
+/**
+ * 取消编辑基础信息
+ */
+function cancelEditBasicInfo() {
+  isEditingBasicInfo.value = false
+  basicInfoForm.value = {
+    title: '',
+    tags: [],
+    isReviewRequired: false,
+  }
+  newTagInput.value = ''
+}
+
+/**
+ * 添加标签
+ */
+function addTag() {
+  const tag = newTagInput.value.trim()
+  if (tag && !basicInfoForm.value.tags.includes(tag)) {
+    basicInfoForm.value.tags.push(tag)
+    newTagInput.value = ''
+  }
+}
+
+/**
+ * 移除标签
+ */
+function removeTag(index: number) {
+  basicInfoForm.value.tags.splice(index, 1)
+}
+
+/**
+ * 保存基础信息
+ */
+async function saveBasicInfo() {
+  if (!page.value) {
+    return
+  }
+
+  try {
+    const title = basicInfoForm.value.title.trim()
+    if (!title) {
+      toast({
+        title: '标题不能为空',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    await articleApi.updateBasicInfo(pageId.value, {
+      title,
+      tags: basicInfoForm.value.tags,
+      is_review_required: basicInfoForm.value.isReviewRequired,
+    })
+
+    toast({
+      title: '保存成功',
+      description: '文章基础信息已更新',
+    })
+
+    // 刷新页面数据
+    await loadPage()
+    isEditingBasicInfo.value = false
+  }
+  catch (error: any) {
+    console.error('Failed to update basic info:', error)
+    toast({
+      title: '保存失败',
+      description: error.response?.data?.message || '请重试',
+      variant: 'destructive',
+    })
+  }
+}
 </script>
 
 <template>
@@ -326,48 +441,133 @@ function handleConflictCancel() {
           <div class="space-y-6 w-full">
             <!-- Page header -->
             <header class="space-y-4">
-              <div class="flex items-start justify-between">
-                <h1 class="text-3xl font-bold tracking-tight">
-                  {{ page.title }}
-                </h1>
+              <!-- 编辑模式 -->
+              <div v-if="isEditingBasicInfo" class="space-y-4 border-2 border-amber-500 rounded-lg p-4 bg-amber-50">
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="text-lg font-semibold text-amber-900">
+                    编辑基础信息
+                  </h3>
+                  <div class="flex items-center space-x-2">
+                    <Button variant="outline" size="sm" @click="cancelEditBasicInfo">
+                      <X class="h-4 w-4 mr-2" />
+                      取消
+                    </Button>
+                    <Button size="sm" @click="saveBasicInfo">
+                      <Save class="h-4 w-4 mr-2" />
+                      保存
+                    </Button>
+                  </div>
+                </div>
+
+                <!-- 标题编辑 -->
+                <div>
+                  <Label for="edit-title" class="text-sm font-medium">文章标题</Label>
+                  <Input
+                    id="edit-title"
+                    v-model="basicInfoForm.title"
+                    class="mt-1 text-2xl font-bold"
+                    placeholder="输入文章标题"
+                  />
+                </div>
+
+                <!-- 标签编辑 -->
+                <div>
+                  <Label for="edit-tags" class="text-sm font-medium">标签</Label>
+                  <div class="flex items-center gap-2 mt-1">
+                    <Input
+                      id="edit-tags"
+                      v-model="newTagInput"
+                      placeholder="输入新标签"
+                      class="flex-1"
+                      @keydown.enter.prevent="addTag"
+                    />
+                    <Button variant="outline" size="sm" @click="addTag">
+                      添加
+                    </Button>
+                  </div>
+                  <div v-if="basicInfoForm.tags.length" class="flex flex-wrap gap-2 mt-2">
+                    <Badge
+                      v-for="(tag, index) in basicInfoForm.tags"
+                      :key="index"
+                      variant="secondary"
+                      class="cursor-pointer hover:bg-red-100"
+                      @click="removeTag(index)"
+                    >
+                      {{ tag }}
+                      <X class="h-3 w-3 ml-1" />
+                    </Badge>
+                  </div>
+                </div>
+
+                <!-- 审核设置 -->
                 <div class="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    class="flex items-center space-x-2 transition-colors" :class="[
-                      showAiChat ? 'bg-primary text-primary-foreground' : '',
-                    ]"
-                    @click="toggleAiChat"
+                  <input
+                    id="edit-review-required"
+                    v-model="basicInfoForm.isReviewRequired"
+                    type="checkbox"
+                    class="w-4 h-4 text-amber-600 rounded"
                   >
-                    <Bot class="h-4 w-4" />
-                    <span>AI助手</span>
-                  </Button>
-                  <Button
-                    v-if="canEdit"
-                    variant="outline"
-                    size="sm"
-                    @click="navigateToEdit"
-                  >
-                    <Edit class="h-4 w-4 mr-2" />
-                    编辑
-                  </Button>
+                  <Label for="edit-review-required" class="text-sm cursor-pointer">
+                    需要审核（勾选后其他用户的修改需要管理员审核）
+                  </Label>
                 </div>
               </div>
 
-              <div class="flex items-center space-x-4 text-sm text-muted-foreground">
-                <span>最近编辑于 {{ formatDate(page.lastEditedAt) }}</span>
-                <span>由 {{ page.editor.username }}</span>
-                <span>{{ page.viewCount }} 次阅读</span>
-              </div>
+              <!-- 普通显示模式 -->
+              <div
+                v-else
+                class="space-y-4"
+                :class="{ 'cursor-pointer hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors': canManageBasicInfo }"
+                :title="canManageBasicInfo ? '双击编辑基础信息' : ''"
+                @dblclick="enterEditBasicInfo"
+              >
+                <div class="flex items-start justify-between">
+                  <h1 class="text-3xl font-bold tracking-tight">
+                    {{ page.title }}
+                  </h1>
+                  <div class="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      class="flex items-center space-x-2 transition-colors" :class="[
+                        showAiChat ? 'bg-primary text-primary-foreground' : '',
+                      ]"
+                      @click="toggleAiChat"
+                    >
+                      <Bot class="h-4 w-4" />
+                      <span>AI助手</span>
+                    </Button>
+                  </div>
+                </div>
 
-              <div class="flex flex-wrap gap-2">
-                <Badge
-                  v-for="tag in page.tags"
-                  :key="tag.id"
-                  variant="secondary"
-                >
-                  {{ tag.name }}
-                </Badge>
+                <div class="flex items-center space-x-4 text-sm text-muted-foreground">
+                  <span>最近编辑于 {{ formatDate(page.lastEditedAt) }}</span>
+                  <span>由 {{ page.editor.username }}</span>
+                  <span>{{ page.viewCount }} 次阅读</span>
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                  <Badge
+                    v-for="tag in page.tags"
+                    :key="tag.id"
+                    variant="secondary"
+                  >
+                    {{ tag.name }}
+                  </Badge>
+                  <Badge
+                    v-if="(page as any).is_review_required"
+                    variant="outline"
+                    class="border-amber-500 text-amber-700"
+                  >
+                    <Check class="h-3 w-3 mr-1" />
+                    需要审核
+                  </Badge>
+                </div>
+
+                <!-- 管理员提示 -->
+                <p v-if="canManageBasicInfo" class="text-xs text-gray-500 italic">
+                  💡 提示：双击此区域可编辑标题、标签和审核设置
+                </p>
               </div>
 
               <div class="border-b" />
@@ -416,7 +616,7 @@ function handleConflictCancel() {
 
               <!-- Edit Tab -->
               <TabsContent value="edit" class="overflow-y-auto">
-                <div v-if="!canEdit" class="text-center py-8">
+                <div v-if="!isAuthenticated" class="text-center py-8">
                   <p class="text-muted-foreground">
                     您需要登录才能编辑此页面
                   </p>
