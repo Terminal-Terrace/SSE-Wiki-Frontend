@@ -18,13 +18,43 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
-// 合并内容（可编辑）
-const mergedContent = ref(props.conflictData.merged_content)
+/**
+ * 动态生成冲突标记
+ * 如果后端没有提供 merged_content，前端根据三方内容生成冲突标记
+ */
+function generateConflictMarkers(data: ThreeWayMergeData): string {
+  if (data.merged_content) {
+    // 如果后端提供了，直接使用（向后兼容）
+    return data.merged_content
+  }
 
-// 监听外部数据变化
-watch(() => props.conflictData.merged_content, (newValue) => {
-  mergedContent.value = newValue
-})
+  // 前端动态生成冲突标记（标准 Git 格式）
+  let result = ''
+
+  result += '<<<<<<< THEIRS (提交者的修改)\n'
+  result += data.their_content
+  if (!data.their_content.endsWith('\n')) {
+    result += '\n'
+  }
+
+  result += '=======\n'
+  result += data.our_content
+  if (!data.our_content.endsWith('\n')) {
+    result += '\n'
+  }
+
+  result += '>>>>>>> OURS (当前线上版本)\n'
+
+  return result
+}
+
+// 合并内容（可编辑）
+const mergedContent = ref(generateConflictMarkers(props.conflictData))
+
+// 监听外部数据变化，动态重新生成冲突标记
+watch(() => props.conflictData, (newData) => {
+  mergedContent.value = generateConflictMarkers(newData)
+}, { deep: true })
 
 // 检查是否已解决所有冲突标记
 const conflictResolved = computed(() => {
