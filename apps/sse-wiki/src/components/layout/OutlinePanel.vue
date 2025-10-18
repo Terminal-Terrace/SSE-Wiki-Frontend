@@ -20,15 +20,20 @@ const headings = ref<Heading[]>([])
 const activeHeading = ref('')
 const scrollProgress = ref(0)
 
-function extractHeadings(markdown: string): Heading[] {
-  const headingRegex = /^(#{1,6}) +(\S.*)$/gm
+function extractHeadings(html: string): Heading[] {
   const extracted: Heading[] = []
+  if (!html)
+    return extracted
 
-  for (let match = headingRegex.exec(markdown); match !== null; match = headingRegex.exec(markdown)) {
-    if (!match[1] || !match[2])
-      continue
-    const level = match[1].length
-    const text = match[2].trim()
+  // 解析 HTML 字符串
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+
+  // 选择所有标题元素
+  const headingElements = doc.querySelectorAll('h1, h2, h3, h4, h5, h6')
+  headingElements.forEach((el) => {
+    const level = Number.parseInt(el.tagName[1] || '1')
+    const text = el.textContent?.trim() || ''
     const id = text
       .toLowerCase()
       .replace(/[^\w\u4E00-\u9FFF\s-]/g, '') // 保留中文、英文、数字、空格、横线
@@ -37,7 +42,7 @@ function extractHeadings(markdown: string): Heading[] {
       .replace(/^-|-$/g, '')
 
     extracted.push({ id, text, level })
-  }
+  })
 
   return extracted
 }

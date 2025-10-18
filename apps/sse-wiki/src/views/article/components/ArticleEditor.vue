@@ -2,7 +2,7 @@
 import type { Page } from '@/types'
 import { Button, Input, Label, toast } from '@sse-wiki/ui'
 import { ref, watch } from 'vue'
-import ContentEditor from './ContentEditor.vue'
+import ContentEditor from '@/components/common/ContentEditor.vue'
 
 interface Props {
   page: Page

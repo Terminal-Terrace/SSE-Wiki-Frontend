@@ -7,6 +7,8 @@ import { computed, onMounted, ref } from 'vue'
 
 import { useRouter } from 'vue-router'
 
+import ComparisonPanel from '@/components/article/ComparisonPanel.vue'
+import MergeConflictPanel from '@/components/article/MergeConflictPanel.vue'
 import { articleApi } from '@/services/articleApi'
 import { useAuthStore } from '@/stores/auth'
 
@@ -406,7 +408,7 @@ onMounted(() => {
 
       <!-- 冲突处理视图 -->
       <div v-if="showConflict && conflictData">
-        <ThreeWayMerge
+        <MergeConflictPanel
           :conflict-data="conflictData"
           :submission-id="Number(submissionId)"
           :can-review="canReview"
@@ -421,7 +423,7 @@ onMounted(() => {
         <h2 class="text-lg font-semibold mb-4">
           内容对比
         </h2>
-        <DiffViewer
+        <ComparisonPanel
           :old-content="reviewData.base_version.content"
           :new-content="reviewData.proposed_version.content"
           :old-label="`Base v${baseVersionNumber}`"
