@@ -12,12 +12,12 @@ const router = createRouter({
         {
           path: '',
           name: 'home',
-          component: () => import('@/views/default/HomeView.vue'),
+          component: () => import('@/views/home/HomeView.vue'),
         },
         {
           path: 'knowledge-space',
           name: 'knowledge-space',
-          component: () => import('@/views/knowledge-space/OverviewView.vue'),
+          component: () => import('@/views/space/OverviewView.vue'),
         },
         {
           path: 'assistant',
@@ -33,7 +33,7 @@ const router = createRouter({
         {
           path: 'modules/:moduleId',
           name: 'ModuleDetail',
-          component: () => import('@/views/ModuleDetailView.vue'),
+          component: () => import('@/views/module/ModuleDetailView.vue'),
           props: true,
           meta: { requiresAuth: true },
         },
