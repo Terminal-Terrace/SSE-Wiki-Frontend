@@ -12,13 +12,13 @@ import {
 } from '@sse-wiki/ui'
 import { Edit2, Plus, X } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import CollaboratorsModal from '@/components/layout/components/ModuleCollaboratorsModal.vue'
+import DeleteModuleModal from '@/components/layout/components/ModuleDeleteModal.vue'
+import CreateEditModuleModal from '@/components/layout/components/ModuleFormModal.vue'
+import NavigationTree from '@/components/layout/components/ModuleTree.vue'
 import { useModulePermission } from '@/composables/useModulePermission'
 import { moduleApi } from '@/services/moduleApi'
 import { useModuleStore } from '@/stores/module'
-import CollaboratorsModal from './modals/CollaboratorsModal.vue'
-import CreateEditModuleModal from './modals/CreateEditModuleModal.vue'
-import DeleteModuleModal from './modals/DeleteModuleModal.vue'
-import NavigationTree from './NavigationTree.vue'
 
 // 状态管理
 const moduleStore = useModuleStore()

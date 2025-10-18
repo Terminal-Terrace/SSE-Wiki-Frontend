@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { SidebarProvider, SidebarTrigger, Toaster } from '@sse-wiki/ui'
 import { RouterView } from 'vue-router'
-import Navbar from '@/components/Navbar.vue'
-import Sidebar from '@/components/Sidebar.vue'
+import Sidebar from '@/components/layout/ModuleSidebar.vue'
+import Navbar from '@/components/layout/Navbar.vue'
 </script>
 
 <template>

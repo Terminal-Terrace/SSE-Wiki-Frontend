@@ -6,7 +6,7 @@ import { ArrowLeft, Loader2, Save } from 'lucide-vue-next'
 
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import ContentEditor from '@/components/ContentEditor.vue'
+import ContentEditor from '@/components/common/ContentEditor.vue'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { articleApi } from '@/services/articleApi'
 import { moduleApi } from '@/services/moduleApi'
@@ -82,7 +82,7 @@ onMounted(async () => {
     return
   }
 
-  const resolvedModuleId = Number.parseInt(Array.isArray(moduleIdParam) ? moduleIdParam[0] : moduleIdParam)
+  const resolvedModuleId = Number.parseInt((Array.isArray(moduleIdParam) ? moduleIdParam[0] : moduleIdParam) ?? '')
   if (Number.isNaN(resolvedModuleId) || resolvedModuleId <= 0) {
     toast({
       title: '模块信息无效',

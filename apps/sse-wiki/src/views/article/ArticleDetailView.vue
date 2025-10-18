@@ -9,19 +9,18 @@ import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import AiChatSidebar from '@/components/AiChatSidebar.vue'
-import ThreeWayMerge from '@/components/article/ThreeWayMerge.vue'
-import ArticleContentCard from '@/components/ArticleContentCard.vue'
-import ArticleDiscussionList from '@/components/ArticleDiscussionList.vue'
-import ArticleEditCard from '@/components/ArticleEditCard.vue'
-import ArticleHistoryList from '@/components/ArticleHistoryList.vue'
-import OutlineCard from '@/components/OutlineCard.vue'
-
+import OutlineCard from '@/components/layout/OutlinePanel.vue'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 // 服务和工具
 import { articleApi } from '@/services/articleApi'
 import { useAuthStore } from '@/stores/auth'
 import { formatDate } from '@/utils/format'
+import AiChatSidebar from '@/views/article/components/AiChatPanel.vue'
+
+import ArticleContentCard from '@/views/article/components/ArticleContent.vue'
+import ArticleDiscussionList from '@/views/article/components/ArticleDiscussionList.vue'
+import ArticleEditCard from '@/views/article/components/ArticleEditor.vue'
+import ArticleHistoryList from '@/views/article/components/ArticleHistoryList.vue'
 
 interface Props {
   id?: string

@@ -6,8 +6,8 @@ import { ArrowLeft } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 
 import { useRoute, useRouter } from 'vue-router'
-import DiffViewer from '@/components/article/DiffViewer.vue'
-import ThreeWayMerge from '@/components/article/ThreeWayMerge.vue'
+import ComparisonPanel from '@/components/article/ComparisonPanel.vue'
+import MergeConflictPanel from '@/components/article/MergeConflictPanel.vue'
 
 import { articleApi } from '@/services/articleApi'
 
@@ -267,7 +267,7 @@ onMounted(() => {
 
       <!-- 冲突处理视图（只读模式） -->
       <div v-if="conflictData">
-        <ThreeWayMerge
+        <MergeConflictPanel
           :conflict-data="conflictData"
           :submission-id="Number(submissionIdFromQuery)"
           :can-review="false"
@@ -281,7 +281,7 @@ onMounted(() => {
         <h2 class="text-lg font-semibold mb-4">
           {{ baseVersion ? '内容对比' : '版本内容' }}
         </h2>
-        <DiffViewer
+        <ComparisonPanel
           :old-content="baseVersion?.content || null"
           :new-content="currentVersion.content"
           :old-label="baseVersion ? `Base v${baseVersion.version_number}` : undefined"

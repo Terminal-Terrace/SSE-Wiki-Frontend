@@ -7,9 +7,6 @@ import { computed, onMounted, ref } from 'vue'
 
 import { useRouter } from 'vue-router'
 
-import DiffViewer from '@/components/article/DiffViewer.vue'
-import ThreeWayMerge from '@/components/article/ThreeWayMerge.vue'
-
 import { articleApi } from '@/services/articleApi'
 import { useAuthStore } from '@/stores/auth'
 

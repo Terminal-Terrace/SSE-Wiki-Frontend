@@ -3,9 +3,9 @@ import type { ThreeWayMergeData } from '@/types/article'
 import { Badge, Button, Card, Textarea, toast, ToggleGroup, ToggleGroupItem } from '@sse-wiki/ui'
 import { Code, Eye, GitMerge, XCircle } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
-import ContentEditor from '@/components/ContentEditor.vue'
+import ContentEditor from '@/components/common/ContentEditor.vue'
 import { simpleThreeWayMerge, threeWayMerge } from '@/utils/diff'
-import DiffViewer from './DiffViewer.vue'
+import ComparisonPanel from './ComparisonPanel.vue'
 
 interface Props {
   conflictData: ThreeWayMergeData
@@ -185,7 +185,7 @@ function togglePreview() {
     <div v-if="showPreview" class="space-y-3">
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <!-- 提交者版本 -->
-        <DiffViewer
+        <ComparisonPanel
           :old-content="conflictData.base_content"
           :new-content="conflictData.their_content"
           old-label="Base"
@@ -194,7 +194,7 @@ function togglePreview() {
         />
 
         <!-- 当前版本 -->
-        <DiffViewer
+        <ComparisonPanel
           :old-content="conflictData.base_content"
           :new-content="conflictData.our_content"
           old-label="Base"
