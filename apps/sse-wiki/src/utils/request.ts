@@ -179,6 +179,14 @@ function handleTokenExpired() {
   localStorage.removeItem('refresh_token')
 
   // Cookie 会由后端自动清除或过期
+
+  // 延迟重定向到登录页，避免在拦截器中立即调用
+  setTimeout(async () => {
+    // 动态导入避免循环依赖
+    const { useLoginRedirect } = await import('@/composables/useLoginRedirect')
+    const { startLogin } = useLoginRedirect()
+    await startLogin()
+  }, 500)
 }
 
 // 导出配置好的实例

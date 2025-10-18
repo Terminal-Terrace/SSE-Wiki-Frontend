@@ -18,6 +18,7 @@ import {
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import OverflowText from '@/components/common/OverflowText.vue'
+import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { moduleApi } from '@/services/moduleApi'
 import { useAuthStore } from '@/stores/auth'
 
@@ -27,6 +28,7 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const moduleStore = useModuleStore()
+const { startLogin } = useLoginRedirect()
 
 // 响应式状态
 const isLoading = ref(false)
@@ -278,7 +280,7 @@ function changePage(page: number) {
 }
 
 // 操作方法
-function createArticle() {
+async function createArticle() {
   // 检查登录状态
   if (!authStore.isAuthenticated) {
     toast({
@@ -286,7 +288,10 @@ function createArticle() {
       description: '登录后才能创建文章',
       variant: 'destructive',
     })
-    router.push('/login')
+    // 延迟一下让用户看到提示，然后跳转登录
+    setTimeout(() => {
+      startLogin()
+    }, 1000)
     return
   }
 

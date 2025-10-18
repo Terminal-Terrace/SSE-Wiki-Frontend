@@ -17,6 +17,7 @@ import ArticleEditCard from '@/components/ArticleEditCard.vue'
 import ArticleHistoryList from '@/components/ArticleHistoryList.vue'
 import OutlineCard from '@/components/OutlineCard.vue'
 
+import { useLoginRedirect } from '@/composables/useLoginRedirect'
 // 服务和工具
 import { articleApi } from '@/services/articleApi'
 import { useAuthStore } from '@/stores/auth'
@@ -32,6 +33,7 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const { isAuthenticated } = storeToRefs(authStore)
+const { startLogin } = useLoginRedirect()
 
 const loading = ref(true)
 const page = ref<Page | null>(null)
@@ -156,8 +158,8 @@ function navigateToEdit() {
   router.push(`/edit/${pageId.value}`)
 }
 
-function showLoginPrompt() {
-  router.push('/login')
+async function showLoginPrompt() {
+  await startLogin()
 }
 
 function toggleAiChat() {

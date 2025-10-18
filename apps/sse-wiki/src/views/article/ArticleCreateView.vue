@@ -7,6 +7,7 @@ import { ArrowLeft, Loader2, Save } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MarkdownEditor from '@/components/article/MarkdownEditor.vue'
+import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { articleApi } from '@/services/articleApi'
 import { moduleApi } from '@/services/moduleApi'
 import { useAuthStore } from '@/stores/auth'
@@ -15,6 +16,7 @@ const route = useRoute()
 const router = useRouter()
 const { toast } = useToast()
 const authStore = useAuthStore()
+const { startLogin } = useLoginRedirect()
 
 // 表单数据
 const EMPTY_FORM: CreateArticleRequest = {
@@ -61,7 +63,10 @@ onMounted(async () => {
       description: '登录后才能创建文章',
       variant: 'destructive',
     })
-    router.push('/')
+    // 延迟一下让用户看到提示，然后跳转登录
+    setTimeout(() => {
+      startLogin()
+    }, 1000)
     return
   }
 
