@@ -45,6 +45,34 @@ const router = createRouter({
           props: true,
           meta: { requiresAuth: true },
         },
+        // 文章版本查看页面
+        {
+          path: 'articles/:articleId/version',
+          name: 'ArticleVersion',
+          component: () => import('@/views/article/ArticleVersionView.vue'),
+          props: route => ({
+            articleId: route.params.articleId,
+            versionId: route.query.versionId,
+            submissionId: route.query.submissionId,
+          }),
+          meta: { requiresAuth: true },
+        },
+        // 文章审核页面
+        {
+          path: 'articles/:articleId/review/:submissionId',
+          name: 'ArticleReview',
+          component: () => import('@/views/article/ArticleReviewView.vue'),
+          props: true,
+          meta: { requiresAuth: true },
+        },
+        // 新建文章页面
+        {
+          path: 'articles/create',
+          name: 'ArticleCreate',
+          component: () => import('@/views/article/ArticleCreateView.vue'),
+          props: route => ({ moduleId: route.query.moduleId }),
+          meta: { requiresAuth: true },
+        },
         // 文章编辑器页面（预留，暂未实现）
         {
           path: 'articles/edit/:articleId?',
