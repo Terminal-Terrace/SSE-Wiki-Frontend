@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ArticleVersion, ReviewDetailResponse } from '@/types/article'
+import type { ArticleVersion, ReviewDetailResponse, ThreeWayMergeData } from '@/types/article'
 import { Badge, Button, Skeleton } from '@sse-wiki/ui'
 
 import { ArrowLeft } from 'lucide-vue-next'
@@ -7,6 +7,7 @@ import { computed, onMounted, ref } from 'vue'
 
 import { useRoute, useRouter } from 'vue-router'
 import DiffViewer from '@/components/article/DiffViewer.vue'
+import ThreeWayMerge from '@/components/article/ThreeWayMerge.vue'
 
 import { articleApi } from '@/services/articleApi'
 
@@ -24,6 +25,7 @@ const loading = ref(true)
 const baseVersion = ref<ArticleVersion | null>(null)
 const currentVersion = ref<ArticleVersion | null>(null)
 const reviewData = ref<ReviewDetailResponse | null>(null)
+const conflictData = ref<ThreeWayMergeData | null>(null)
 const errorMessage = ref<string | null>(null)
 
 // 从 URL query 获取参数
@@ -32,6 +34,15 @@ const submissionIdFromQuery = computed(() => props.submissionId || route.query.s
 
 // 是否为提交查看模式
 const isSubmission = computed(() => !!submissionIdFromQuery.value)
+
+// 判断当前用户是否有审核权限
+const canReview = computed(() => {
+  if (!reviewData.value) {
+    return false
+  }
+  const userRole = reviewData.value.current_user_role
+  return userRole === 'admin' || userRole === 'owner' || userRole === 'moderator'
+})
 
 // 页面标题
 const pageTitle = computed(() => {
@@ -126,6 +137,27 @@ async function loadVersionData() {
       // 设置版本数据用于diff显示
       baseVersion.value = data.base_version || null
       currentVersion.value = data.proposed_version || null
+
+      // 如果检测到冲突，构建 conflict_data（只读查看模式）
+      if (data.has_conflict || data.conflict_data) {
+        if (data.conflict_data) {
+          conflictData.value = data.conflict_data
+        }
+        else {
+          // 手动构建 conflict_data
+          conflictData.value = {
+            has_conflict: true,
+            base_content: data.base_version?.content || '',
+            their_content: data.proposed_version?.content || '',
+            our_content: data.current_version?.content || '',
+            merged_content: undefined,
+            base_version_number: data.base_version?.version_number,
+            their_version_number: data.proposed_version?.version_number,
+            our_version_number: data.current_version?.version_number,
+            submitter_name: data.submitter?.username,
+          }
+        }
+      }
     }
     else {
       errorMessage.value = '缺少版本ID或提交ID参数'
@@ -233,13 +265,19 @@ onMounted(() => {
         <div class="border-b" />
       </header>
 
-      <!-- Diff 对比 -->
-      <!-- TODO: 支持切换对比目标
-           - 默认：base vs current
-           - 可选：mergedAgainst vs current
-           - 添加切换按钮，让用户选择对比方式
-      -->
-      <div class="bg-muted/50 border border-border rounded-lg p-6">
+      <!-- 冲突处理视图（只读模式） -->
+      <div v-if="conflictData">
+        <ThreeWayMerge
+          :conflict-data="conflictData"
+          :submission-id="Number(submissionIdFromQuery)"
+          :can-review="false"
+          :is-read-only="true"
+          @resolve="() => {}"
+        />
+      </div>
+
+      <!-- Diff 对比视图（无冲突） -->
+      <div v-else class="bg-muted/50 border border-border rounded-lg p-6">
         <h2 class="text-lg font-semibold mb-4">
           {{ baseVersion ? '内容对比' : '版本内容' }}
         </h2>
@@ -251,8 +289,8 @@ onMounted(() => {
         />
       </div>
 
-      <!-- 操作按钮 -->
-      <div v-if="isSubmission && reviewData && (reviewData.status === 'pending' || reviewData.status === 'conflict_detected')" class="flex justify-end gap-4">
+      <!-- 操作按钮（仅有审核权限的用户可见） -->
+      <div v-if="isSubmission && reviewData && canReview && (reviewData.status === 'pending' || reviewData.status === 'conflict_detected')" class="flex justify-end gap-4">
         <Button variant="default" @click="goToReview">
           进入审核
         </Button>

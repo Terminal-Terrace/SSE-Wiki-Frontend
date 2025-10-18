@@ -305,16 +305,6 @@ async function handleConflictResolve(mergedContent: string) {
 }
 
 /**
- * 取消冲突处理
- * 关闭对话框但保留待提交数据，用户可以重新尝试
- */
-function handleConflictCancel() {
-  showConflictDialog.value = false
-  currentConflictData.value = null
-  // 不清空 pendingSubmissionData，用户可能想再次尝试
-}
-
-/**
  * 进入基础信息编辑模式
  * 仅管理员可以双击进入编辑
  */
@@ -666,8 +656,9 @@ async function saveBasicInfo() {
           v-if="currentConflictData"
           :conflict-data="currentConflictData"
           :submission-id="0"
+          :can-review="true"
+          :is-read-only="false"
           @resolve="handleConflictResolve"
-          @cancel="handleConflictCancel"
         />
       </DialogContent>
     </Dialog>

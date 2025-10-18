@@ -114,9 +114,27 @@ async function loadReviewData() {
     const data = await articleApi.getReview(props.submissionId)
     reviewData.value = data
 
-    // 如果已经有冲突数据，直接显示
-    if (data.conflict_data) {
-      conflictData.value = data.conflict_data
+    // 如果检测到冲突，直接显示 ThreeWayMerge（不管是否已有 conflict_data）
+    if (data.has_conflict || data.conflict_data) {
+      // 如果后端已经返回了 conflict_data，直接使用
+      if (data.conflict_data) {
+        conflictData.value = data.conflict_data
+      }
+      else {
+        // 如果只有 has_conflict 标记但没有 conflict_data，手动构建
+        // 这种情况下后端应该总是返回 conflict_data，但为了兼容性保留构建逻辑
+        conflictData.value = {
+          has_conflict: true,
+          base_content: data.base_version?.content || '',
+          their_content: data.proposed_version?.content || '',
+          our_content: data.current_version?.content || '',
+          merged_content: undefined,
+          base_version_number: data.base_version?.version_number,
+          their_version_number: data.proposed_version?.version_number,
+          our_version_number: data.current_version?.version_number,
+          submitter_name: data.submitter?.username,
+        }
+      }
       showConflict.value = true
     }
   }
@@ -195,14 +213,16 @@ async function handleApprove() {
 /**
  * 审核驳回
  * 使用 submitting 标志防止重复点击
- * 要求必须填写驳回原因
+ * @param notes - 驳回原因（从 ThreeWayMerge 传入，或使用表单中的 reviewNotes）
  */
-async function handleReject() {
+async function handleReject(notes?: string) {
   // 防抖：如果正在提交，直接返回
   if (submitting.value)
     return
 
-  if (!reviewNotes.value.trim()) {
+  const rejectNotes = notes || reviewNotes.value
+
+  if (!rejectNotes.trim()) {
     toast({
       title: '请填写驳回原因',
       variant: 'destructive',
@@ -214,7 +234,7 @@ async function handleReject() {
   try {
     await articleApi.reviewSubmission(props.submissionId, {
       action: 'reject',
-      notes: reviewNotes.value,
+      notes: rejectNotes,
     })
 
     toast({
@@ -245,8 +265,9 @@ async function handleReject() {
  * 处理冲突解决
  * 使用 submitting 标志防止重复提交
  * @param mergedContent - 解决冲突后的合并内容
+ * @param notes - 审核备注（可选，从 ThreeWayMerge 传入）
  */
-async function handleConflictResolve(mergedContent: string) {
+async function handleConflictResolve(mergedContent: string, notes?: string) {
   // 防抖：如果正在提交，直接返回
   if (submitting.value)
     return
@@ -257,7 +278,7 @@ async function handleConflictResolve(mergedContent: string) {
     await articleApi.reviewSubmission(props.submissionId, {
       action: 'approve',
       merged_content: mergedContent,
-      notes: reviewNotes.value || undefined,
+      notes: notes || reviewNotes.value || undefined,
     })
 
     toast({
@@ -282,15 +303,6 @@ async function handleConflictResolve(mergedContent: string) {
   finally {
     submitting.value = false
   }
-}
-
-/**
- * 取消冲突处理
- * 关闭冲突处理界面，返回普通审核视图
- */
-function handleConflictCancel() {
-  showConflict.value = false
-  conflictData.value = null
 }
 
 /**
@@ -400,8 +412,10 @@ onMounted(() => {
         <ThreeWayMerge
           :conflict-data="conflictData"
           :submission-id="Number(submissionId)"
+          :can-review="canReview"
+          :is-read-only="isReadOnly"
           @resolve="handleConflictResolve"
-          @cancel="handleConflictCancel"
+          @reject="handleReject"
         />
       </div>
 
