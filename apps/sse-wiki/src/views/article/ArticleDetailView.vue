@@ -1,16 +1,23 @@
 <script setup lang="ts">
 import type { Page } from '@/types'
-import { Badge, Button, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, toast } from '@sse-wiki/ui'
+import type { ThreeWayMergeData } from '@/types/article'
+import { Badge, Button, Dialog, DialogContent, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, toast } from '@sse-wiki/ui'
+
 import { Bot, Edit } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
+
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+
 import AiChatSidebar from '@/components/AiChatSidebar.vue'
+import ThreeWayMerge from '@/components/article/ThreeWayMerge.vue'
 import ArticleContentCard from '@/components/ArticleContentCard.vue'
 import ArticleDiscussionList from '@/components/ArticleDiscussionList.vue'
 import ArticleEditCard from '@/components/ArticleEditCard.vue'
 import ArticleHistoryList from '@/components/ArticleHistoryList.vue'
 import OutlineCard from '@/components/OutlineCard.vue'
+
+// 服务和工具
 import { articleApi } from '@/services/articleApi'
 import { useAuthStore } from '@/stores/auth'
 import { formatDate } from '@/utils/format'
@@ -30,6 +37,16 @@ const loading = ref(true)
 const page = ref<Page | null>(null)
 const activeTab = ref('content')
 const showAiChat = ref(false)
+
+// 冲突处理状态
+const showConflictDialog = ref(false)
+const currentConflictData = ref<ThreeWayMergeData | null>(null)
+const pendingSubmissionData = ref<{
+  content: string
+  commitMessage: string
+  baseVersionId: number
+  tags?: string[]
+} | null>(null)
 
 // 兼容路由 param 名称：优先使用 props.id, 然后 props.articleId, 最后退回到 route.params.articleId
 const pageId = computed(() => String(props.id ?? props.articleId ?? route.params.articleId ?? ''))
@@ -147,6 +164,11 @@ function toggleAiChat() {
   showAiChat.value = !showAiChat.value
 }
 
+/**
+ * 保存文章修改
+ * 创建提交，如果遇到冲突（409）则显示冲突处理对话框
+ * @param updatedPage - 更新的页面数据，包含内容和提交信息
+ */
 async function handleSave(updatedPage: Partial<Page> & { commitMessage?: string }) {
   if (!page.value)
     return
@@ -171,6 +193,14 @@ async function handleSave(updatedPage: Partial<Page> & { commitMessage?: string 
     // 处理标签：从 Tag[] 转换为字符串数组
     const tags = updatedPage.tags?.map(t => t.name) || []
 
+    // 保存提交数据，以便冲突解决后重新提交
+    pendingSubmissionData.value = {
+      content,
+      commitMessage,
+      baseVersionId,
+      tags: tags.length > 0 ? tags : undefined,
+    }
+
     // 使用创建提交的方式保存修改（后端会返回 ReviewSubmission）
     const submission = await articleApi.createSubmission(pageId, {
       content,
@@ -185,8 +215,10 @@ async function handleSave(updatedPage: Partial<Page> & { commitMessage?: string 
       activeTab.value = 'history'
       toast({
         title: '保存成功',
-        description: '您的修改已提交审核',
+        description: '您的修改已提交',
       })
+      // 清空待提交数据
+      pendingSubmissionData.value = null
     }
     else {
       toast({
@@ -196,14 +228,91 @@ async function handleSave(updatedPage: Partial<Page> & { commitMessage?: string 
       })
     }
   }
-  catch (error) {
-    console.error('Failed to save page:', error)
+  catch (error: any) {
+    // 检查是否为冲突错误（409）
+    if (error.response?.status === 409) {
+      const conflictDataFromError = error.response?.data?.data?.conflict_data
+      if (conflictDataFromError) {
+        // 显示冲突对话框
+        currentConflictData.value = conflictDataFromError
+        showConflictDialog.value = true
+        toast({
+          title: '检测到冲突',
+          description: '请解决冲突后重新提交',
+          variant: 'destructive',
+        })
+      }
+      else {
+        toast({
+          title: '冲突错误',
+          description: '无法获取冲突数据，请刷新页面重试',
+          variant: 'destructive',
+        })
+      }
+    }
+    else {
+      console.error('Failed to save page:', error)
+      toast({
+        title: '保存失败',
+        description: error.response?.data?.message || '请重试',
+        variant: 'destructive',
+      })
+    }
+  }
+}
+
+/**
+ * 处理冲突解决
+ * 使用解决后的内容重新创建提交
+ * @param mergedContent - 解决冲突后的合并内容
+ */
+async function handleConflictResolve(mergedContent: string) {
+  if (!page.value || !pendingSubmissionData.value)
+    return
+
+  try {
+    const pageId = page.value.id ? String(page.value.id) : 'unknown'
+
+    // 使用解决后的内容重新提交
+    await articleApi.createSubmission(pageId, {
+      content: mergedContent,
+      commit_message: pendingSubmissionData.value.commitMessage,
+      base_version_id: pendingSubmissionData.value.baseVersionId,
+      tags: pendingSubmissionData.value.tags,
+    })
+
     toast({
-      title: '保存失败',
-      description: '请重试',
+      title: '冲突已解决',
+      description: '您的修改已成功提交',
+    })
+
+    // 关闭对话框
+    showConflictDialog.value = false
+    currentConflictData.value = null
+    pendingSubmissionData.value = null
+
+    // 刷新页面并切换到历史页
+    await loadPage()
+    activeTab.value = 'history'
+  }
+  catch (error: any) {
+    console.error('Failed to submit after conflict resolution:', error)
+    toast({
+      title: '提交失败',
+      description: error.response?.data?.message || '请重试',
       variant: 'destructive',
     })
   }
+}
+
+/**
+ * 取消冲突处理
+ * 关闭对话框但保留待提交数据，用户可以重新尝试
+ */
+function handleConflictCancel() {
+  showConflictDialog.value = false
+  currentConflictData.value = null
+  // 不清空 pendingSubmissionData，用户可能想再次尝试
 }
 </script>
 
@@ -368,9 +477,22 @@ async function handleSave(updatedPage: Partial<Page> & { commitMessage?: string 
       <p class="text-muted-foreground mb-4">
         抱歉，您请求的页面不存在。
       </p>
-      <Button @click="$router.push('/')">
+      <Button @click="router.push('/')">
         返回首页
       </Button>
     </div>
+
+    <!-- 冲突处理对话框 -->
+    <Dialog v-model:open="showConflictDialog">
+      <DialogContent class="max-w-[90vw] max-h-[90vh] overflow-y-auto">
+        <ThreeWayMerge
+          v-if="currentConflictData"
+          :conflict-data="currentConflictData"
+          :submission-id="0"
+          @resolve="handleConflictResolve"
+          @cancel="handleConflictCancel"
+        />
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
