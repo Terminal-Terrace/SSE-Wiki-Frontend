@@ -37,6 +37,8 @@ export interface ArticleVersion {
   content: string
   commit_message: string
   author_id: number
+  base_version_id?: number | null
+  merged_against_version_id?: number | null
   status: VersionStatus
   created_at: string
 
@@ -50,6 +52,7 @@ export interface ReviewSubmission {
   article_id: number
   proposed_version_id: number
   base_version_id: number
+  merged_against_version_id?: number | null
   ai_score: number | null
   ai_suggestions: string | null
   submitted_by: number
@@ -165,16 +168,38 @@ export interface Favorite {
 export type ArticleRole = 'owner' | 'admin' | 'moderator' | 'editor'
 
 // 版本状态
-export type VersionStatus = 'draft' | 'published' | 'archived'
+export type VersionStatus = 'published' | 'rejected'
 
 // 提交状态
-export type SubmissionStatus = 'pending' | 'approved' | 'rejected' | 'conflict_detected' | 'merged'
+export type SubmissionStatus = 'pending' | 'conflict_detected' | 'rejected' | 'auto_published' | 'merged'
 
 // 冲突状态
 export type ConflictStatus = 'detected' | 'resolved'
 
 // 引用类型
 export type ReferenceType = 'prerequisite' | 'related' | 'extends'
+
+// 历史条目（统一结构）
+export interface HistoryEntry {
+  entry_type: 'version' | 'submission'
+  entry_id: number
+  version_id: number | null
+  submission_id: number | null
+  status: 'published' | 'rejected' | null // 版本状态
+  submission_status: 'pending' | 'conflict_detected' | 'rejected' | 'auto_published' | 'merged' | null // 提交状态
+  base_version_id: number | null
+  merged_against_version_id: number | null
+  has_conflict: boolean
+  merge_result: string | null
+  commit_message: string
+  author_id: number
+  author?: User
+  reviewed_by?: number | null
+  reviewer?: User
+  review_notes?: string | null
+  created_at: string
+  reviewed_at?: string | null
+}
 
 // ========== API 请求/响应类型 ==========
 
@@ -250,21 +275,36 @@ export interface ArticleDetailResponse extends Article {
   current_version?: ArticleVersion
   tags?: string[]
   collaborators?: ArticleCollaborator[]
-  pending_submissions?: ReviewSubmission[]
+  history?: HistoryEntry[] // 统一历史列表（替代 pending_submissions）
   references?: ArticleReference[]
 }
 
 // 三路合并冲突数据
 export interface ThreeWayMergeData {
   base_content: string
-  their_content: string
-  our_content: string
-  merged_content: string // 带冲突标记的内容
+  their_content: string // 提交者的内容（proposed）
+  our_content: string // 当前版本的内容（current）
+  merged_content?: string // 带冲突标记的内容（可选，前端会动态生成）
   has_conflict: boolean
   base_version_number?: number
   their_version_number?: number
   our_version_number?: number
   submitter_name?: string
+}
+
+// 版本差异对比响应
+export interface VersionDiffResponse {
+  base_version: ArticleVersion
+  current_version: ArticleVersion
+  diff?: string
+}
+
+// 审核详情响应
+export interface ReviewDetailResponse extends ReviewSubmission {
+  base_version?: ArticleVersion
+  current_version?: ArticleVersion // 当前线上版本
+  conflict_data?: ThreeWayMergeData
+  current_user_role?: string // 当前用户在该文章的角色（admin/owner/moderator/空）
 }
 
 // 冲突解决请求
@@ -276,7 +316,8 @@ export interface ResolveConflictRequest {
 // 审核操作成功响应
 export interface ReviewActionResponse {
   success: true
-  new_version_id: number
+  published_version?: ArticleVersion
+  new_version_id?: number
 }
 
 // 审核操作冲突响应
@@ -408,9 +449,9 @@ export interface StatusBadgeConfig {
 export function getSubmissionStatusConfig(status: SubmissionStatus): StatusBadgeConfig {
   const configs: Record<SubmissionStatus, StatusBadgeConfig> = {
     pending: { label: '待审核', variant: 'secondary' },
-    approved: { label: '已通过', variant: 'default' },
-    rejected: { label: '已拒绝', variant: 'destructive' },
-    conflict_detected: { label: '有冲突', variant: 'destructive' },
+    conflict_detected: { label: '冲突处理中', variant: 'destructive' },
+    rejected: { label: '已驳回', variant: 'destructive' },
+    auto_published: { label: '已自动发布', variant: 'default' },
     merged: { label: '已合并', variant: 'default' },
   }
 
@@ -420,9 +461,8 @@ export function getSubmissionStatusConfig(status: SubmissionStatus): StatusBadge
 // 获取版本状态配置
 export function getVersionStatusConfig(status: VersionStatus): StatusBadgeConfig {
   const configs: Record<VersionStatus, StatusBadgeConfig> = {
-    draft: { label: '草稿', variant: 'secondary' },
     published: { label: '已发布', variant: 'default' },
-    archived: { label: '已归档', variant: 'outline' },
+    rejected: { label: '已驳回', variant: 'destructive' },
   }
 
   return configs[status] || { label: status, variant: 'default' }
