@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Article, BreadcrumbItem, Module, ModuleTreeNode } from '@/types/module'
-import { Button } from '@sse-wiki/ui'
+import { Button, toast } from '@sse-wiki/ui'
 import {
   Calendar,
   ChevronDown,
@@ -18,6 +18,7 @@ import {
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import OverflowText from '@/components/common/OverflowText.vue'
+import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { moduleApi } from '@/services/moduleApi'
 import { useAuthStore } from '@/stores/auth'
 
@@ -27,6 +28,7 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const moduleStore = useModuleStore()
+const { startLogin } = useLoginRedirect()
 
 // 响应式状态
 const isLoading = ref(false)
@@ -146,7 +148,7 @@ async function fetchModuleInfo(moduleId: string) {
       return
     }
     catch (apiError) {
-      console.warn('API获取模块信息失败，使用模块树备用方案:', apiError)
+      console.error('获取模块信息失败:', apiError)
     }
 
     // API失败时的备用方案：从模块树中查找
@@ -191,7 +193,7 @@ async function fetchBreadcrumbs(moduleId: string) {
       return
     }
     catch (apiError) {
-      console.warn('API获取面包屑失败，使用模块树备用方案:', apiError)
+      console.error('获取面包屑导航失败:', apiError)
     }
 
     // API失败时的备用方案：从模块树中构建面包屑
@@ -231,8 +233,8 @@ async function fetchArticles(moduleId: string, page = 1) {
       totalArticles.value = response.total
     }
     catch (apiError) {
-      console.warn('API获取文章列表失败，可能后端未实现此接口:', apiError)
       // 如果API未实现，使用空数组作为默认值
+      console.error('获取文章列表失败:', apiError)
       articles.value = []
       totalArticles.value = 0
     }
@@ -278,9 +280,23 @@ function changePage(page: number) {
 }
 
 // 操作方法
-function createArticle() {
+async function createArticle() {
+  // 检查登录状态
+  if (!authStore.isAuthenticated) {
+    toast({
+      title: '请先登录',
+      description: '登录后才能创建文章',
+      variant: 'destructive',
+    })
+    // 延迟一下让用户看到提示，然后跳转登录
+    setTimeout(() => {
+      startLogin()
+    }, 1000)
+    return
+  }
+
   router.push({
-    name: 'ArticleEditor',
+    name: 'ArticleCreate',
     query: { moduleId: route.params.moduleId },
   })
 }
@@ -288,13 +304,6 @@ function createArticle() {
 function goToArticle(articleId: number) {
   router.push({
     name: 'ArticleDetail',
-    params: { articleId },
-  })
-}
-
-function editArticle(articleId: number) {
-  router.push({
-    name: 'ArticleEditor',
     params: { articleId },
   })
 }
@@ -550,16 +559,21 @@ onUnmounted(() => {
               <p class="text-gray-600 text-sm line-clamp-3 mb-4">
                 {{ article.summary }}
               </p>
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                  <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
-                    {{ article.author?.username?.charAt(0) || 'U' }}
-                  </div>
-                  <span class="text-sm text-gray-700">{{ article.author?.username || '未知作者' }}</span>
+              <!-- 标签 -->
+              <div v-if="article.tags && article.tags.length > 0" class="flex flex-wrap gap-2 mb-4">
+                <span
+                  v-for="tag in article.tags"
+                  :key="tag"
+                  class="px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded-md"
+                >
+                  {{ tag }}
+                </span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
+                  {{ article.author?.username?.charAt(0) || 'U' }}
                 </div>
-                <Button size="sm" variant="ghost" class="p-1" @click.stop="editArticle(article.id)">
-                  <Edit2 class="w-4 h-4" />
-                </Button>
+                <span class="text-sm text-gray-700">{{ article.author?.username || '未知作者' }}</span>
               </div>
             </div>
           </article>
@@ -573,25 +587,30 @@ onUnmounted(() => {
             class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer"
             @click="goToArticle(article.id)"
           >
-            <div class="flex items-start justify-between">
-              <div class="flex-1">
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">
-                  {{ article.title }}
-                </h3>
-                <p class="text-gray-600 text-sm mb-3 line-clamp-2">
-                  {{ article.summary }}
-                </p>
-                <div class="flex items-center gap-2 text-xs text-gray-500">
-                  <span>{{ article.author?.username || '未知作者' }}</span>
-                  <span>·</span>
-                  <time>{{ formatDate(article.created_at) }}</time>
-                  <span>·</span>
-                  <span>最后更新 {{ formatDate(article.updated_at) }}</span>
-                </div>
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold text-gray-900 mb-2">
+                {{ article.title }}
+              </h3>
+              <p class="text-gray-600 text-sm mb-3 line-clamp-2">
+                {{ article.summary }}
+              </p>
+              <!-- 标签 -->
+              <div v-if="article.tags && article.tags.length > 0" class="flex flex-wrap gap-2 mb-3">
+                <span
+                  v-for="tag in article.tags"
+                  :key="tag"
+                  class="px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded-md"
+                >
+                  {{ tag }}
+                </span>
               </div>
-              <Button size="sm" variant="ghost" class="p-1" @click.stop="editArticle(article.id)">
-                <Edit2 class="w-4 h-4" />
-              </Button>
+              <div class="flex items-center gap-2 text-xs text-gray-500">
+                <span>{{ article.author?.username || '未知作者' }}</span>
+                <span>·</span>
+                <time>{{ formatDate(article.created_at) }}</time>
+                <span>·</span>
+                <span>最后更新 {{ formatDate(article.updated_at) }}</span>
+              </div>
             </div>
           </div>
         </div>

@@ -116,13 +116,40 @@ request.interceptors.response.use(
     // HTTP 错误（网络错误、超时等）
     console.error('❌ HTTP Error:', error)
 
+    // 409 冲突错误：不显示全局 toast，交给业务代码处理
+    if (error.response?.status === 409) {
+      return Promise.reject(error)
+    }
+
     let errorMessage = '网络请求失败'
     let errorTitle = '网络错误'
 
     if (error.response) {
       // 服务器返回错误状态码
-      errorMessage = `服务器错误 (${error.response.status})`
-      errorTitle = '服务器错误'
+      const status = error.response.status
+
+      // 特殊状态码处理
+      if (status === 401) {
+        errorTitle = '认证失败'
+        errorMessage = '请重新登录'
+        handleTokenExpired()
+      }
+      else if (status === 403) {
+        errorTitle = '权限不足'
+        errorMessage = '您没有权限执行此操作'
+      }
+      else if (status === 404) {
+        errorTitle = '资源不存在'
+        errorMessage = '请求的资源不存在'
+      }
+      else if (status === 500) {
+        errorTitle = '服务器错误'
+        errorMessage = '服务器内部错误，请稍后重试'
+      }
+      else {
+        errorMessage = `服务器错误 (${status})`
+        errorTitle = '服务器错误'
+      }
     }
     else if (error.request) {
       // 请求发出但没有收到响应
@@ -141,7 +168,7 @@ request.interceptors.response.use(
       variant: 'destructive',
     })
 
-    return Promise.reject(new Error(errorMessage))
+    return Promise.reject(error)
   },
 )
 
@@ -152,6 +179,14 @@ function handleTokenExpired() {
   localStorage.removeItem('refresh_token')
 
   // Cookie 会由后端自动清除或过期
+
+  // 延迟重定向到登录页，避免在拦截器中立即调用
+  setTimeout(async () => {
+    // 动态导入避免循环依赖
+    const { useLoginRedirect } = await import('@/composables/useLoginRedirect')
+    const { startLogin } = useLoginRedirect()
+    await startLogin()
+  }, 500)
 }
 
 // 导出配置好的实例

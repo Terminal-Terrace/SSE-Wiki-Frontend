@@ -33,24 +33,44 @@ const router = createRouter({
         {
           path: 'modules/:moduleId',
           name: 'ModuleDetail',
-          component: () => import('@/views/ModuleDetail.vue'),
+          component: () => import('@/views/ModuleDetailView.vue'),
           props: true,
           meta: { requiresAuth: true },
         },
-        // 文章详情页面（预留，暂未实现）
+        // 文章详情页面
         {
           path: 'articles/:articleId',
           name: 'ArticleDetail',
-          component: () => import('@/views/ArticleDetail.vue'),
+          component: () => import('@/views/article/ArticleDetailView.vue'),
           props: true,
           meta: { requiresAuth: true },
         },
-        // 文章编辑器页面（预留，暂未实现）
+        // 文章版本查看页面
         {
-          path: 'articles/edit/:articleId?',
-          name: 'ArticleEditor',
-          component: () => import('@/views/ArticleEditor.vue'),
+          path: 'articles/:articleId/version',
+          name: 'ArticleVersion',
+          component: () => import('@/views/article/ArticleVersionView.vue'),
+          props: route => ({
+            articleId: route.params.articleId,
+            versionId: route.query.versionId,
+            submissionId: route.query.submissionId,
+          }),
+          meta: { requiresAuth: true },
+        },
+        // 文章审核页面
+        {
+          path: 'articles/:articleId/review/:submissionId',
+          name: 'ArticleReview',
+          component: () => import('@/views/article/ArticleReviewView.vue'),
           props: true,
+          meta: { requiresAuth: true },
+        },
+        // 新建文章页面
+        {
+          path: 'articles/create',
+          name: 'ArticleCreate',
+          component: () => import('@/views/article/ArticleCreateView.vue'),
+          props: route => ({ moduleId: route.query.moduleId }),
           meta: { requiresAuth: true },
         },
       ],

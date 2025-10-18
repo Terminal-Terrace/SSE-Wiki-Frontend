@@ -66,7 +66,20 @@ pnpm build
 
 > `packages/ui` 下的 `pnpm build` 会先执行 `sync-exports` 再打包产物。
 
-## 3. 认证系统架构
+## 3. 命名规范
+
+**组件：** `{Feature}{Purpose}{Type}.vue`
+
+常见的 type : Viewer, Editor, Panel, Card, List, Comparison
+
+（如 `ArticleEditor.vue`、`ModuleSidebar.vue`），通用组件省略前缀（如 `ContentEditor.vue`）
+**页面：** `{Feature}{Action}View.vue`
+
+（如 `ArticleDetailView.vue`、`HomeView.vue`），页面专属组件放在 `views/{feature}/components/`，可复用组件放在公共`components`文件夹下
+
+
+
+## 4. 认证系统架构
 
 ### 应用架构
 

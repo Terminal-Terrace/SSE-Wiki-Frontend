@@ -8,16 +8,17 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
+  toast,
 } from '@sse-wiki/ui'
 import { Edit2, Plus, X } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import CollaboratorsModal from '@/components/layout/components/ModuleCollaboratorsModal.vue'
+import DeleteModuleModal from '@/components/layout/components/ModuleDeleteModal.vue'
+import CreateEditModuleModal from '@/components/layout/components/ModuleFormModal.vue'
+import NavigationTree from '@/components/layout/components/ModuleTree.vue'
 import { useModulePermission } from '@/composables/useModulePermission'
 import { moduleApi } from '@/services/moduleApi'
 import { useModuleStore } from '@/stores/module'
-import CollaboratorsModal from './modals/CollaboratorsModal.vue'
-import CreateEditModuleModal from './modals/CreateEditModuleModal.vue'
-import DeleteModuleModal from './modals/DeleteModuleModal.vue'
-import NavigationTree from './NavigationTree.vue'
 
 // 状态管理
 const moduleStore = useModuleStore()
@@ -54,8 +55,9 @@ async function fetchModules() {
   }
 }
 
-// 获取锁状态
-async function fetchLockStatus() {
+// TODO: 待检查
+// 获取锁状态（目前未主动调用，命名为 _fetchLockStatus 以避免 eslint unused-vars 报错）
+async function _fetchLockStatus() {
   try {
     const response = await moduleApi.getLockStatus()
     lockInfo.value = response
@@ -75,21 +77,28 @@ async function enterEditMode() {
 
     if (response.success) {
       isEditMode.value = true
-      // 更新锁信息
-      await fetchLockStatus()
+      lockInfo.value = response // 获取锁成功后直接使用返回的锁信息
       console.log('已进入编辑模式')
     }
     else {
       // 锁被其他用户占用
       const lockedBy = response.locked_by?.username || '其他用户'
-      alert(`无法进入编辑模式\n\n当前导航栏正在被 ${lockedBy} 编辑中，请稍后再试。`)
+      toast({
+        title: '无法进入编辑模式',
+        description: `当前导航栏正在被 ${lockedBy} 编辑中，请稍后再试。`,
+        variant: 'destructive',
+      })
       console.warn('无法进入编辑模式，锁被其他用户占用:', response)
     }
   }
   catch (err: any) {
     console.error('进入编辑模式失败:', err)
     const errorMsg = err?.message || '未知错误'
-    alert(`进入编辑模式失败\n\n${errorMsg}\n\n请检查网络连接或稍后重试。`)
+    toast({
+      title: '进入编辑模式失败',
+      description: `${errorMsg}。请检查网络连接或稍后重试。`,
+      variant: 'destructive',
+    })
   }
   finally {
     isLockLoading.value = false
@@ -102,16 +111,20 @@ async function exitEditMode() {
     await moduleApi.releaseLock()
 
     isEditMode.value = false
-    // 更新锁信息
-    await fetchLockStatus()
+    lockInfo.value = null // 清空锁信息
     console.log('已退出编辑模式')
   }
   catch (err: any) {
     console.error('退出编辑模式失败:', err)
     // 即使释放锁失败，也退出编辑模式（可能锁已过期）
     isEditMode.value = false
+    lockInfo.value = null
     const errorMsg = err?.message || '未知错误'
-    alert(`释放锁失败\n\n${errorMsg}\n\n已退出编辑模式。`)
+    toast({
+      title: '释放锁失败',
+      description: `${errorMsg}。已退出编辑模式。`,
+      variant: 'destructive',
+    })
   }
 }
 
@@ -207,17 +220,13 @@ function handleBeforeUnload() {
 // 组件挂载
 onMounted(() => {
   fetchModules()
-  fetchLockStatus()
+  // 移除自动获取锁状态，改为只在用户点击编辑按钮时检查
 
   // 监听页面卸载事件
   window.addEventListener('beforeunload', handleBeforeUnload)
 
-  // 定期检查锁状态
-  const lockCheckInterval = setInterval(fetchLockStatus, 30000) // 每30秒检查一次
-
   onUnmounted(() => {
     window.removeEventListener('beforeunload', handleBeforeUnload)
-    clearInterval(lockCheckInterval)
     handleBeforeUnload()
   })
 })

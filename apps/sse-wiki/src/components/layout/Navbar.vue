@@ -12,7 +12,7 @@ import {
 import { LogOut, Search, User } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { useAuth } from '../composables/useAuth'
+import { useAuth } from '../../composables/useAuth'
 
 interface NavItem {
   label: string

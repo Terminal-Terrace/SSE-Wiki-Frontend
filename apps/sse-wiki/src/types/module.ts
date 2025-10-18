@@ -58,6 +58,7 @@ export interface Article {
   author?: User
   created_at: string
   updated_at: string
+  tags?: string[] // 文章标签
 }
 
 export interface ArticleListResponse {
