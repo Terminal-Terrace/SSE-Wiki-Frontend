@@ -1,99 +1,34 @@
 <script setup lang="ts">
-import { Badge, Card, ScrollArea } from '@sse-wiki/ui'
-import { computed } from 'vue'
+import { Badge, Button, Card, ScrollArea } from '@sse-wiki/ui'
+import { Code, Eye } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
+import ContentEditor from '@/components/ContentEditor.vue'
+import { computeDiff as computeDiffAlgo } from '@/utils/diff'
 
 interface Props {
   oldContent?: string | null
   newContent: string
   oldLabel?: string
   newLabel?: string
+  height?: string // 自定义高度，默认 600px
 }
 
 const props = withDefaults(defineProps<Props>(), {
   oldContent: null,
   oldLabel: '旧版本',
   newLabel: '新版本',
+  height: '600px',
 })
 
-// 简单的行级 diff 算法
-function computeDiff() {
-  // 如果没有旧内容，直接显示新内容（第一个版本的情况）
-  if (!props.oldContent) {
-    const newLines = props.newContent.split('\n')
-    return newLines.map((line, index) => ({
-      type: 'add' as const,
-      newLine: index + 1,
-      content: line,
-    }))
-  }
+// 视图模式：rendered（渲染模式，使用 Tiptap）或 text（文本对比模式）
+type ViewMode = 'rendered' | 'text'
+const viewMode = ref<ViewMode>('rendered')
 
-  const oldLines = props.oldContent.split('\n')
-  const newLines = props.newContent.split('\n')
+// 控制展开/折叠状态
+const showAllLines = ref(false)
 
-  const diffs: Array<{
-    type: 'add' | 'delete' | 'unchanged'
-    oldLine?: number
-    newLine?: number
-    content: string
-  }> = []
-
-  let oldIndex = 0
-  let newIndex = 0
-
-  while (oldIndex < oldLines.length || newIndex < newLines.length) {
-    const oldLine = oldLines[oldIndex]
-    const newLine = newLines[newIndex]
-
-    if (oldLine === newLine) {
-      // 相同行
-      diffs.push({
-        type: 'unchanged',
-        oldLine: oldIndex + 1,
-        newLine: newIndex + 1,
-        content: oldLine ?? '',
-      })
-      oldIndex++
-      newIndex++
-    }
-    else if (oldIndex >= oldLines.length) {
-      // 新增行
-      diffs.push({
-        type: 'add',
-        newLine: newIndex + 1,
-        content: newLine ?? '',
-      })
-      newIndex++
-    }
-    else if (newIndex >= newLines.length) {
-      // 删除行
-      diffs.push({
-        type: 'delete',
-        oldLine: oldIndex + 1,
-        content: oldLine ?? '',
-      })
-      oldIndex++
-    }
-    else {
-      // 修改行（简化处理：先删除后添加）
-      diffs.push({
-        type: 'delete',
-        oldLine: oldIndex + 1,
-        content: oldLine ?? '',
-      })
-      diffs.push({
-        type: 'add',
-        newLine: newIndex + 1,
-        content: newLine ?? '',
-      })
-      oldIndex++
-      newIndex++
-    }
-  }
-
-  return diffs
-}
-
-const diffs = computed(() => computeDiff())
+// 使用新的 diff 算法
+const diffs = computed(() => computeDiffAlgo(props.oldContent, props.newContent))
 
 // 统计信息
 const stats = computed(() => {
@@ -106,6 +41,26 @@ const stats = computed(() => {
 
 // 是否为单版本显示模式（第一个版本）
 const isSingleVersion = computed(() => !props.oldContent)
+
+// 切换展开/折叠状态
+function toggleExpand() {
+  showAllLines.value = !showAllLines.value
+}
+
+// 获取显示的行（支持折叠）
+const visibleDiffs = computed(() => {
+  if (showAllLines.value || isSingleVersion.value) {
+    return diffs.value
+  }
+
+  // 只显示前20行，其余折叠
+  return diffs.value.slice(0, 20)
+})
+
+// 是否有更多行需要折叠
+const hasMoreLines = computed(() => {
+  return !showAllLines.value && diffs.value.length > 20
+})
 </script>
 
 <template>
@@ -113,75 +68,213 @@ const isSingleVersion = computed(() => !props.oldContent)
     <template #header>
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-4">
-          <span v-if="!isSingleVersion" class="text-sm text-muted-foreground">{{ oldLabel }}</span>
+          <span v-if="!isSingleVersion" class="text-sm font-medium">{{ oldLabel }}</span>
           <span v-if="!isSingleVersion" class="text-muted-foreground">→</span>
-          <span class="text-sm text-muted-foreground">{{ newLabel }}</span>
+          <span class="text-sm font-medium">{{ newLabel }}</span>
           <Badge v-if="isSingleVersion" variant="secondary" class="ml-2">
             初始版本
           </Badge>
         </div>
 
-        <div class="flex items-center gap-3 text-sm">
-          <Badge v-if="!isSingleVersion" variant="outline" class="bg-green-500/10 text-green-600 border-green-500/20">
-            +{{ stats.adds }}
-          </Badge>
-          <Badge v-if="!isSingleVersion" variant="outline" class="bg-red-500/10 text-red-600 border-red-500/20">
-            -{{ stats.deletes }}
-          </Badge>
-          <Badge v-if="!isSingleVersion" variant="outline">
-            {{ stats.unchanged }} 未改变
-          </Badge>
-          <Badge v-if="isSingleVersion" variant="outline" class="bg-blue-500/10 text-blue-600 border-blue-500/20">
-            {{ stats.adds }} 行内容
-          </Badge>
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2 text-sm">
+            <Badge v-if="!isSingleVersion" variant="outline" class="bg-green-50 text-green-700 border-green-200">
+              +{{ stats.adds }}
+            </Badge>
+            <Badge v-if="!isSingleVersion" variant="outline" class="bg-red-50 text-red-700 border-red-200">
+              -{{ stats.deletes }}
+            </Badge>
+            <Badge v-if="!isSingleVersion" variant="outline" class="bg-gray-50 text-gray-700 border-gray-200">
+              {{ stats.unchanged }} 未改变
+            </Badge>
+            <Badge v-if="isSingleVersion" variant="outline" class="bg-blue-50 text-blue-700 border-blue-200">
+              {{ stats.adds }} 行内容
+            </Badge>
+          </div>
+
+          <!-- 视图模式切换按钮 -->
+          <Button
+            variant="outline"
+            size="sm"
+            class="text-xs"
+            @click="viewMode = viewMode === 'rendered' ? 'text' : 'rendered'"
+          >
+            <component :is="viewMode === 'rendered' ? Code : Eye" class="h-3 w-3 mr-1" />
+            {{ viewMode === 'rendered' ? '查看源码对比' : '查看渲染效果' }}
+          </Button>
+
+          <Button
+            v-if="hasMoreLines && viewMode === 'text'"
+            variant="ghost"
+            size="sm"
+            class="text-xs"
+            @click="toggleExpand"
+          >
+            {{ showAllLines ? '折叠' : `展开全部 ${diffs.length} 行` }}
+          </Button>
         </div>
       </div>
     </template>
 
-    <ScrollArea class="h-[600px]">
-      <div class="font-mono text-sm">
-        <div
-          v-for="(diff, index) in diffs"
-          :key="index"
-          class="flex items-start hover:bg-accent/50 transition-colors"
-          :class="{
-            'bg-green-500/5': diff.type === 'add',
-            'bg-red-500/5': diff.type === 'delete',
-          }"
-        >
-          <!-- 行号 -->
-          <div class="flex-shrink-0 w-20 py-1 px-2 text-right text-muted-foreground/60 border-r border-border select-none">
-            <span v-if="!isSingleVersion && 'oldLine' in diff && diff.oldLine" class="inline-block w-8">{{ diff.oldLine }}</span>
-            <span v-else-if="!isSingleVersion" class="inline-block w-8" />
-            <span v-if="diff.newLine" class="inline-block w-8">{{ diff.newLine }}</span>
-            <span v-else class="inline-block w-8" />
+    <ScrollArea :style="{ height }">
+      <!-- 渲染模式：使用 Tiptap 编辑器 -->
+      <div v-if="viewMode === 'rendered'" class="h-full">
+        <!-- 单版本模式 -->
+        <div v-if="isSingleVersion" class="p-4">
+          <ContentEditor
+            :model-value="newContent"
+            :readonly="true"
+            :show-toolbar="false"
+            min-height="500px"
+          />
+        </div>
+
+        <!-- 对比模式 -->
+        <div v-else class="grid grid-cols-2 h-full">
+          <!-- 左侧：旧版本 -->
+          <div class="border-r border-border">
+            <div class="bg-red-50 px-4 py-2 text-xs font-medium text-red-800 border-b border-border sticky top-0 z-10">
+              {{ oldLabel }}
+            </div>
+            <div class="p-4">
+              <ContentEditor
+                :model-value="oldContent || ''"
+                :readonly="true"
+                :show-toolbar="false"
+                min-height="500px"
+              />
+            </div>
           </div>
 
-          <!-- 变更标记 -->
-          <div
-            class="flex-shrink-0 w-8 py-1 px-2 text-center font-bold select-none"
-            :class="{
-              'text-green-600': diff.type === 'add',
-              'text-red-600': diff.type === 'delete',
-              'text-muted-foreground/40': diff.type === 'unchanged',
-              'text-blue-600': isSingleVersion && diff.type === 'add',
-            }"
-          >
-            <span v-if="diff.type === 'add'">+</span>
-            <span v-else-if="diff.type === 'delete'">-</span>
-            <span v-else />
+          <!-- 右侧：新版本 -->
+          <div>
+            <div class="bg-green-50 px-4 py-2 text-xs font-medium text-green-800 border-b border-border sticky top-0 z-10">
+              {{ newLabel }}
+            </div>
+            <div class="p-4">
+              <ContentEditor
+                :model-value="newContent"
+                :readonly="true"
+                :show-toolbar="false"
+                min-height="500px"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 文本对比模式：原有的逐行对比 -->
+      <div v-else class="font-mono text-sm">
+        <!-- GitHub风格的左右对比布局 -->
+        <div class="grid grid-cols-2 border-b border-border">
+          <!-- 左侧：旧版本 -->
+          <div class="border-r border-border">
+            <div class="bg-gray-50 px-4 py-2 text-xs font-medium text-gray-600 border-b border-border">
+              {{ oldLabel }}
+            </div>
+            <div class="divide-y divide-border">
+              <div
+                v-for="(diff, index) in visibleDiffs"
+                :key="`old-${index}`"
+                class="group flex items-start hover:bg-gray-50/50 transition-colors"
+                :class="{
+                  'bg-red-50': diff.type === 'delete',
+                  'bg-gray-50/30': diff.type === 'unchanged',
+                }"
+              >
+                <!-- 行号 -->
+                <div class="flex-shrink-0 w-12 py-1 px-2 text-right text-gray-500 select-none border-r border-gray-200">
+                  <span v-if="diff.oldLine" class="text-xs">{{ diff.oldLine }}</span>
+                  <span v-else class="text-xs text-gray-300">-</span>
+                </div>
+
+                <!-- 变更标记 -->
+                <div class="flex-shrink-0 w-6 py-1 text-center">
+                  <span
+                    v-if="diff.type === 'delete'"
+                    class="text-red-600 font-bold text-sm"
+                  >
+                    -
+                  </span>
+                  <span
+                    v-else-if="diff.type === 'unchanged'"
+                    class="text-gray-400 text-sm"
+                  >
+                    &nbsp;
+                  </span>
+                </div>
+
+                <!-- 内容 -->
+                <div
+                  class="flex-1 py-1 px-2 whitespace-pre-wrap break-words"
+                  :class="{
+                    'text-red-800': diff.type === 'delete',
+                    'text-gray-700': diff.type === 'unchanged',
+                  }"
+                >
+                  {{ diff.oldContent }}
+                </div>
+              </div>
+            </div>
           </div>
 
-          <!-- 内容 -->
-          <div
-            class="flex-1 py-1 px-2 whitespace-pre-wrap break-words"
-            :class="{
-              'text-foreground': diff.type !== 'unchanged',
-              'text-muted-foreground/80': diff.type === 'unchanged',
-            }"
-          >
-            {{ diff.content }}
+          <!-- 右侧：新版本 -->
+          <div>
+            <div class="bg-gray-50 px-4 py-2 text-xs font-medium text-gray-600 border-b border-border">
+              {{ newLabel }}
+            </div>
+            <div class="divide-y divide-border">
+              <div
+                v-for="(diff, index) in visibleDiffs"
+                :key="`new-${index}`"
+                class="group flex items-start hover:bg-gray-50/50 transition-colors"
+                :class="{
+                  'bg-green-50': diff.type === 'add',
+                  'bg-gray-50/30': diff.type === 'unchanged',
+                }"
+              >
+                <!-- 行号 -->
+                <div class="flex-shrink-0 w-12 py-1 px-2 text-right text-gray-500 select-none border-r border-gray-200">
+                  <span v-if="diff.newLine" class="text-xs">{{ diff.newLine }}</span>
+                  <span v-else class="text-xs text-gray-300">-</span>
+                </div>
+
+                <!-- 变更标记 -->
+                <div class="flex-shrink-0 w-6 py-1 text-center">
+                  <span
+                    v-if="diff.type === 'add'"
+                    class="text-green-600 font-bold text-sm"
+                  >
+                    +
+                  </span>
+                  <span
+                    v-else-if="diff.type === 'unchanged'"
+                    class="text-gray-400 text-sm"
+                  >
+                    &nbsp;
+                  </span>
+                </div>
+
+                <!-- 内容 -->
+                <div
+                  class="flex-1 py-1 px-2 whitespace-pre-wrap break-words"
+                  :class="{
+                    'text-green-800': diff.type === 'add',
+                    'text-gray-700': diff.type === 'unchanged',
+                  }"
+                >
+                  {{ diff.newContent }}
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
+
+        <!-- 折叠提示 -->
+        <div v-if="hasMoreLines && !showAllLines" class="text-center py-4 bg-gray-50 border-t border-border">
+          <Button variant="ghost" size="sm" class="text-gray-600" @click="toggleExpand">
+            显示更多 {{ diffs.length - 20 }} 行...
+          </Button>
         </div>
 
         <!-- 空状态 -->
