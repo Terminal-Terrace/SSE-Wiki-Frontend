@@ -9,7 +9,6 @@
  * - v-model 双向绑定
  * - 自定义扩展
  */
-import type { Editor } from '@tiptap/vue-3'
 import { Button, Separator, ToggleGroup, ToggleGroupItem } from '@sse-wiki/ui'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import Link from '@tiptap/extension-link'
@@ -49,8 +48,8 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
-  'blur': [editor: Editor]
-  'focus': [editor: Editor]
+  'blur': [editor: any]
+  'focus': [editor: any]
 }>()
 
 const lowlight = createLowlight(common)

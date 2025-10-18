@@ -3,19 +3,30 @@ import { Badge, Card, ScrollArea } from '@sse-wiki/ui'
 import { computed } from 'vue'
 
 interface Props {
-  oldContent: string
+  oldContent?: string | null
   newContent: string
   oldLabel?: string
   newLabel?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  oldContent: null,
   oldLabel: '旧版本',
   newLabel: '新版本',
 })
 
 // 简单的行级 diff 算法
 function computeDiff() {
+  // 如果没有旧内容，直接显示新内容（第一个版本的情况）
+  if (!props.oldContent) {
+    const newLines = props.newContent.split('\n')
+    return newLines.map((line, index) => ({
+      type: 'add' as const,
+      newLine: index + 1,
+      content: line,
+    }))
+  }
+
   const oldLines = props.oldContent.split('\n')
   const newLines = props.newContent.split('\n')
 
@@ -92,6 +103,9 @@ const stats = computed(() => {
 
   return { adds, deletes, unchanged }
 })
+
+// 是否为单版本显示模式（第一个版本）
+const isSingleVersion = computed(() => !props.oldContent)
 </script>
 
 <template>
@@ -99,20 +113,26 @@ const stats = computed(() => {
     <template #header>
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-4">
-          <span class="text-sm text-muted-foreground">{{ oldLabel }}</span>
-          <span class="text-muted-foreground">→</span>
+          <span v-if="!isSingleVersion" class="text-sm text-muted-foreground">{{ oldLabel }}</span>
+          <span v-if="!isSingleVersion" class="text-muted-foreground">→</span>
           <span class="text-sm text-muted-foreground">{{ newLabel }}</span>
+          <Badge v-if="isSingleVersion" variant="secondary" class="ml-2">
+            初始版本
+          </Badge>
         </div>
 
         <div class="flex items-center gap-3 text-sm">
-          <Badge variant="outline" class="bg-green-500/10 text-green-600 border-green-500/20">
+          <Badge v-if="!isSingleVersion" variant="outline" class="bg-green-500/10 text-green-600 border-green-500/20">
             +{{ stats.adds }}
           </Badge>
-          <Badge variant="outline" class="bg-red-500/10 text-red-600 border-red-500/20">
+          <Badge v-if="!isSingleVersion" variant="outline" class="bg-red-500/10 text-red-600 border-red-500/20">
             -{{ stats.deletes }}
           </Badge>
-          <Badge variant="outline">
+          <Badge v-if="!isSingleVersion" variant="outline">
             {{ stats.unchanged }} 未改变
+          </Badge>
+          <Badge v-if="isSingleVersion" variant="outline" class="bg-blue-500/10 text-blue-600 border-blue-500/20">
+            {{ stats.adds }} 行内容
           </Badge>
         </div>
       </div>
@@ -131,8 +151,8 @@ const stats = computed(() => {
         >
           <!-- 行号 -->
           <div class="flex-shrink-0 w-20 py-1 px-2 text-right text-muted-foreground/60 border-r border-border select-none">
-            <span v-if="diff.oldLine" class="inline-block w-8">{{ diff.oldLine }}</span>
-            <span v-else class="inline-block w-8" />
+            <span v-if="!isSingleVersion && 'oldLine' in diff && diff.oldLine" class="inline-block w-8">{{ diff.oldLine }}</span>
+            <span v-else-if="!isSingleVersion" class="inline-block w-8" />
             <span v-if="diff.newLine" class="inline-block w-8">{{ diff.newLine }}</span>
             <span v-else class="inline-block w-8" />
           </div>
@@ -144,6 +164,7 @@ const stats = computed(() => {
               'text-green-600': diff.type === 'add',
               'text-red-600': diff.type === 'delete',
               'text-muted-foreground/40': diff.type === 'unchanged',
+              'text-blue-600': isSingleVersion && diff.type === 'add',
             }"
           >
             <span v-if="diff.type === 'add'">+</span>

@@ -148,7 +148,7 @@ async function fetchModuleInfo(moduleId: string) {
       return
     }
     catch (apiError) {
-      console.warn('API获取模块信息失败，使用模块树备用方案:', apiError)
+      console.error('获取模块信息失败:', apiError)
     }
 
     // API失败时的备用方案：从模块树中查找
@@ -193,7 +193,7 @@ async function fetchBreadcrumbs(moduleId: string) {
       return
     }
     catch (apiError) {
-      console.warn('API获取面包屑失败，使用模块树备用方案:', apiError)
+      console.error('获取面包屑导航失败:', apiError)
     }
 
     // API失败时的备用方案：从模块树中构建面包屑
@@ -233,8 +233,8 @@ async function fetchArticles(moduleId: string, page = 1) {
       totalArticles.value = response.total
     }
     catch (apiError) {
-      console.warn('API获取文章列表失败，可能后端未实现此接口:', apiError)
       // 如果API未实现，使用空数组作为默认值
+      console.error('获取文章列表失败:', apiError)
       articles.value = []
       totalArticles.value = 0
     }

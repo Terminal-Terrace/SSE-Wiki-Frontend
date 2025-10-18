@@ -288,7 +288,7 @@ export interface ThreeWayMergeData {
 
 // 版本差异对比响应
 export interface VersionDiffResponse {
-  base_version: ArticleVersion
+  base_version: ArticleVersion | null
   current_version: ArticleVersion
   diff?: string
 }

@@ -191,7 +191,7 @@ onMounted(() => {
     </div>
 
     <!-- 版本内容 -->
-    <div v-else-if="baseVersion && currentVersion" class="space-y-6">
+    <div v-else-if="currentVersion" class="space-y-6">
       <!-- 头部信息 -->
       <header class="space-y-4">
         <div class="flex items-start justify-between">
@@ -212,9 +212,13 @@ onMounted(() => {
 
         <!-- 提交审核信息 -->
         <div v-if="isSubmission && reviewData" class="border-t pt-4 space-y-2">
-          <div class="text-sm">
+          <div v-if="baseVersion" class="text-sm">
             <span class="text-muted-foreground">基于版本:</span>
             <span class="ml-2 font-mono">v{{ baseVersion.version_number }}</span>
+          </div>
+          <div v-else class="text-sm">
+            <span class="text-muted-foreground">基于版本:</span>
+            <span class="ml-2 font-mono">初始版本</span>
           </div>
           <div v-if="reviewData.has_conflict" class="text-sm text-destructive">
             <span class="font-semibold">检测到冲突</span>
@@ -237,12 +241,12 @@ onMounted(() => {
       -->
       <div class="bg-muted/50 border border-border rounded-lg p-6">
         <h2 class="text-lg font-semibold mb-4">
-          内容对比
+          {{ baseVersion ? '内容对比' : '版本内容' }}
         </h2>
         <DiffViewer
-          :old-content="baseVersion.content"
+          :old-content="baseVersion?.content || null"
           :new-content="currentVersion.content"
-          :old-label="`Base v${baseVersion.version_number}`"
+          :old-label="baseVersion ? `Base v${baseVersion.version_number}` : undefined"
           :new-label="`${isSubmission ? '提交版本' : `v${currentVersion.version_number}`}`"
         />
       </div>

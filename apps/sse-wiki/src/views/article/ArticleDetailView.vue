@@ -71,11 +71,9 @@ const tabs = [
 // 判断是否可以管理基础信息（需要 moderator 或更高权限）
 const canManageBasicInfo = computed(() => {
   if (!page.value || !isAuthenticated.value) {
-    console.debug('[canManageBasicInfo] 未登录或页面未加载')
     return false
   }
   const role = (page.value as any).current_user_role
-  console.debug('[canManageBasicInfo] 当前用户角色:', role, '是否可编辑:', ['admin', 'owner', 'moderator'].includes(role))
   return role === 'admin' || role === 'owner' || role === 'moderator'
 })
 
@@ -87,15 +85,6 @@ onMounted(async () => {
     activeTab.value = tabFromQuery
   }
 
-  // 调试信息：打印 props 和路由参数，便于排查 pageId 为空的原因
-  console.debug('ArticleDetail mounted', {
-    props,
-    routeParams: route.params,
-    routeQuery: route.query,
-    fullPath: route.fullPath,
-    pageId: pageId.value,
-  })
-
   // 仅在 pageId 可用时加载页面数据，若为空则等待 watcher 触发
   if (pageId.value) {
     await loadPage()
@@ -103,7 +92,6 @@ onMounted(async () => {
 })
 
 watch(() => pageId.value, async (newId, oldId) => {
-  console.debug('ArticleDetail: pageId changed', { newId, oldId })
   if (newId && newId !== oldId) {
     await loadPage()
   }
@@ -155,7 +143,6 @@ function mapArticleToPage(article: any): Page {
 async function loadPage() {
   loading.value = true
   try {
-    console.debug('ArticleDetail: loading page', pageId.value)
     const data = await articleApi.getArticle(pageId.value)
     page.value = mapArticleToPage(data)
   }
@@ -332,14 +319,9 @@ function handleConflictCancel() {
  * 仅管理员可以双击进入编辑
  */
 function enterEditBasicInfo() {
-  console.log('[enterEditBasicInfo] 双击触发，canManageBasicInfo:', canManageBasicInfo.value, 'page:', !!page.value)
-
   if (!canManageBasicInfo.value || !page.value) {
-    console.warn('[enterEditBasicInfo] 无权限或页面未加载，取消进入编辑模式')
     return
   }
-
-  console.log('[enterEditBasicInfo] 进入编辑模式')
 
   // 初始化表单数据
   basicInfoForm.value = {
