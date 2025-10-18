@@ -169,7 +169,7 @@ function goBack() {
 </script>
 
 <template>
-  <div class="container mx-auto px-4 py-8 max-w-5xl">
+  <div>
     <!-- 头部 -->
     <div class="mb-8">
       <Button
@@ -248,8 +248,11 @@ function goBack() {
               for="review-required"
               class="text-sm font-normal cursor-pointer"
             >
-              需要审核（开启后，普通用户的修改需要管理员审核后才能发布）
+              启用审核流程（勾选后，其他用户的修改需要管理员审核；不勾选则所有修改自动发布）
             </Label>
+          </div>
+          <div v-if="!formData.is_review_required" class="text-xs text-amber-600 ml-6">
+            ⚠️ 未启用审核，所有用户的修改将自动发布
           </div>
         </CardContent>
       </Card>
