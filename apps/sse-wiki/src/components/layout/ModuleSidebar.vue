@@ -15,7 +15,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import CollaboratorsModal from '@/components/layout/components/ModuleCollaboratorsModal.vue'
 import DeleteModuleModal from '@/components/layout/components/ModuleDeleteModal.vue'
 import CreateEditModuleModal from '@/components/layout/components/ModuleFormModal.vue'
-import NavigationTree from '@/components/layout/components/ModuleTree.vue'
+import ModuleTree from '@/components/layout/components/ModuleTree.vue'
 import { useModulePermission } from '@/composables/useModulePermission'
 import { moduleApi } from '@/services/moduleApi'
 import { useModuleStore } from '@/stores/module'
@@ -292,7 +292,7 @@ onMounted(() => {
 
           <!-- 模块树 -->
           <SidebarMenu v-else>
-            <NavigationTree
+            <ModuleTree
               v-for="module in (moduleTree || [])"
               :key="module.id"
               :node="module"

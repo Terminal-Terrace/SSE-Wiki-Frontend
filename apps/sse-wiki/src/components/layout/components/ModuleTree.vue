@@ -205,7 +205,7 @@ function deleteModule() {
 
     <!-- 子菜单 -->
     <SidebarMenuSub v-show="isExpanded">
-      <NavigationTree
+      <ModuleTree
         v-for="child in node.children"
         :key="child.id"
         :node="child"
