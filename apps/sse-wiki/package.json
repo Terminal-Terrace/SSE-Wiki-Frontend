@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@sse-wiki/ui": "workspace:*",
+    "@tiptap/core": "^3.7.2",
     "@tiptap/extension-code-block-lowlight": "^3.7.2",
     "@tiptap/extension-link": "^3.7.2",
     "@tiptap/extension-placeholder": "^3.7.2",
