@@ -2,7 +2,7 @@
 import { Badge, Button, Card, ScrollArea } from '@sse-wiki/ui'
 import { Code, Eye } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
-import ContentEditor from '@/components/common/ContentEditor.vue'
+import ContentEditor from '@/components/common/editor/ContentEditor.vue'
 import { computeDiff as computeDiffAlgo } from '@/utils/diff'
 
 interface Props {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { UploadProgress } from '@/utils/fileUpload'
 /**
  * 通用富文本编辑器组件 (基于 TipTap)
  *
@@ -8,8 +9,9 @@
  * - 可配置（只读、占位符、高度等）
  * - v-model 双向绑定
  * - 自定义扩展
+ * - 拖拽上传文件
  */
-import { Button, Separator, ToggleGroup, ToggleGroupItem } from '@sse-wiki/ui'
+import { Button, Progress, Separator, ToggleGroup, ToggleGroupItem } from '@sse-wiki/ui'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -32,8 +34,12 @@ import {
   Redo,
   Strikethrough,
   Undo,
+  Upload,
+  X,
 } from 'lucide-vue-next'
-import { computed, onBeforeUnmount, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { uploadFile } from '@/utils/fileUpload'
+import { FileCard } from './utils'
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: '',
@@ -89,6 +95,12 @@ interface Props {
   enableMarkdown?: boolean
 }
 
+// 上传状态
+const uploading = ref(false)
+const uploadProgress = ref(0)
+const uploadFileName = ref('')
+const uploadError = ref('')
+
 // 创建编辑器实例
 const editor = useEditor({
   content: props.modelValue || '',
@@ -111,6 +123,7 @@ const editor = useEditor({
       placeholder: props.placeholder,
     }),
     Typography, // 自动转换引号、省略号等
+    FileCard, // 文件卡片扩展
   ],
   onUpdate: ({ editor }) => {
     const html = editor.getHTML()
@@ -121,6 +134,45 @@ const editor = useEditor({
   },
   onFocus: ({ editor }) => {
     emit('focus', editor)
+  },
+  editorProps: {
+    handleDrop: (view, event, slice, moved) => {
+      // 如果是移动操作，使用默认行为
+      if (moved)
+        return false
+
+      // 获取拖放的文件
+      const files = event.dataTransfer?.files
+      if (!files || files.length === 0)
+        return false
+
+      // 阻止默认行为
+      event.preventDefault()
+
+      // 获取光标位置
+      const coordinates = { left: event.clientX, top: event.clientY }
+      const pos = view.posAtCoords(coordinates)
+      if (!pos)
+        return true
+
+      // 处理文件上传
+      handleFileDrop(Array.from(files), pos.pos)
+      return true
+    },
+    handlePaste: (view, event) => {
+      // 获取粘贴的文件
+      const files = event.clipboardData?.files
+      if (!files || files.length === 0)
+        return false
+
+      // 阻止默认行为
+      event.preventDefault()
+
+      // 在当前光标位置插入
+      const pos = view.state.selection.from
+      handleFileDrop(Array.from(files), pos)
+      return true
+    },
   },
 })
 
@@ -169,6 +221,71 @@ function setLink() {
 
 const undo = () => editor.value?.chain().focus().undo().run()
 const redo = () => editor.value?.chain().focus().redo().run()
+
+// 文件上传处理
+// TODO: 后端接入 - 当前使用 uploadFile 模拟上传，实际应调用真实 API
+async function handleFileDrop(files: File[], position: number) {
+  if (!editor.value || files.length === 0)
+    return
+
+  // 设置光标位置
+  editor.value.commands.setTextSelection(position)
+
+  // 逐个上传文件
+  for (const file of files) {
+    try {
+      uploading.value = true
+      uploadError.value = ''
+      uploadFileName.value = file.name
+      uploadProgress.value = 0
+
+      // TODO: 后端接入 - uploadFile 函数当前是模拟实现，需要替换为真实上传
+      // 见 @/utils/fileUpload.ts 中的详细说明
+      const fileInfo = await uploadFile(file, (progress: UploadProgress) => {
+        uploadProgress.value = progress.percentage
+      })
+
+      // 插入文件卡片
+      ;(editor.value.commands as any).setFileCard({
+        fileId: fileInfo.fileId,
+        fileName: fileInfo.fileName,
+        fileSize: fileInfo.fileSize,
+        fileType: fileInfo.fileType,
+        fileUrl: fileInfo.fileUrl,
+        category: fileInfo.category,
+      })
+
+      // 上传成功后暂停一下，让用户看到进度
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+    catch (error) {
+      console.error('文件上传失败:', error)
+      uploadError.value = error instanceof Error ? error.message : '上传失败'
+      await new Promise(resolve => setTimeout(resolve, 2000))
+    }
+    finally {
+      uploading.value = false
+      uploadProgress.value = 0
+    }
+  }
+}
+
+// 手动选择文件上传
+function triggerFileUpload() {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.multiple = true
+  input.onchange = async (e) => {
+    const files = (e.target as HTMLInputElement).files
+    if (!files || files.length === 0)
+      return
+
+    // 在当前光标位置插入
+    const pos = editor.value?.state.selection.from ?? 0
+    await handleFileDrop(Array.from(files), pos)
+  }
+  input.click()
+}
 
 // 清理
 onBeforeUnmount(() => {
@@ -306,6 +423,37 @@ onBeforeUnmount(() => {
       >
         <LinkIcon class="h-4 w-4" />
       </Button>
+
+      <Separator orientation="vertical" class="h-6" />
+
+      <!-- 上传文件 -->
+      <Button
+        variant="ghost"
+        size="sm"
+        title="上传文件"
+        @click="triggerFileUpload"
+      >
+        <Upload class="h-4 w-4" />
+      </Button>
+    </div>
+
+    <!-- 上传进度条 -->
+    <div
+      v-if="uploading"
+      class="upload-progress border-b bg-muted/50 p-3"
+    >
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-2">
+          <Upload class="h-4 w-4 animate-pulse text-primary" />
+          <span class="text-sm font-medium">上传中: {{ uploadFileName }}</span>
+        </div>
+        <span class="text-sm text-muted-foreground">{{ uploadProgress }}%</span>
+      </div>
+      <Progress :model-value="uploadProgress" class="h-2" />
+      <div v-if="uploadError" class="mt-2 text-sm text-destructive flex items-center gap-2">
+        <X class="h-4 w-4" />
+        {{ uploadError }}
+      </div>
     </div>
 
     <!-- 编辑器内容区 -->

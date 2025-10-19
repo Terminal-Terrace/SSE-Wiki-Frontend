@@ -3,7 +3,7 @@ import type { ThreeWayMergeData } from '@/types/article'
 import { Badge, Button, Card, Textarea, toast, ToggleGroup, ToggleGroupItem } from '@sse-wiki/ui'
 import { Code, Eye, GitMerge, XCircle } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
-import ContentEditor from '@/components/common/ContentEditor.vue'
+import ContentEditor from '@/components/common/editor/ContentEditor.vue'
 import { simpleThreeWayMerge, threeWayMerge } from '@/utils/diff'
 import ComparisonPanel from './ComparisonPanel.vue'
 

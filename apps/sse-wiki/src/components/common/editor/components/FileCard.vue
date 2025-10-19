@@ -1,0 +1,149 @@
+<script setup lang="ts">
+import { Button, Card, CardContent } from '@sse-wiki/ui'
+/**
+ * 文件卡片组件
+ * 用于在编辑器中显示文件（非图片类型）
+ */
+import { NodeViewWrapper } from '@tiptap/vue-3'
+import {
+  Archive,
+  Code,
+  Download,
+  File,
+  FileText,
+  Image,
+  Music,
+  Video,
+} from 'lucide-vue-next'
+import { computed } from 'vue'
+import ImageCard from './ImageCard.vue'
+
+const props = defineProps<{
+  node: {
+    attrs: {
+      fileId: string
+      fileName: string
+      fileSize: number
+      fileType: string
+      fileUrl: string
+      category: 'image' | 'video' | 'audio' | 'document' | 'archive' | 'code' | 'other'
+    }
+  }
+  selected: boolean
+  editor?: any
+  getPos?: () => number
+}>()
+
+// 格式化文件大小
+function formatFileSize(bytes: number): string {
+  if (bytes === 0)
+    return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${(bytes / k ** i).toFixed(2)} ${sizes[i]}`
+}
+
+// 获取文件图标和颜色
+const fileIcon = computed(() => {
+  const category = props.node.attrs.category
+  switch (category) {
+    case 'image':
+      return { component: Image, color: 'bg-blue-500' }
+    case 'video':
+      return { component: Video, color: 'bg-purple-500' }
+    case 'audio':
+      return { component: Music, color: 'bg-green-500' }
+    case 'document':
+      return { component: FileText, color: 'bg-orange-500' }
+    case 'archive':
+      return { component: Archive, color: 'bg-gray-500' }
+    case 'code':
+      return { component: Code, color: 'bg-pink-500' }
+    default:
+      return { component: File, color: 'bg-gray-400' }
+  }
+})
+
+// 点击卡片打开文件
+// TODO: 后端接入 - 当前直接打开 fileUrl，实际应该调用预览 API
+// 应改为: /api/v1/files/:id (在线预览)
+function handleOpen() {
+  window.open(props.node.attrs.fileUrl, '_blank') // TODO: 后端接入 - Base64 URL 需要改为服务器 URL
+}
+
+// 下载文件
+// TODO: 后端接入 - 应该调用下载 API
+// 应改为: /api/v1/files/:id/download
+function handleDownload(e: Event) {
+  e.stopPropagation()
+  const link = document.createElement('a')
+  link.href = props.node.attrs.fileUrl // TODO: 后端接入 - Base64 URL 需要改为服务器下载地址
+  link.download = props.node.attrs.fileName
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+</script>
+
+<template>
+  <!-- 图片类型使用专门的组件 -->
+  <ImageCard
+    v-if="node.attrs.category === 'image'"
+    :node="node"
+    :selected="selected"
+    :editor="editor"
+    :get-pos="getPos"
+  />
+
+  <!-- 其他类型文件使用 Card 组件 -->
+  <NodeViewWrapper v-else class="file-card-wrapper">
+    <Card
+      class="file-card group my-4 cursor-pointer transition-all hover:shadow-md"
+      :class="{ 'ring-2 ring-primary': selected }"
+      @click="handleOpen"
+    >
+      <CardContent class="flex items-center gap-4 p-4">
+        <!-- 文件图标 -->
+        <div
+          class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg text-white"
+          :class="fileIcon.color"
+        >
+          <component :is="fileIcon.component" class="h-6 w-6" />
+        </div>
+
+        <!-- 文件信息 -->
+        <div class="flex-1 overflow-hidden">
+          <div class="font-medium text-foreground truncate">
+            {{ node.attrs.fileName }}
+          </div>
+          <div class="text-sm text-muted-foreground">
+            {{ formatFileSize(node.attrs.fileSize) }} • {{ node.attrs.fileType }}
+          </div>
+        </div>
+
+        <!-- 下载按钮 -->
+        <div class="flex-shrink-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            class="opacity-0 group-hover:opacity-100 transition-opacity"
+            @click="handleDownload"
+          >
+            <Download class="h-4 w-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  </NodeViewWrapper>
+</template>
+
+<style scoped>
+.file-card-wrapper {
+  margin: 0;
+}
+
+.file-card {
+  user-select: none;
+}
+</style>

@@ -6,7 +6,7 @@ import { ArrowLeft, Loader2, Save } from 'lucide-vue-next'
 
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import ContentEditor from '@/components/common/ContentEditor.vue'
+import ContentEditor from '@/components/common/editor/ContentEditor.vue'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { articleApi } from '@/services/articleApi'
 import { moduleApi } from '@/services/moduleApi'
