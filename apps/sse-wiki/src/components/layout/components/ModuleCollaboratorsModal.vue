@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { ModuleModalState, ModuleModerator } from '@/types/module'
 import {
+  Avatar,
+  AvatarFallback,
   Button,
   Dialog,
   DialogContent,
@@ -241,16 +243,11 @@ function formatDate(dateString: string) {
             <Button
               class="w-full"
               :disabled="isAddingCollaborator || !newCollaboratorUserId.trim()"
+              :loading="isAddingCollaborator"
               @click="addCollaborator"
             >
-              <div v-if="isAddingCollaborator" class="flex items-center gap-2">
-                <div class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                <span>添加中...</span>
-              </div>
-              <div v-else class="flex items-center gap-2">
-                <Plus class="w-4 h-4" />
-                <span>添加协作者</span>
-              </div>
+              <Plus v-if="!isAddingCollaborator" class="w-4 h-4 mr-2" />
+              <span>{{ isAddingCollaborator ? '添加中...' : '添加协作者' }}</span>
             </Button>
           </div>
         </div>
@@ -261,11 +258,9 @@ function formatDate(dateString: string) {
             现有协作者
           </h4>
 
-          <div v-if="isLoadingCollaborators" class="flex items-center justify-center py-8">
-            <div class="flex items-center gap-2 text-muted-foreground">
-              <div class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-              <span class="text-sm">加载协作者列表...</span>
-            </div>
+          <div v-if="isLoadingCollaborators" class="flex items-center justify-center py-8 gap-2 text-muted-foreground">
+            <div class="w-4 h-4 border-2 border-border border-t-primary rounded-full animate-spin" />
+            <span class="text-sm">加载协作者列表...</span>
           </div>
 
           <div v-else-if="collaborators.length === 0" class="flex flex-col items-center justify-center py-8 text-muted-foreground">
@@ -282,9 +277,11 @@ function formatDate(dateString: string) {
               class="flex items-center justify-between p-3 border rounded-lg"
             >
               <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-medium">
-                  {{ collaborator.username.charAt(0) }}
-                </div>
+                <Avatar>
+                  <AvatarFallback>
+                    {{ collaborator.username.charAt(0).toUpperCase() }}
+                  </AvatarFallback>
+                </Avatar>
                 <div>
                   <p class="font-medium">
                     {{ collaborator.username }}

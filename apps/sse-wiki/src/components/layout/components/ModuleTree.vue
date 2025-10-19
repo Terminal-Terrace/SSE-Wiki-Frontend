@@ -123,13 +123,15 @@ function deleteModule() {
       <!-- 编辑模式下的操作菜单 -->
       <DropdownMenu v-if="hasPermission && isEditMode">
         <DropdownMenuTrigger as-child>
-          <button
-            class="ml-auto hover:bg-sidebar-accent rounded p-1 transition-opacity"
+          <Button
+            variant="ghost"
+            size="icon"
+            class="ml-auto h-6 w-6 transition-opacity"
             :class="{ 'opacity-0': !isHovered, 'opacity-100': isHovered }"
             @click.stop
           >
             <MoreHorizontal class="w-4 h-4" />
-          </button>
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" class="w-48">
           <DropdownMenuItem v-if="canCreateChild" @click="createChild">
@@ -173,13 +175,15 @@ function deleteModule() {
       <!-- 编辑模式下的操作菜单 -->
       <DropdownMenu v-if="hasPermission && isEditMode">
         <DropdownMenuTrigger as-child>
-          <button
-            class="ml-auto hover:bg-sidebar-accent rounded p-1 transition-opacity"
+          <Button
+            variant="ghost"
+            size="icon"
+            class="ml-auto h-6 w-6 transition-opacity"
             :class="{ 'opacity-0': !isHovered, 'opacity-100': isHovered }"
             @click.stop
           >
             <MoreHorizontal class="w-4 h-4" />
-          </button>
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" class="w-48">
           <DropdownMenuItem v-if="canCreateChild" @click="createChild">

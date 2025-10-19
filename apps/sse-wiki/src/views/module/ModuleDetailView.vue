@@ -1,6 +1,21 @@
 <script setup lang="ts">
 import type { Article, BreadcrumbItem, Module, ModuleTreeNode } from '@/types/module'
-import { Button, toast } from '@sse-wiki/ui'
+import {
+  Avatar,
+  AvatarFallback,
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  toast,
+} from '@sse-wiki/ui'
 import {
   Calendar,
   ChevronDown,
@@ -15,7 +30,7 @@ import {
   Trash2,
   Users,
 } from 'lucide-vue-next'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import OverflowText from '@/components/common/OverflowText.vue'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
@@ -37,7 +52,6 @@ const error = ref<string | null>(null)
 const moduleInfo = ref<Module | null>(null)
 const articles = ref<Article[]>([])
 const breadcrumbs = ref<BreadcrumbItem[]>([])
-const showManageMenu = ref(false)
 const viewMode = ref<'grid' | 'list'>('grid')
 const sortBy = ref<'created_at' | 'updated_at' | 'title'>('created_at')
 
@@ -310,17 +324,14 @@ function goToArticle(articleId: number) {
 
 function editModule() {
   // TODO: 触发编辑模块模态框
-  showManageMenu.value = false
 }
 
 function manageCollaborators() {
   // TODO: 触发协作者管理模态框
-  showManageMenu.value = false
 }
 
 function deleteModule() {
   // TODO: 触发删除确认模态框
-  showManageMenu.value = false
 }
 
 // 格式化日期
@@ -331,13 +342,6 @@ function formatDate(dateString: string) {
     month: 'long',
     day: 'numeric',
   })
-}
-
-// 点击外部关闭管理菜单
-function handleClickOutside(event: MouseEvent) {
-  if (showManageMenu.value && !(event.target as Element)?.closest('.module-actions')) {
-    showManageMenu.value = false
-  }
 }
 
 // 监听路由变化
@@ -351,22 +355,16 @@ watch(
   },
   { immediate: true },
 )
-
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
 </script>
 
 <template>
   <div class="flex-1 overflow-y-auto">
     <!-- 加载状态 -->
     <div v-if="isLoading" class="flex flex-col items-center justify-center min-h-96 space-y-4">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      <span class="text-gray-600">加载模块信息...</span>
+      <div class="flex items-center gap-3">
+        <div class="w-6 h-6 border-2 border-border border-t-primary rounded-full animate-spin" />
+        <span class="text-muted-foreground">加载模块信息...</span>
+      </div>
     </div>
 
     <!-- 错误状态 -->
@@ -447,32 +445,30 @@ onUnmounted(() => {
             </Button>
 
             <!-- 模块管理按钮 (仅有权限用户可见) -->
-            <div v-if="canManageModule" class="relative module-actions">
-              <Button variant="outline" class="flex items-center gap-2" @click="showManageMenu = !showManageMenu">
-                <Settings class="w-4 h-4" />
-                模块管理
-                <ChevronDown class="w-4 h-4" />
-              </Button>
-
-              <!-- 管理菜单 -->
-              <div v-if="showManageMenu" class="absolute top-full right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-                <div class="p-1">
-                  <button class="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors" @click="editModule">
-                    <Edit2 class="w-4 h-4" />
-                    <span>编辑模块</span>
-                  </button>
-                  <button class="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors" @click="manageCollaborators">
-                    <Users class="w-4 h-4" />
-                    <span>管理协作者</span>
-                  </button>
-                  <div class="border-t border-gray-100 my-1" />
-                  <button class="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors" @click="deleteModule">
-                    <Trash2 class="w-4 h-4" />
-                    <span>删除模块</span>
-                  </button>
-                </div>
-              </div>
-            </div>
+            <DropdownMenu v-if="canManageModule">
+              <DropdownMenuTrigger as-child>
+                <Button variant="outline" class="flex items-center gap-2">
+                  <Settings class="w-4 h-4" />
+                  模块管理
+                  <ChevronDown class="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" class="w-48">
+                <DropdownMenuItem @click="editModule">
+                  <Edit2 class="mr-2 w-4 h-4" />
+                  <span>编辑模块</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem @click="manageCollaborators">
+                  <Users class="mr-2 w-4 h-4" />
+                  <span>管理协作者</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem class="text-destructive focus:text-destructive" @click="deleteModule">
+                  <Trash2 class="mr-2 w-4 h-4" />
+                  <span>删除模块</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
@@ -505,24 +501,29 @@ onUnmounted(() => {
             </div>
 
             <!-- 排序选择 -->
-            <select v-model="sortBy" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-              <option value="created_at">
-                按创建时间
-              </option>
-              <option value="updated_at">
-                按更新时间
-              </option>
-              <option value="title">
-                按标题
-              </option>
-            </select>
+            <Select v-model="sortBy">
+              <SelectTrigger class="w-[140px]">
+                <SelectValue placeholder="排序方式" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="created_at">
+                  按创建时间
+                </SelectItem>
+                <SelectItem value="updated_at">
+                  按更新时间
+                </SelectItem>
+                <SelectItem value="title">
+                  按标题
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
         <!-- 文章列表内容 -->
-        <div v-if="articlesLoading" class="flex flex-col items-center justify-center py-12 space-y-4">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-          <span class="text-gray-600">加载文章...</span>
+        <div v-if="articlesLoading" class="flex items-center justify-center py-12 gap-3">
+          <div class="w-6 h-6 border-2 border-border border-t-primary rounded-full animate-spin" />
+          <span class="text-muted-foreground">加载文章...</span>
         </div>
 
         <div v-else-if="articles.length === 0" class="text-center py-12">
@@ -570,9 +571,11 @@ onUnmounted(() => {
                 </span>
               </div>
               <div class="flex items-center gap-2">
-                <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
-                  {{ article.author?.username?.charAt(0) || 'U' }}
-                </div>
+                <Avatar size="sm" class="h-8 w-8">
+                  <AvatarFallback class="text-sm">
+                    {{ (article.author?.username?.charAt(0) || 'U').toUpperCase() }}
+                  </AvatarFallback>
+                </Avatar>
                 <span class="text-sm text-gray-700">{{ article.author?.username || '未知作者' }}</span>
               </div>
             </div>

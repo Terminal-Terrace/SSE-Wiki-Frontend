@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Button, Input } from '@sse-wiki/ui'
 import { Bot, Send, X } from 'lucide-vue-next'
 import { ref } from 'vue'
 
@@ -53,12 +54,13 @@ function handleSend() {
           AI 助手
         </h3>
       </div>
-      <button
-        class="p-1 hover:bg-muted rounded transition-colors"
+      <Button
+        variant="ghost"
+        size="icon"
         @click="$emit('close')"
       >
         <X class="h-4 w-4" />
-      </button>
+      </Button>
     </div>
 
     <!-- Messages -->
@@ -86,20 +88,19 @@ function handleSend() {
     <!-- Input -->
     <div class="p-4 border-t border-border">
       <div class="flex gap-2">
-        <input
+        <Input
           v-model="inputMessage"
           type="text"
           placeholder="输入你的问题..."
-          class="flex-1 px-3 py-2 border border-input rounded-md bg-background text-sm"
           @keypress.enter="handleSend"
-        >
-        <button
+        />
+        <Button
           :disabled="!inputMessage.trim()"
-          class="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          size="icon"
           @click="handleSend"
         >
           <Send class="h-4 w-4" />
-        </button>
+        </Button>
       </div>
     </div>
   </div>

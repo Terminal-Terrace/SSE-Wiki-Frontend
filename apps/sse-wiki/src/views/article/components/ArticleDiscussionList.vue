@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Button, Textarea } from '@sse-wiki/ui'
 import { ref } from 'vue'
 
 interface Comment {
@@ -41,20 +42,18 @@ function formatDate(date: string) {
       </h2>
 
       <div class="mb-6">
-        <textarea
+        <Textarea
           v-model="newComment"
           rows="4"
-          class="w-full px-3 py-2 border border-input rounded-md bg-background"
           placeholder="发表你的看法..."
         />
         <div class="mt-2 flex justify-end">
-          <button
+          <Button
             :disabled="!newComment.trim()"
-            class="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             @click="handleSubmit"
           >
             发表评论
-          </button>
+          </Button>
         </div>
       </div>
 

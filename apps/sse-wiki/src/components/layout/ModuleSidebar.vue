@@ -278,8 +278,10 @@ onMounted(() => {
         <SidebarGroupContent>
           <!-- 加载状态 -->
           <div v-if="isLoading" class="flex flex-col items-center gap-2 py-6 px-4 text-center text-muted-foreground">
-            <div class="w-6 h-6 border-2 border-border border-t-primary rounded-full animate-spin" />
-            <span>加载模块树...</span>
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 border-2 border-border border-t-primary rounded-full animate-spin" />
+              <span>加载模块树...</span>
+            </div>
           </div>
 
           <!-- 错误状态 -->
