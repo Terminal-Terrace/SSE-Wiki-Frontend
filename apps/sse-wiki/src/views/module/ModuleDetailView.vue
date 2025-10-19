@@ -1,22 +1,38 @@
 <script setup lang="ts">
 import type { Article, BreadcrumbItem, Module, ModuleTreeNode } from '@/types/module'
 import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
   Avatar,
   AvatarFallback,
+  Badge,
   Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Skeleton,
   toast,
 } from '@sse-wiki/ui'
 import {
+  AlertCircle,
   Calendar,
   ChevronDown,
   ChevronLeft,
@@ -26,6 +42,7 @@ import {
   Grid,
   List,
   Plus,
+  RefreshCw,
   Settings,
   Trash2,
   Users,
@@ -359,34 +376,48 @@ watch(
 
 <template>
   <div class="flex-1 overflow-y-auto">
-    <!-- 加载状态 -->
-    <div v-if="isLoading" class="flex flex-col items-center justify-center min-h-96 space-y-4">
-      <div class="flex items-center gap-3">
-        <div class="w-6 h-6 border-2 border-border border-t-primary rounded-full animate-spin" />
-        <span class="text-muted-foreground">加载模块信息...</span>
-      </div>
-    </div>
-
-    <!-- 错误状态 -->
-    <div v-else-if="error" class="flex flex-col items-center justify-center min-h-96 space-y-4">
-      <div class="text-center">
-        <h3 class="text-lg font-semibold text-red-600 mb-2">
-          加载失败
-        </h3>
-        <p class="text-gray-600 mb-4">
-          {{ error }}
-        </p>
-        <Button variant="outline" @click="refreshData">
-          重试
-        </Button>
-      </div>
-    </div>
-
-    <!-- 模块详情内容 -->
-    <div v-else class="space-y-6">
-      <!-- 页面头部 -->
+    <div v-if="isLoading" class="space-y-6 p-6">
       <div class="space-y-4">
-        <!-- 面包屑导航  -->
+        <Skeleton class="h-8 w-48" />
+        <Skeleton class="h-6 w-3/4" />
+        <div class="flex gap-4">
+          <Skeleton class="h-10 w-32" />
+          <Skeleton class="h-10 w-32" />
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card v-for="i in 6" :key="i">
+          <CardHeader>
+            <Skeleton class="h-6 w-full mb-2" />
+            <Skeleton class="h-4 w-24" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton class="h-16 w-full mb-3" />
+            <div class="flex gap-2">
+              <Skeleton class="h-5 w-16" />
+              <Skeleton class="h-5 w-16" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+
+    <div v-else-if="error" class="flex items-center justify-center min-h-96 p-6">
+      <Alert variant="destructive" class="max-w-lg">
+        <AlertCircle class="h-4 w-4" />
+        <AlertTitle>加载模块失败</AlertTitle>
+        <AlertDescription class="mt-2 space-y-3">
+          <p>{{ error }}</p>
+          <Button variant="outline" size="sm" class="gap-2" @click="refreshData">
+            <RefreshCw class="h-4 w-4" />
+            重试
+          </Button>
+        </AlertDescription>
+      </Alert>
+    </div>
+
+    <div v-else class="space-y-6">
+      <div class="space-y-4">
         <nav class="h-6 flex items-center space-x-2 text-base text-gray-600">
           <template v-for="(crumb, index) in breadcrumbs" :key="crumb.id">
             <router-link
@@ -408,20 +439,15 @@ watch(
           </template>
         </nav>
 
-        <!-- 模块标题和操作按钮 -->
         <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div class="flex-1">
-            <!-- 模块标题 -->
             <h1 class="text-3xl font-bold text-gray-900 mb-3">
               {{ moduleInfo?.module_name }}
             </h1>
 
-            <!-- 模块描述 -->
             <p v-if="moduleInfo?.description" class="text-gray-700 mb-4">
               {{ moduleInfo.description }}
             </p>
-
-            <!-- 模块统计信息 -->
             <div v-if="moduleInfo" class="flex flex-wrap items-center gap-6 text-sm text-gray-600">
               <div class="flex items-center gap-2">
                 <FileText class="w-4 h-4" />
@@ -434,7 +460,6 @@ watch(
             </div>
           </div>
 
-          <!-- 操作按钮 -->
           <div class="flex gap-3">
             <Button
               class="flex items-center gap-2"
@@ -444,7 +469,6 @@ watch(
               新建文章
             </Button>
 
-            <!-- 模块管理按钮 (仅有权限用户可见) -->
             <DropdownMenu v-if="canManageModule">
               <DropdownMenuTrigger as-child>
                 <Button variant="outline" class="flex items-center gap-2">
@@ -473,14 +497,12 @@ watch(
         </div>
       </div>
 
-      <!-- 文章列表 -->
       <div class="space-y-4">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <h2 class="text-xl font-semibold text-gray-900">
             文章列表
           </h2>
           <div class="flex items-center gap-3">
-            <!-- 视图切换 -->
             <div class="flex bg-gray-100 rounded-lg p-1">
               <Button
                 :variant="viewMode === 'grid' ? 'default' : 'ghost'"
@@ -500,7 +522,6 @@ watch(
               </Button>
             </div>
 
-            <!-- 排序选择 -->
             <Select v-model="sortBy">
               <SelectTrigger class="w-[140px]">
                 <SelectValue placeholder="排序方式" />
@@ -520,105 +541,126 @@ watch(
           </div>
         </div>
 
-        <!-- 文章列表内容 -->
-        <div v-if="articlesLoading" class="flex items-center justify-center py-12 gap-3">
-          <div class="w-6 h-6 border-2 border-border border-t-primary rounded-full animate-spin" />
-          <span class="text-muted-foreground">加载文章...</span>
+        <div v-if="articlesLoading" :class="viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'">
+          <Card v-for="i in 6" :key="i">
+            <CardHeader>
+              <Skeleton class="h-6 w-full mb-2" />
+              <Skeleton class="h-4 w-24" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton class="h-16 w-full mb-3" />
+              <div class="flex gap-2">
+                <Skeleton class="h-5 w-16" />
+                <Skeleton class="h-5 w-16" />
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        <div v-else-if="articles.length === 0" class="text-center py-12">
-          <div class="space-y-4">
-            <FileText class="w-12 h-12 text-gray-400 mx-auto" />
-            <h3 class="text-lg font-medium text-gray-900">
-              该模块下暂无文章
-            </h3>
-            <p class="text-gray-600">
+        <Empty v-else-if="articles.length === 0" class="py-12">
+          <EmptyMedia variant="icon">
+            <FileText class="h-8 w-8" />
+          </EmptyMedia>
+          <EmptyHeader>
+            <EmptyTitle>该模块下暂无文章</EmptyTitle>
+            <EmptyDescription>
               开始创建第一篇文章来分享知识吧！
-            </p>
-            <Button class="flex items-center gap-2" @click="createArticle">
-              <Plus class="w-4 h-4" />
-              创建文章
-            </Button>
-          </div>
-        </div>
+            </EmptyDescription>
+          </EmptyHeader>
+          <Button class="mt-4" @click="createArticle">
+            <Plus class="w-4 h-4 mr-2" />
+            创建文章
+          </Button>
+        </Empty>
 
-        <!-- 网格视图 -->
         <div v-else-if="viewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <article
+          <Card
             v-for="article in sortedArticles"
             :key="article.id"
-            class="bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer"
+            class="hover:shadow-md transition-shadow cursor-pointer"
             @click="goToArticle(article.id)"
           >
-            <div class="p-6">
-              <div class="flex items-start justify-between mb-3">
-                <h3 class="text-lg font-semibold text-gray-900 line-clamp-2 flex-1">
+            <CardHeader>
+              <div class="flex items-start justify-between gap-3">
+                <CardTitle class="line-clamp-2 text-lg">
                   {{ article.title }}
-                </h3>
-                <time class="text-sm text-gray-500 ml-3">{{ formatDate(article.created_at) }}</time>
+                </CardTitle>
+                <time class="text-sm text-muted-foreground whitespace-nowrap">
+                  {{ formatDate(article.created_at) }}
+                </time>
               </div>
-              <p class="text-gray-600 text-sm line-clamp-3 mb-4">
+            </CardHeader>
+            <CardContent class="space-y-4">
+              <CardDescription class="line-clamp-3">
                 {{ article.summary }}
-              </p>
+              </CardDescription>
+
               <!-- 标签 -->
-              <div v-if="article.tags && article.tags.length > 0" class="flex flex-wrap gap-2 mb-4">
-                <span
+              <div v-if="article.tags && article.tags.length > 0" class="flex flex-wrap gap-2">
+                <Badge
                   v-for="tag in article.tags"
                   :key="tag"
-                  class="px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded-md"
+                  variant="secondary"
+                  class="text-xs"
                 >
                   {{ tag }}
-                </span>
+                </Badge>
               </div>
-              <div class="flex items-center gap-2">
+
+              <div class="flex items-center gap-2 pt-2 border-t">
                 <Avatar size="sm" class="h-8 w-8">
                   <AvatarFallback class="text-sm">
                     {{ (article.author?.username?.charAt(0) || 'U').toUpperCase() }}
                   </AvatarFallback>
                 </Avatar>
-                <span class="text-sm text-gray-700">{{ article.author?.username || '未知作者' }}</span>
-              </div>
-            </div>
-          </article>
-        </div>
-
-        <!-- 列表视图 -->
-        <div v-else class="space-y-4">
-          <div
-            v-for="article in sortedArticles"
-            :key="article.id"
-            class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer"
-            @click="goToArticle(article.id)"
-          >
-            <div class="flex-1">
-              <h3 class="text-lg font-semibold text-gray-900 mb-2">
-                {{ article.title }}
-              </h3>
-              <p class="text-gray-600 text-sm mb-3 line-clamp-2">
-                {{ article.summary }}
-              </p>
-              <!-- 标签 -->
-              <div v-if="article.tags && article.tags.length > 0" class="flex flex-wrap gap-2 mb-3">
-                <span
-                  v-for="tag in article.tags"
-                  :key="tag"
-                  class="px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded-md"
-                >
-                  {{ tag }}
+                <span class="text-sm text-muted-foreground">
+                  {{ article.author?.username || '未知作者' }}
                 </span>
               </div>
-              <div class="flex items-center gap-2 text-xs text-gray-500">
+            </CardContent>
+          </Card>
+        </div>
+
+        <div v-else class="space-y-4">
+          <Card
+            v-for="article in sortedArticles"
+            :key="article.id"
+            class="hover:shadow-md transition-shadow cursor-pointer"
+            @click="goToArticle(article.id)"
+          >
+            <CardHeader>
+              <CardTitle class="text-lg">
+                {{ article.title }}
+              </CardTitle>
+            </CardHeader>
+            <CardContent class="space-y-3">
+              <CardDescription class="line-clamp-2">
+                {{ article.summary }}
+              </CardDescription>
+
+              <!-- 标签 -->
+              <div v-if="article.tags && article.tags.length > 0" class="flex flex-wrap gap-2">
+                <Badge
+                  v-for="tag in article.tags"
+                  :key="tag"
+                  variant="secondary"
+                  class="text-xs"
+                >
+                  {{ tag }}
+                </Badge>
+              </div>
+
+              <div class="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
                 <span>{{ article.author?.username || '未知作者' }}</span>
                 <span>·</span>
                 <time>{{ formatDate(article.created_at) }}</time>
                 <span>·</span>
                 <span>最后更新 {{ formatDate(article.updated_at) }}</span>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
 
-        <!-- 分页 -->
         <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 mt-8">
           <Button
             :disabled="currentPage <= 1"

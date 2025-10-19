@@ -1,8 +1,23 @@
 <script setup lang="ts">
 import type { ReviewDetailResponse, ThreeWayMergeData } from '@/types/article'
-import { Badge, Button, Card, Skeleton, Textarea, toast } from '@sse-wiki/ui'
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  Badge,
+  Button,
+  Card,
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  Skeleton,
+  Textarea,
+  toast,
+} from '@sse-wiki/ui'
 
-import { ArrowLeft, CheckCircle2, XCircle } from 'lucide-vue-next'
+import { AlertCircle, ArrowLeft, CheckCircle2, FileText, XCircle } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 
 import { useRouter } from 'vue-router'
@@ -330,26 +345,26 @@ onMounted(() => {
       </Button>
     </div>
 
-    <!-- 加载状态 -->
     <div v-if="loading" class="space-y-4">
       <Skeleton class="h-12 w-3/4" />
       <Skeleton class="h-4 w-1/2" />
       <Skeleton class="h-96 w-full" />
     </div>
 
-    <!-- 错误状态 -->
-    <div v-else-if="errorMessage" class="text-center py-12">
-      <div class="text-destructive mb-4">
-        {{ errorMessage }}
-      </div>
-      <Button @click="goBack">
-        返回
-      </Button>
+    <div v-else-if="errorMessage" class="flex items-center justify-center min-h-96 p-6">
+      <Alert variant="destructive" class="max-w-lg">
+        <AlertCircle class="h-4 w-4" />
+        <AlertTitle>加载失败</AlertTitle>
+        <AlertDescription class="mt-2 space-y-3">
+          <p>{{ errorMessage }}</p>
+          <Button variant="outline" size="sm" @click="goBack">
+            返回
+          </Button>
+        </AlertDescription>
+      </Alert>
     </div>
 
-    <!-- 审核内容 -->
     <div v-else-if="reviewData" class="space-y-6">
-      <!-- 头部信息 -->
       <header class="space-y-4">
         <div class="flex items-start justify-between">
           <h1 class="text-3xl font-bold tracking-tight">
@@ -365,7 +380,6 @@ onMounted(() => {
         <div class="border-b" />
       </header>
 
-      <!-- 提交信息卡片 -->
       <Card class="p-6">
         <div class="space-y-3">
           <div class="flex items-start justify-between">
@@ -406,7 +420,6 @@ onMounted(() => {
         </div>
       </Card>
 
-      <!-- 冲突处理视图 -->
       <div v-if="showConflict && conflictData">
         <MergeConflictPanel
           :conflict-data="conflictData"
@@ -418,7 +431,6 @@ onMounted(() => {
         />
       </div>
 
-      <!-- Diff 对比视图 -->
       <div v-else-if="reviewData.base_version && reviewData.proposed_version" class="bg-muted/50 border border-border rounded-lg p-6">
         <h2 class="text-lg font-semibold mb-4">
           内容对比
@@ -431,7 +443,6 @@ onMounted(() => {
         />
       </div>
 
-      <!-- 审核操作 -->
       <div v-if="!showConflict && canReview && !isReadOnly" class="space-y-4">
         <Card class="p-6">
           <div class="space-y-4">
@@ -466,7 +477,6 @@ onMounted(() => {
         </Card>
       </div>
 
-      <!-- 只读模式提示（无审核权限或已审核） -->
       <div v-else-if="!showConflict" class="space-y-4">
         <Card class="p-6">
           <div class="text-center text-muted-foreground py-4">
@@ -487,14 +497,17 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- 无数据状态 -->
-    <div v-else class="text-center py-12">
-      <div class="text-muted-foreground mb-4">
-        无法加载审核数据
-      </div>
-      <Button @click="goBack">
+    <Empty v-else class="py-12">
+      <EmptyMedia variant="icon">
+        <FileText class="h-8 w-8" />
+      </EmptyMedia>
+      <EmptyHeader>
+        <EmptyTitle>无法加载审核数据</EmptyTitle>
+        <EmptyDescription>审核数据不存在或已被删除</EmptyDescription>
+      </EmptyHeader>
+      <Button class="mt-4" @click="goBack">
         返回
       </Button>
-    </div>
+    </Empty>
   </div>
 </template>

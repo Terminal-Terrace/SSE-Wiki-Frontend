@@ -1,8 +1,20 @@
 <script setup lang="ts">
 import type { ArticleVersion, ReviewDetailResponse, ThreeWayMergeData } from '@/types/article'
-import { Badge, Button, Skeleton } from '@sse-wiki/ui'
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  Badge,
+  Button,
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  Skeleton,
+} from '@sse-wiki/ui'
 
-import { ArrowLeft } from 'lucide-vue-next'
+import { AlertCircle, ArrowLeft, FileText } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 
 import { useRoute, useRouter } from 'vue-router'
@@ -205,26 +217,26 @@ onMounted(() => {
       </Button>
     </div>
 
-    <!-- 加载状态 -->
     <div v-if="loading" class="space-y-4">
       <Skeleton class="h-12 w-3/4" />
       <Skeleton class="h-4 w-1/2" />
       <Skeleton class="h-96 w-full" />
     </div>
 
-    <!-- 错误状态 -->
-    <div v-else-if="errorMessage" class="text-center py-12">
-      <div class="text-destructive mb-4">
-        {{ errorMessage }}
-      </div>
-      <Button @click="goBack">
-        返回
-      </Button>
+    <div v-else-if="errorMessage" class="flex items-center justify-center min-h-96 p-6">
+      <Alert variant="destructive" class="max-w-lg">
+        <AlertCircle class="h-4 w-4" />
+        <AlertTitle>加载失败</AlertTitle>
+        <AlertDescription class="mt-2 space-y-3">
+          <p>{{ errorMessage }}</p>
+          <Button variant="outline" size="sm" @click="goBack">
+            返回
+          </Button>
+        </AlertDescription>
+      </Alert>
     </div>
 
-    <!-- 版本内容 -->
     <div v-else-if="currentVersion" class="space-y-6">
-      <!-- 头部信息 -->
       <header class="space-y-4">
         <div class="flex items-start justify-between">
           <h1 class="text-3xl font-bold tracking-tight">
@@ -242,7 +254,6 @@ onMounted(() => {
           <span>{{ formatDate(createdAt) }}</span>
         </div>
 
-        <!-- 提交审核信息 -->
         <div v-if="isSubmission && reviewData" class="border-t pt-4 space-y-2">
           <div v-if="baseVersion" class="text-sm">
             <span class="text-muted-foreground">基于版本:</span>
@@ -265,7 +276,6 @@ onMounted(() => {
         <div class="border-b" />
       </header>
 
-      <!-- 冲突处理视图（只读模式） -->
       <div v-if="conflictData">
         <MergeConflictPanel
           :conflict-data="conflictData"
@@ -276,7 +286,6 @@ onMounted(() => {
         />
       </div>
 
-      <!-- Diff 对比视图（无冲突） -->
       <div v-else class="bg-muted/50 border border-border rounded-lg p-6">
         <h2 class="text-lg font-semibold mb-4">
           {{ baseVersion ? '内容对比' : '版本内容' }}
@@ -289,7 +298,6 @@ onMounted(() => {
         />
       </div>
 
-      <!-- 操作按钮（仅有审核权限的用户可见） -->
       <div v-if="isSubmission && reviewData && canReview && (reviewData.status === 'pending' || reviewData.status === 'conflict_detected')" class="flex justify-end gap-4">
         <Button variant="default" @click="goToReview">
           进入审核
@@ -297,14 +305,17 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- 无数据状态 -->
-    <div v-else class="text-center py-12">
-      <div class="text-muted-foreground mb-4">
-        无法加载版本数据
-      </div>
-      <Button @click="goBack">
+    <Empty v-else class="py-12">
+      <EmptyMedia variant="icon">
+        <FileText class="h-8 w-8" />
+      </EmptyMedia>
+      <EmptyHeader>
+        <EmptyTitle>无法加载版本数据</EmptyTitle>
+        <EmptyDescription>版本数据不存在或已被删除</EmptyDescription>
+      </EmptyHeader>
+      <Button class="mt-4" @click="goBack">
         返回
       </Button>
-    </div>
+    </Empty>
   </div>
 </template>

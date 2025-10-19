@@ -1,6 +1,21 @@
 <script setup lang="ts">
 import type { HistoryEntry } from '@/types/article'
-import { Badge, Button } from '@sse-wiki/ui'
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  Skeleton,
+} from '@sse-wiki/ui'
+import { History } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { articleApi } from '@/services/articleApi'
@@ -188,65 +203,84 @@ watch(() => props.pageId, () => {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="bg-muted/50 border border-border rounded-lg p-6">
-      <h2 class="text-lg font-semibold mb-4">
+  <Card>
+    <CardHeader>
+      <CardTitle class="flex items-center gap-2">
+        <History class="h-5 w-5" />
         历史版本
-      </h2>
-
-      <div v-if="loading" class="text-center py-8 text-muted-foreground">
-        加载中...
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div v-if="loading" class="space-y-3">
+        <Card v-for="i in 3" :key="i">
+          <CardContent class="p-4">
+            <div class="flex items-center justify-between">
+              <div class="flex-1 space-y-2">
+                <Skeleton class="h-5 w-3/4" />
+                <Skeleton class="h-4 w-1/2" />
+              </div>
+              <Skeleton class="h-8 w-16" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      <div v-else-if="historyItems.length === 0" class="text-center py-8 text-muted-foreground">
-        暂无历史版本
-      </div>
+      <Empty v-else-if="historyItems.length === 0">
+        <EmptyMedia variant="icon">
+          <History class="h-6 w-6" />
+        </EmptyMedia>
+        <EmptyHeader>
+          <EmptyTitle>暂无历史版本</EmptyTitle>
+          <EmptyDescription>
+            开始编辑文档后，版本历史将显示在这里
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
 
       <div v-else class="space-y-3">
-        <div
+        <Card
           v-for="entry in historyItems"
           :key="`${entry.entry_type}-${entry.entry_id}`"
-          class="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
+          class="hover:shadow-md transition-shadow cursor-pointer"
+          @click="handleAction(entry)"
         >
-          <div class="flex-1">
-            <div class="flex items-center gap-2 flex-wrap">
-              <div class="font-medium">
-                {{ getTitle(entry) }}
+          <CardContent class="p-4">
+            <div class="flex items-center justify-between gap-4">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap mb-1">
+                  <span class="font-medium">{{ getTitle(entry) }}</span>
+
+                  <Badge v-if="isCurrent(entry)" class="bg-primary text-primary-foreground">
+                    当前版本
+                  </Badge>
+
+                  <Badge
+                    v-if="getBadgeConfig(entry)"
+                    :variant="getBadgeConfig(entry)?.variant"
+                  >
+                    {{ getBadgeConfig(entry)?.label }}
+                  </Badge>
+
+                  <Badge v-if="entry.has_conflict" variant="destructive">
+                    有冲突
+                  </Badge>
+                </div>
+                <CardDescription>
+                  {{ getSubtitle(entry) }} 于 {{ formatDate(entry.created_at) }}
+                </CardDescription>
               </div>
 
-              <!-- 当前版本标识 -->
-              <Badge v-if="isCurrent(entry)" class="bg-primary text-primary-foreground">
-                当前版本
-              </Badge>
-
-              <!-- 状态标识 -->
-              <Badge
-                v-if="getBadgeConfig(entry)"
-                :variant="getBadgeConfig(entry)?.variant"
+              <Button
+                size="sm"
+                :variant="getActionButton(entry).variant"
+                @click.stop="handleAction(entry)"
               >
-                {{ getBadgeConfig(entry)?.label }}
-              </Badge>
-
-              <!-- 冲突标识 -->
-              <Badge v-if="entry.has_conflict" variant="destructive">
-                有冲突
-              </Badge>
+                {{ getActionButton(entry).text }}
+              </Button>
             </div>
-            <div class="text-sm text-muted-foreground mt-1">
-              {{ getSubtitle(entry) }} 于 {{ formatDate(entry.created_at) }}
-            </div>
-          </div>
-
-          <!-- 操作按钮 -->
-          <Button
-            size="sm"
-            :variant="getActionButton(entry).variant"
-            @click="handleAction(entry)"
-          >
-            {{ getActionButton(entry).text }}
-          </Button>
-        </div>
+          </CardContent>
+        </Card>
       </div>
-    </div>
-  </div>
+    </CardContent>
+  </Card>
 </template>

@@ -1,13 +1,22 @@
 <script setup lang="ts">
 import type { ModuleAction, ModuleModalState, ModuleTreeNode } from '@/types/module'
 import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
   Button,
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
+  SidebarMenuSkeleton,
   toast,
 } from '@sse-wiki/ui'
 import { Edit2, Plus, X } from 'lucide-vue-next'
@@ -276,26 +285,25 @@ onMounted(() => {
         </SidebarGroupLabel>
 
         <SidebarGroupContent>
-          <!-- 加载状态 -->
-          <div v-if="isLoading" class="flex flex-col items-center gap-2 py-6 px-4 text-center text-muted-foreground">
-            <div class="flex items-center gap-2">
-              <div class="w-4 h-4 border-2 border-border border-t-primary rounded-full animate-spin" />
-              <span>加载模块树...</span>
-            </div>
+          <div v-if="isLoading" class="px-2">
+            <SidebarMenuSkeleton v-for="i in 5" :key="i" />
           </div>
 
-          <!-- 错误状态 -->
-          <div v-else-if="error" class="flex flex-col items-center gap-2 py-6 px-4 text-center text-muted-foreground">
-            <span>{{ error }}</span>
-            <Button size="sm" variant="outline" @click="fetchModules">
-              重试
-            </Button>
-          </div>
+          <Alert v-else-if="error" variant="destructive" class="mx-2">
+            <AlertTitle>加载失败</AlertTitle>
+            <AlertDescription class="mt-2">
+              <p class="mb-2">
+                {{ error }}
+              </p>
+              <Button size="sm" variant="outline" @click="fetchModules">
+                重试
+              </Button>
+            </AlertDescription>
+          </Alert>
 
-          <!-- 模块树 -->
-          <SidebarMenu v-else>
+          <SidebarMenu v-else-if="moduleTree && moduleTree.length">
             <ModuleTree
-              v-for="module in (moduleTree || [])"
+              v-for="module in moduleTree"
               :key="module.id"
               :node="module"
               :is-edit-mode="isEditMode"
@@ -303,24 +311,26 @@ onMounted(() => {
             />
           </SidebarMenu>
 
-          <!-- 空状态 -->
-          <div v-if="!isLoading && !error && (!moduleTree || !moduleTree.length)" class="flex flex-col items-center gap-2 py-6 px-4 text-center text-muted-foreground">
-            <span>暂无模块数据</span>
-            <span class="text-sm">系统中还没有创建任何模块</span>
-            <Button
-              v-if="canCreateTopLevel"
-              size="sm"
-              variant="outline"
-              @click="createTopLevelModule"
-            >
+          <Empty v-else class="py-6">
+            <EmptyMedia variant="icon">
+              <Plus class="h-5 w-5" />
+            </EmptyMedia>
+            <EmptyHeader>
+              <EmptyTitle class="text-sm">
+                暂无模块
+              </EmptyTitle>
+              <EmptyDescription class="text-xs">
+                系统中还没有创建任何模块
+              </EmptyDescription>
+            </EmptyHeader>
+            <Button v-if="canCreateTopLevel" size="sm" variant="outline" class="mt-3" @click="createTopLevelModule">
               创建第一个模块
             </Button>
-          </div>
+          </Empty>
         </SidebarGroupContent>
       </SidebarGroup>
     </SidebarContent>
 
-    <!-- 模块管理对话框 -->
     <CreateEditModuleModal
       :modal-state="modalState"
       @close="closeModal"
@@ -339,7 +349,6 @@ onMounted(() => {
       @success="handleModalSuccess"
     />
 
-    <!-- 编辑锁提示 -->
     <div v-if="lockInfo && lockInfo.locked_by && !isEditMode" class="fixed bottom-4 left-4 right-4 bg-muted border border-border rounded-md p-2 px-3 z-[1000] md:left-auto md:right-4">
       <div class="flex items-center gap-2 text-sm text-muted-foreground">
         <Edit2 class="w-4 h-4" />

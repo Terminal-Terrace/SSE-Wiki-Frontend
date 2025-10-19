@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import type { ModuleModalState, ModuleModerator } from '@/types/module'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
   Avatar,
   AvatarFallback,
   Button,
@@ -41,6 +49,8 @@ const moduleStore = useModuleStore()
 const collaborators = ref<ModuleModerator[]>([])
 const isLoadingCollaborators = ref(false)
 const isAddingCollaborator = ref(false)
+const collaboratorToRemove = ref<ModuleModerator | null>(null)
+const showRemoveDialog = ref(false)
 
 // 添加协作者表单
 const newCollaboratorUserId = ref('')
@@ -85,21 +95,29 @@ async function loadCollaborators(moduleId: number) {
   }
 }
 
+// 打开移除确认对话框
+function openRemoveDialog(collaborator: ModuleModerator) {
+  collaboratorToRemove.value = collaborator
+  showRemoveDialog.value = true
+}
+
 // TODO：暂时未测试协作者部分功能
 // 移除协作者
-async function removeCollaborator(userId: number) {
-  if (!targetModule.value)
-    return
-
-  if (!confirm('确定要移除该协作者吗？'))
+async function confirmRemoveCollaborator() {
+  if (!targetModule.value || !collaboratorToRemove.value)
     return
 
   try {
     // 调用真实API
-    await moduleStore.removeModerator(targetModule.value.id, userId)
+    await moduleStore.removeModerator(targetModule.value.id, collaboratorToRemove.value.user_id)
 
     // 重新加载协作者列表
     await loadCollaborators(targetModule.value.id)
+
+    toast({
+      title: '移除成功',
+      description: `已移除 ${collaboratorToRemove.value.username} 的协作权限`,
+    })
   }
   catch (error) {
     console.error('❌ 移除协作者失败:', error)
@@ -108,6 +126,10 @@ async function removeCollaborator(userId: number) {
       description: '请重试',
       variant: 'destructive',
     })
+  }
+  finally {
+    showRemoveDialog.value = false
+    collaboratorToRemove.value = null
   }
 }
 
@@ -307,7 +329,7 @@ function formatDate(dateString: string) {
                 size="sm"
                 variant="ghost"
                 class="text-muted-foreground hover:text-destructive"
-                @click="removeCollaborator(collaborator.user_id)"
+                @click="openRemoveDialog(collaborator)"
               >
                 <Trash2 class="w-4 h-4" />
               </Button>
@@ -323,4 +345,23 @@ function formatDate(dateString: string) {
       </DialogFooter>
     </DialogContent>
   </Dialog>
+
+  <!-- 移除协作者确认对话框 -->
+  <AlertDialog :open="showRemoveDialog" @update:open="showRemoveDialog = $event">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>确定要移除该协作者吗？</AlertDialogTitle>
+        <AlertDialogDescription>
+          移除后，<strong>{{ collaboratorToRemove?.username }}</strong> 将失去对此模块的协作权限。
+          此操作不可撤销。
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>取消</AlertDialogCancel>
+        <AlertDialogAction variant="destructive" @click="confirmRemoveCollaborator">
+          确认移除
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
 </template>
