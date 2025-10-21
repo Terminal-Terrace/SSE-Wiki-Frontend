@@ -137,6 +137,10 @@ const editor = useEditor({
   },
   editorProps: {
     handleDrop: (view, event, slice, moved) => {
+      // 只读模式下禁用拖拽上传
+      if (props.readonly)
+        return false
+
       // 如果是移动操作，使用默认行为
       if (moved)
         return false
@@ -160,6 +164,10 @@ const editor = useEditor({
       return true
     },
     handlePaste: (view, event) => {
+      // 只读模式下禁用粘贴上传
+      if (props.readonly)
+        return false
+
       // 获取粘贴的文件
       const files = event.clipboardData?.files
       if (!files || files.length === 0)
@@ -223,7 +231,6 @@ const undo = () => editor.value?.chain().focus().undo().run()
 const redo = () => editor.value?.chain().focus().redo().run()
 
 // 文件上传处理
-// TODO: 后端接入 - 当前使用 uploadFile 模拟上传，实际应调用真实 API
 async function handleFileDrop(files: File[], position: number) {
   if (!editor.value || files.length === 0)
     return
@@ -239,8 +246,6 @@ async function handleFileDrop(files: File[], position: number) {
       uploadFileName.value = file.name
       uploadProgress.value = 0
 
-      // TODO: 后端接入 - uploadFile 函数当前是模拟实现，需要替换为真实上传
-      // 见 @/utils/fileUpload.ts 中的详细说明
       const fileInfo = await uploadFile(file, (progress: UploadProgress) => {
         uploadProgress.value = progress.percentage
       })

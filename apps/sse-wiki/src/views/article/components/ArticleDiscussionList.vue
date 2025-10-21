@@ -43,7 +43,6 @@ function handleSubmit() {
   newComment.value = ''
 }
 
-// TODO: 实现日期格式化
 function formatDate(date: string) {
   return new Date(date).toLocaleString('zh-CN')
 }

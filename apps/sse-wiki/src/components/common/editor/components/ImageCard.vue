@@ -34,6 +34,11 @@ const isResizing = ref(false)
 const imageRef = ref<HTMLImageElement>()
 const containerRef = ref<HTMLDivElement>()
 
+// 检查编辑器是否可编辑
+const isEditable = computed(() => {
+  return props.editor?.isEditable ?? false
+})
+
 // 图片尺寸
 const imageWidth = ref(props.node.attrs.width || 0)
 const imageHeight = ref(props.node.attrs.height || 0)
@@ -147,12 +152,10 @@ function handlePreview(e: Event) {
 }
 
 // 下载图片
-// TODO: 后端接入 - 当前直接使用 fileUrl，实际应该调用下载 API
-// 应改为: /api/v1/files/:id/download
 function handleDownload(e: Event) {
   e.stopPropagation()
   const link = document.createElement('a')
-  link.href = props.node.attrs.fileUrl // TODO: 后端接入 - 如果是 Base64，需要改为服务器 URL
+  link.href = props.node.attrs.fileUrl
   link.download = props.node.attrs.fileName
   document.body.appendChild(link)
   link.click()
@@ -197,9 +200,9 @@ function handleAlignChange(align: any) {
           @load="handleImageLoad"
         >
 
-        <!-- 悬浮操作栏 -->
+        <!-- 悬浮操作栏 - 只在可编辑模式下显示 -->
         <div
-          v-if="imageLoaded && !isResizing"
+          v-if="imageLoaded && !isResizing && isEditable"
           class="absolute top-2 left-2 right-2 flex justify-between items-start opacity-0 group-hover:opacity-100 transition-opacity"
         >
           <!-- 对齐按钮 -->
@@ -241,9 +244,32 @@ function handleAlignChange(align: any) {
           </div>
         </div>
 
-        <!-- 调整大小手柄 -->
+        <!-- 查看和下载按钮 - 只读模式下显示 -->
         <div
-          v-if="imageLoaded"
+          v-if="imageLoaded && !isEditable"
+          class="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <Button
+            variant="secondary"
+            size="sm"
+            class="shadow-lg"
+            @click="handlePreview"
+          >
+            <Eye class="h-4 w-4" />
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            class="shadow-lg"
+            @click="handleDownload"
+          >
+            <Download class="h-4 w-4" />
+          </Button>
+        </div>
+
+        <!-- 调整大小手柄 - 只在可编辑模式下显示 -->
+        <div
+          v-if="imageLoaded && isEditable"
           class="resize-handle absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize opacity-0 group-hover:opacity-100 transition-opacity"
           @mousedown="startResize"
         >

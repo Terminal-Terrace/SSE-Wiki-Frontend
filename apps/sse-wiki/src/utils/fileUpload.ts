@@ -1,18 +1,11 @@
 /**
  * 文件上传工具
  *
- * TODO: 后端接入
- * 目前为本地模拟版本，文件转为 Base64 URL
+ * 分块上传实现，支持秒传、断点续传
  *
- * 需要实现的后端 API：
- * 1. POST /api/v1/files/upload/init - 初始化上传（秒传检测）
- * 2. POST /api/v1/files/upload/chunk - 上传分块
- * 3. POST /api/v1/files/upload/complete - 完成上传
- * 4. GET /api/v1/files/:id - 在线预览文件
- * 5. GET /api/v1/files/:id/download - 下载文件
- *
- * @see 多文件上传预期.md 查看完整技术方案
  */
+
+import { ALLOWED_FILE_TYPES, CHUNK_SIZE, MAX_CONCURRENT, MAX_FILE_SIZE } from '@/constants/upload'
 
 export interface FileInfo {
   fileId: string
@@ -69,41 +62,7 @@ export function getFileCategory(mimeType: string): FileInfo['category'] {
  * 验证文件类型
  */
 export function validateFileType(file: File): { valid: boolean, message?: string } {
-  const allowedTypes = [
-    // 图片
-    'image/jpeg',
-    'image/png',
-    'image/gif',
-    'image/webp',
-    'image/svg+xml',
-    // 视频
-    'video/mp4',
-    'video/webm',
-    'video/quicktime',
-    // 音频
-    'audio/mpeg',
-    'audio/wav',
-    'audio/ogg',
-    // 文档
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'text/plain',
-    'text/markdown',
-    // 压缩包
-    'application/zip',
-    'application/x-rar-compressed',
-    'application/x-7z-compressed',
-    // 代码
-    'text/javascript',
-    'application/json',
-    'text/xml',
-    'text/html',
-  ]
-
-  if (!allowedTypes.includes(file.type)) {
+  if (!ALLOWED_FILE_TYPES.includes(file.type)) {
     return {
       valid: false,
       message: `不支持的文件类型: ${file.type}`,
@@ -117,9 +76,7 @@ export function validateFileType(file: File): { valid: boolean, message?: string
  * 验证文件大小
  */
 export function validateFileSize(file: File): { valid: boolean, message?: string } {
-  const maxSize = 100 * 1024 * 1024 // TODO：目前文件大小限制为100MB，写死
-
-  if (file.size > maxSize) {
+  if (file.size > MAX_FILE_SIZE) {
     return {
       valid: false,
       message: '文件大小超过限制 (最大 100 MB)',
@@ -130,176 +87,173 @@ export function validateFileSize(file: File): { valid: boolean, message?: string
 }
 
 /**
- * 将文件转换为 Base64 URL（模拟上传）
- *
- * TODO: 后端接入 - 删除此函数
- * 实际实现时，应该改为真实的文件上传到服务器
- */
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
-
-/**
  * 上传文件
  *
- * TODO: 后端接入 - 替换为真实上传逻辑
- *
  * 实现步骤：
- * 1. 计算文件 SHA256 Hash（使用 Web Worker 避免阻塞）
- * 2. 调用 /api/v1/files/upload/init 初始化上传
+ * 1. 计算文件 SHA256 Hash
+ * 2. 调用 /api/v1/upload/init 初始化上传（秒传检测）
  * 3. 如果返回 exists=true，直接返回文件信息（秒传）
  * 4. 否则，将文件分块（2MB/块）
- * 5. 并发上传分块到 /api/v1/files/upload/chunk（最多3个并发）
- * 6. 所有分块完成后调用 /api/v1/files/upload/complete
+ * 5. 并发上传分块到 /api/v1/upload/chunk（最多3个并发）
+ * 6. 所有分块完成后调用 /api/v1/upload/complete
  * 7. 返回服务器生成的文件信息
- *
- * 当前实现：模拟上传，文件转为 Base64 存储在前端
  */
 export async function uploadFile(
   file: File,
   onProgress?: (progress: UploadProgress) => void,
 ): Promise<FileInfo> {
-  // 验证文件类型
+  // 验证文件类型与大小
   const typeValidation = validateFileType(file)
-  if (!typeValidation.valid) {
+  if (!typeValidation.valid)
     throw new Error(typeValidation.message)
-  }
 
-  // 验证文件大小
   const sizeValidation = validateFileSize(file)
-  if (!sizeValidation.valid) {
+  if (!sizeValidation.valid)
     throw new Error(sizeValidation.message)
-  }
 
-  // TODO: 后端接入 - 替换以下模拟代码
-  // ============ 以下是模拟代码，后端接入时需要删除 ============
+  // 1) 计算文件哈希（一次性读取，100MB内可接受）
+  const fileHash = await calculateSHA256(file)
 
-  // 模拟上传进度
-  const total = file.size
-  let loaded = 0
-  const chunkSize = Math.ceil(total / 10) // 分10步模拟
-
-  return new Promise((resolve, reject) => {
-    const uploadInterval = setInterval(() => {
-      loaded += chunkSize
-      if (loaded > total)
-        loaded = total
-
-      const percentage = Math.round((loaded / total) * 100)
-      onProgress?.({ loaded, total, percentage })
-
-      if (loaded >= total) {
-        clearInterval(uploadInterval)
-
-        // 转换为 Base64 URL（模拟存储）
-        fileToBase64(file)
-          .then((dataUrl) => {
-            const fileInfo: FileInfo = {
-              fileId: `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-              fileName: file.name,
-              fileSize: file.size,
-              fileType: file.type,
-              fileUrl: dataUrl, // TODO: 后端接入 - 这里应该是服务器返回的 URL，如: /api/v1/files/123
-              category: getFileCategory(file.type),
-            }
-            resolve(fileInfo)
-          })
-          .catch(reject)
-      }
-    }, 100) // 每100ms更新一次进度
+  // 2) 初始化上传（秒传检测）
+  const initResp = await fetch('/api/v1/upload/init', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      fileName: file.name,
+      fileSize: file.size,
+      fileHash,
+      totalChunks: Math.ceil(file.size / (CHUNK_SIZE)),
+      mimeType: file.type,
+    }),
   })
+  if (!initResp.ok)
+    throw new Error(`初始化上传失败: ${initResp.status}`)
+  const initData: { exists: boolean, fileId?: number, fileUrl?: string, uploadId?: string } = await initResp.json()
 
-  // ============ 模拟代码结束 ============
-
-  /* TODO: 后端接入 - 使用以下真实实现替换上面的模拟代码
-
-  try {
-    // 1. 计算文件 Hash（在 Web Worker 中）
-    const fileHash = await calculateFileHash(file)
-
-    // 2. 初始化上传
-    const initResponse = await fetch('/api/v1/files/upload/init', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fileName: file.name,
-        fileSize: file.size,
-        fileHash,
-        mimeType: file.type,
-        totalChunks: Math.ceil(file.size / (2 * 1024 * 1024))
-      })
-    })
-    const initData = await initResponse.json()
-
-    // 3. 如果文件已存在（秒传）
-    if (initData.exists) {
-      return {
-        fileId: initData.fileId,
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type,
-        fileUrl: `/api/v1/files/${initData.fileId}`,
-        category: getFileCategory(file.type)
-      }
-    }
-
-    // 4. 分块上传
-    const chunkSize = 2 * 1024 * 1024 // 2MB
-    const chunks = Math.ceil(file.size / chunkSize)
-    const uploadQueue = new UploadQueue(3) // 3个并发
-
-    for (let i = 0; i < chunks; i++) {
-      const start = i * chunkSize
-      const end = Math.min(start + chunkSize, file.size)
-      const chunk = file.slice(start, end)
-
-      await uploadQueue.add(async () => {
-        const formData = new FormData()
-        formData.append('file', chunk)
-        formData.append('uploadId', initData.uploadId)
-        formData.append('chunkIndex', i.toString())
-
-        await fetch('/api/v1/files/upload/chunk', {
-          method: 'POST',
-          body: formData
-        })
-
-        // 更新进度
-        const percentage = Math.round(((i + 1) / chunks) * 100)
-        onProgress?.({
-          loaded: Math.min((i + 1) * chunkSize, file.size),
-          total: file.size,
-          percentage
-        })
-      })
-    }
-
-    // 5. 完成上传
-    const completeResponse = await fetch('/api/v1/files/upload/complete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uploadId: initData.uploadId })
-    })
-    const fileData = await completeResponse.json()
-
+  if (initData.exists && initData.fileId != null) {
     return {
-      fileId: fileData.fileId,
+      fileId: String(initData.fileId),
       fileName: file.name,
       fileSize: file.size,
       fileType: file.type,
-      fileUrl: `/api/v1/files/${fileData.fileId}`,
-      category: getFileCategory(file.type)
+      fileUrl: `/api/v1/files/${initData.fileId}`,
+      category: getFileCategory(file.type),
     }
-  } catch (error) {
-    console.error('文件上传失败:', error)
-    throw error
   }
-  */
+
+  if (!initData.uploadId)
+    throw new Error('后端未返回 uploadId')
+
+  const uploadId = initData.uploadId
+
+  // 3) 分块上传（并发3）
+  const total = file.size
+  const chunks = Math.ceil(total / CHUNK_SIZE)
+  let uploadedChunks = 0
+
+  // 并发上传队列
+  const pool = new ConcurrencyPool(MAX_CONCURRENT)
+  const tasks: Array<() => Promise<void>> = []
+
+  for (let i = 0; i < chunks; i++) {
+    const start = i * CHUNK_SIZE
+    const end = Math.min(start + CHUNK_SIZE, total)
+    const blob = file.slice(start, end)
+
+    tasks.push(async () => {
+      const formData = new FormData()
+      formData.append('file', blob)
+      formData.append('uploadId', uploadId)
+      formData.append('chunkIndex', String(i))
+
+      const resp = await fetch('/api/v1/upload/chunk', {
+        method: 'POST',
+        body: formData,
+      })
+      if (!resp.ok)
+        throw new Error(`分块上传失败: ${resp.status}`)
+
+      uploadedChunks += 1
+      const loaded = Math.min(uploadedChunks * CHUNK_SIZE, total)
+      const percentage = Math.round((loaded / total) * 100)
+      onProgress?.({ loaded, total, percentage })
+    })
+  }
+
+  await pool.run(tasks)
+
+  // 4) 完成上传
+  const completeResp = await fetch('/api/v1/upload/complete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uploadId }),
+  })
+  if (!completeResp.ok)
+    throw new Error(`完成上传失败: ${completeResp.status}`)
+  const completeData: { fileId: number, fileName: string, fileUrl: string, category: FileInfo['category'] } = await completeResp.json()
+
+  return {
+    fileId: String(completeData.fileId),
+    fileName: file.name,
+    fileSize: file.size,
+    fileType: file.type,
+    fileUrl: `/api/v1/files/${completeData.fileId}`,
+    category: completeData.category ?? getFileCategory(file.type),
+  }
+}
+
+// ========== 内部工具 ==========
+
+class ConcurrencyPool {
+  private max: number
+  private running = 0
+  private queue: Array<() => void> = []
+
+  constructor(max: number) {
+    this.max = Math.max(1, max)
+  }
+
+  async run(tasks: Array<() => Promise<void>>): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const next = () => {
+        if (tasks.length === 0 && this.running === 0) {
+          resolve()
+          return
+        }
+        while (this.running < this.max && tasks.length > 0) {
+          const task = tasks.shift()!
+          this.running++
+          task()
+            .then(() => {
+              this.running--
+              next()
+            })
+            .catch((err) => {
+              reject(err)
+            })
+        }
+      }
+      this.queue.push(next)
+      // 启动
+      this.dequeue()
+    })
+  }
+
+  private dequeue() {
+    const fn = this.queue.shift()
+    if (fn) {
+      fn()
+    }
+  }
+}
+
+async function calculateSHA256(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer()
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
+  const bytes = new Uint8Array(hashBuffer)
+  let hex = ''
+  for (const b of bytes) hex += b.toString(16).padStart(2, '0')
+  return hex
 }
 
 /**

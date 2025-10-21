@@ -65,20 +65,16 @@ const fileIcon = computed(() => {
   }
 })
 
-// 点击卡片打开文件
-// TODO: 后端接入 - 当前直接打开 fileUrl，实际应该调用预览 API
-// 应改为: /api/v1/files/:id (在线预览)
+// 点击卡片打开文件（在线预览）
 function handleOpen() {
-  window.open(props.node.attrs.fileUrl, '_blank') // TODO: 后端接入 - Base64 URL 需要改为服务器 URL
+  window.open(props.node.attrs.fileUrl, '_blank')
 }
 
 // 下载文件
-// TODO: 后端接入 - 应该调用下载 API
-// 应改为: /api/v1/files/:id/download
 function handleDownload(e: Event) {
   e.stopPropagation()
   const link = document.createElement('a')
-  link.href = props.node.attrs.fileUrl // TODO: 后端接入 - Base64 URL 需要改为服务器下载地址
+  link.href = props.node.attrs.fileUrl
   link.download = props.node.attrs.fileName
   document.body.appendChild(link)
   link.click()
