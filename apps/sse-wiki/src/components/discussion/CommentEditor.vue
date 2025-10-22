@@ -5,7 +5,7 @@ import { computed, ref, watch } from 'vue'
  * 评论编辑器组件
  * 支持三种模式：新建评论、回复评论、编辑评论
  */
-import ContentEditor from '@/components/common/ContentEditor.vue'
+import ContentEditor from '@/components/common/editor/ContentEditor.vue'
 import { CommentEditorMode } from '@/types/discussion'
 
 interface Props {
