@@ -617,8 +617,8 @@ async function saveBasicInfo() {
                 </div>
                 <DiscussionThread
                   v-else
-                  :article_id="Number(pageId)"
-                  :current_user_id="currentUserId"
+                  :article-id="Number(pageId)"
+                  :current-user-id="currentUserId"
                 />
               </TabsContent>
             </Tabs>
