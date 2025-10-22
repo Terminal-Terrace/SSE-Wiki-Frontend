@@ -9,6 +9,7 @@ import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import { DiscussionThread } from '@/components/discussion'
 import OutlineCard from '@/components/layout/OutlinePanel.vue'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 // 服务和工具
@@ -18,7 +19,7 @@ import { formatDate } from '@/utils/format'
 import AiChatSidebar from '@/views/article/components/AiChatPanel.vue'
 
 import ArticleContentCard from '@/views/article/components/ArticleContent.vue'
-import ArticleDiscussionList from '@/views/article/components/ArticleDiscussionList.vue'
+// import ArticleDiscussionList from '@/views/article/components/ArticleDiscussionList.vue'
 import ArticleEditCard from '@/views/article/components/ArticleEditor.vue'
 import ArticleHistoryList from '@/views/article/components/ArticleHistoryList.vue'
 
@@ -59,6 +60,7 @@ const newTagInput = ref('')
 
 // 兼容路由 param 名称：优先使用 props.id, 然后 props.articleId, 最后退回到 route.params.articleId
 const pageId = computed(() => String(props.id ?? props.articleId ?? route.params.articleId ?? ''))
+const currentUserId = computed(() => authStore.user?.id)
 
 const tabs = [
   { label: '详情', value: 'content' },
@@ -605,7 +607,19 @@ async function saveBasicInfo() {
 
               <!-- Discussion Tab -->
               <TabsContent value="discussion">
-                <ArticleDiscussionList :page-id="page.id" />
+                <div v-if="!isAuthenticated" class="text-center py-8">
+                  <p class="text-muted-foreground mb-4">
+                    您需要登录才能发表评论
+                  </p>
+                  <Button @click="showLoginPrompt">
+                    登录
+                  </Button>
+                </div>
+                <DiscussionThread
+                  v-else
+                  :article_id="Number(pageId)"
+                  :current_user_id="currentUserId"
+                />
               </TabsContent>
             </Tabs>
           </div>

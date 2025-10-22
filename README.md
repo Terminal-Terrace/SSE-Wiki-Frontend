@@ -77,8 +77,6 @@ pnpm build
 
 （如 `ArticleDetailView.vue`、`HomeView.vue`），页面专属组件放在 `views/{feature}/components/`，可复用组件放在公共`components`文件夹下
 
-
-
 ## 4. 认证系统架构
 
 ### 应用架构
