@@ -47,7 +47,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex items-center justify-center w-full h-full bg-gray-100">
+  <div class="flex items-center justify-center w-full h-full bg-muted">
     <svg width="250" height="250" viewBox="0 0 250 250" class="robot">
       <!-- Head -->
       <rect x="50" y="50" width="150" height="130" rx="20" fill="#D1D5DB" />

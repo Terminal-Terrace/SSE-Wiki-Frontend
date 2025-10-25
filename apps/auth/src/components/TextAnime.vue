@@ -39,10 +39,10 @@ onMounted(() => {
   function draw() {
     if (!ctx)
       return
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.05)'
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.05)'
     ctx.fillRect(0, 0, width, height)
 
-    ctx.fillStyle = '#0F0' // Green text
+    ctx.fillStyle = '#22d3ee' // 青色
     ctx.font = '15px monospace'
 
     for (let i = 0; i < drops.length; i++) {
@@ -90,7 +90,7 @@ onMounted(() => {
   flex: 1;
   position: relative;
   overflow: hidden;
-  background: #000;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
 }
 
 .animation-container canvas {
@@ -103,26 +103,29 @@ onMounted(() => {
   position: absolute;
   bottom: 20px;
   right: 20px;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: hsl(var(--background) / 0.8);
+  backdrop-filter: blur(8px);
   padding: 10px;
   border-radius: 8px;
-  color: white;
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
   display: flex;
   align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .speed-control label {
   margin-right: 10px;
-  font-size: large;
+  font-size: 0.875rem;
 }
 
 .speed-control input {
   width: 60px;
-  background-color: #333;
-  color: white;
-  border: 1px solid #555;
-  border-radius: 3px;
-  padding: 8px;
-  font-size: large;
+  background-color: hsl(var(--input));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.375rem;
+  padding: 0.5rem;
+  font-size: 0.875rem;
 }
 </style>
