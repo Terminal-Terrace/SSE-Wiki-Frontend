@@ -11,7 +11,8 @@ import {
 
 import { LogOut, Search, User } from 'lucide-vue-next'
 import { ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
+import { TooltipWrapper } from '@/components/common/tooltip'
 import { useAuth } from '../../composables/useAuth'
 
 interface NavItem {
@@ -20,6 +21,7 @@ interface NavItem {
 }
 
 const { startLogin, logout, loading, isAuthenticated, user } = useAuth()
+const router = useRouter()
 const searchQuery = ref('')
 
 const navItems: NavItem[] = [
@@ -43,8 +45,11 @@ function handleLogout() {
 
 function handleSearch() {
   if (searchQuery.value.trim()) {
-    // TODO: 处理搜索逻辑
-    console.log('搜索:', searchQuery.value)
+    // 跳转到搜索页面并传递查询参数
+    router.push({
+      name: 'search',
+      query: { q: searchQuery.value },
+    })
   }
 }
 </script>
@@ -75,15 +80,25 @@ function handleSearch() {
         </div>
 
         <div class="flex-1 max-w-md mx-8">
-          <div class="relative">
-            <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              v-model="searchQuery"
-              placeholder="搜索..."
-              class="pl-10 pr-4 w-full"
-              @keydown.enter="handleSearch"
-            />
-          </div>
+          <TooltipWrapper>
+            <div class="relative">
+              <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                v-model="searchQuery"
+                placeholder="搜索..."
+                class="pl-10 pr-4 w-full"
+                @keydown.enter="handleSearch"
+              />
+            </div>
+            <template #tooltip>
+              <div class="text-xs space-y-1">
+                <div>按 <kbd class="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">Enter</kbd> 搜索</div>
+                <div class="text-muted-foreground">
+                  快捷键: <kbd class="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">Ctrl+K</kbd>
+                </div>
+              </div>
+            </template>
+          </TooltipWrapper>
         </div>
 
         <!-- 右侧：用户菜单 -->

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Comment } from '@/types/discussion'
-import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@sse-wiki/ui'
+import { Avatar, AvatarFallback, AvatarImage, Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@sse-wiki/ui'
 import { MessageSquare, MoreVertical, Pencil, Trash2 } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { useDiscussionStore } from '@/stores/discussion'
@@ -276,7 +276,7 @@ function cancelEdit() {
           <!-- 更多操作（仅评论作者可见） -->
           <DropdownMenu v-if="isOwner && !isDeleted">
             <DropdownMenuTrigger as-child>
-              <Button variant="ghost" size="sm" class="h-7 w-7 p-0">
+              <Button variant="ghost" size="sm" class="h-7 w-7 p-0" title="更多操作">
                 <MoreVertical class="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>

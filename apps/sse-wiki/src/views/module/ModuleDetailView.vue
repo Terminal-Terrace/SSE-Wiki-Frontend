@@ -50,6 +50,7 @@ import {
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import OverflowText from '@/components/common/OverflowText.vue'
+import { TooltipIconButton } from '@/components/common/tooltip'
 import CollaboratorsModal from '@/components/layout/components/ModuleCollaboratorsModal.vue'
 import DeleteModuleModal from '@/components/layout/components/ModuleDeleteModal.vue'
 import CreateEditModuleModal from '@/components/layout/components/ModuleFormModal.vue'
@@ -559,16 +560,16 @@ watch(
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" class="w-48">
-                <DropdownMenuItem @click="editModule">
+                <DropdownMenuItem title="需要 Moderator 或更高权限" @click="editModule">
                   <Edit2 class="mr-2 w-4 h-4" />
                   <span>编辑模块</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem @click="manageCollaborators">
+                <DropdownMenuItem title="管理可以访问此模块的用户" @click="manageCollaborators">
                   <Users class="mr-2 w-4 h-4" />
                   <span>管理协作者</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem class="text-destructive focus:text-destructive" @click="deleteModule">
+                <DropdownMenuItem title="删除此模块及其所有子模块和文章（不可恢复）" class="text-destructive focus:text-destructive" @click="deleteModule">
                   <Trash2 class="mr-2 w-4 h-4" />
                   <span>删除模块</span>
                 </DropdownMenuItem>
@@ -585,22 +586,20 @@ watch(
           </h2>
           <div class="flex items-center gap-3">
             <div class="flex bg-gray-100 rounded-lg p-1">
-              <Button
+              <TooltipIconButton
+                :icon="Grid"
+                tooltip="网格视图"
                 :variant="viewMode === 'grid' ? 'default' : 'ghost'"
                 size="sm"
-                class="px-3 py-1"
                 @click="viewMode = 'grid'"
-              >
-                <Grid class="w-4 h-4" />
-              </Button>
-              <Button
+              />
+              <TooltipIconButton
+                :icon="List"
+                tooltip="列表视图"
                 :variant="viewMode === 'list' ? 'default' : 'ghost'"
                 size="sm"
-                class="px-3 py-1"
                 @click="viewMode = 'list'"
-              >
-                <List class="w-4 h-4" />
-              </Button>
+              />
             </div>
 
             <Select v-model="sortBy">

@@ -11,7 +11,7 @@ import type { UploadProgress } from '@/utils/fileUpload'
  * - 自定义扩展
  * - 拖拽上传文件
  */
-import { Button, Progress, Separator, ToggleGroup, ToggleGroupItem } from '@sse-wiki/ui'
+import { Progress, Separator, ToggleGroup, TooltipProvider } from '@sse-wiki/ui'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -38,6 +38,7 @@ import {
   X,
 } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { TooltipButton, TooltipToggleButton } from '@/components/common/tooltip'
 import { uploadFile } from '@/utils/fileUpload'
 import { FileCard } from './utils'
 
@@ -299,178 +300,184 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="rich-text-editor border rounded-lg overflow-hidden">
-    <!-- 工具栏 -->
-    <div v-if="showToolbar && !readonly" class="toolbar border-b bg-muted/30 p-2 flex flex-wrap gap-1 items-center">
-      <!-- 撤销/重做 -->
-      <div class="flex gap-1">
-        <Button
-          variant="ghost"
-          size="sm"
-          :disabled="!canUndo"
-          @click="undo"
-        >
-          <Undo class="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          :disabled="!canRedo"
-          @click="redo"
-        >
-          <Redo class="h-4 w-4" />
-        </Button>
-      </div>
-
-      <Separator orientation="vertical" class="h-6" />
-
-      <!-- 标题 -->
-      <ToggleGroup type="single" class="flex gap-1">
-        <ToggleGroupItem
-          value="h1"
-          :pressed="isActive('heading', { level: 1 })"
-          @click="setHeading(1)"
-        >
-          <Heading1 class="h-4 w-4" />
-        </ToggleGroupItem>
-        <ToggleGroupItem
-          value="h2"
-          :pressed="isActive('heading', { level: 2 })"
-          @click="setHeading(2)"
-        >
-          <Heading2 class="h-4 w-4" />
-        </ToggleGroupItem>
-        <ToggleGroupItem
-          value="h3"
-          :pressed="isActive('heading', { level: 3 })"
-          @click="setHeading(3)"
-        >
-          <Heading3 class="h-4 w-4" />
-        </ToggleGroupItem>
-      </ToggleGroup>
-
-      <Separator orientation="vertical" class="h-6" />
-
-      <!-- 文本样式 -->
-      <ToggleGroup type="multiple" class="flex gap-1">
-        <ToggleGroupItem
-          value="bold"
-          :pressed="isActive('bold')"
-          @click="toggleBold"
-        >
-          <Bold class="h-4 w-4" />
-        </ToggleGroupItem>
-        <ToggleGroupItem
-          value="italic"
-          :pressed="isActive('italic')"
-          @click="toggleItalic"
-        >
-          <Italic class="h-4 w-4" />
-        </ToggleGroupItem>
-        <ToggleGroupItem
-          value="strike"
-          :pressed="isActive('strike')"
-          @click="toggleStrike"
-        >
-          <Strikethrough class="h-4 w-4" />
-        </ToggleGroupItem>
-        <ToggleGroupItem
-          value="code"
-          :pressed="isActive('code')"
-          @click="toggleCode"
-        >
-          <Code class="h-4 w-4" />
-        </ToggleGroupItem>
-      </ToggleGroup>
-
-      <Separator orientation="vertical" class="h-6" />
-
-      <!-- 列表和引用 -->
-      <ToggleGroup type="multiple" class="flex gap-1">
-        <ToggleGroupItem
-          value="bulletList"
-          :pressed="isActive('bulletList')"
-          @click="toggleBulletList"
-        >
-          <List class="h-4 w-4" />
-        </ToggleGroupItem>
-        <ToggleGroupItem
-          value="orderedList"
-          :pressed="isActive('orderedList')"
-          @click="toggleOrderedList"
-        >
-          <ListOrdered class="h-4 w-4" />
-        </ToggleGroupItem>
-        <ToggleGroupItem
-          value="blockquote"
-          :pressed="isActive('blockquote')"
-          @click="toggleBlockquote"
-        >
-          <Quote class="h-4 w-4" />
-        </ToggleGroupItem>
-        <ToggleGroupItem
-          value="codeBlock"
-          :pressed="isActive('codeBlock')"
-          @click="toggleCodeBlock"
-        >
-          <Code2 class="h-4 w-4" />
-        </ToggleGroupItem>
-      </ToggleGroup>
-
-      <Separator orientation="vertical" class="h-6" />
-
-      <!-- 链接 -->
-      <Button
-        variant="ghost"
-        size="sm"
-        :class="{ 'bg-muted': isActive('link') }"
-        @click="setLink"
-      >
-        <LinkIcon class="h-4 w-4" />
-      </Button>
-
-      <Separator orientation="vertical" class="h-6" />
-
-      <!-- 上传文件 -->
-      <Button
-        variant="ghost"
-        size="sm"
-        title="上传文件"
-        @click="triggerFileUpload"
-      >
-        <Upload class="h-4 w-4" />
-      </Button>
-    </div>
-
-    <!-- 上传进度条 -->
-    <div
-      v-if="uploading"
-      class="upload-progress border-b bg-muted/50 p-3"
-    >
-      <div class="flex items-center justify-between mb-2">
-        <div class="flex items-center gap-2">
-          <Upload class="h-4 w-4 animate-pulse text-primary" />
-          <span class="text-sm font-medium">上传中: {{ uploadFileName }}</span>
+  <TooltipProvider>
+    <div class="rich-text-editor border rounded-lg overflow-hidden">
+      <!-- 工具栏 -->
+      <div v-if="showToolbar && !readonly" class="toolbar border-b bg-muted/30 p-2 flex flex-wrap gap-1 items-center">
+        <!-- 撤销/重做 -->
+        <div class="flex gap-1">
+          <TooltipButton
+            :icon="Undo"
+            tooltip="撤销 (Ctrl+Z)"
+            :disabled="!canUndo"
+            @click="undo"
+          />
+          <TooltipButton
+            :icon="Redo"
+            tooltip="重做 (Ctrl+Y)"
+            :disabled="!canRedo"
+            @click="redo"
+          />
         </div>
-        <span class="text-sm text-muted-foreground">{{ uploadProgress }}%</span>
-      </div>
-      <Progress :model-value="uploadProgress" class="h-2" />
-      <div v-if="uploadError" class="mt-2 text-sm text-destructive flex items-center gap-2">
-        <X class="h-4 w-4" />
-        {{ uploadError }}
-      </div>
-    </div>
 
-    <!-- 编辑器内容区 -->
-    <EditorContent
-      :editor="editor"
-      class="editor-content prose max-w-none p-4 focus:outline-none overflow-y-auto"
-      :style="{
-        minHeight,
-        maxHeight,
-      }"
-    />
-  </div>
+        <Separator orientation="vertical" class="h-6" />
+
+        <!-- 标题 -->
+        <ToggleGroup type="single" class="flex gap-1">
+          <TooltipToggleButton
+            :icon="Heading1"
+            value="h1"
+            tooltip="一级标题"
+            :pressed="isActive('heading', { level: 1 })"
+            @click="setHeading(1)"
+          />
+          <TooltipToggleButton
+            :icon="Heading2"
+            value="h2"
+            tooltip="二级标题"
+            :pressed="isActive('heading', { level: 2 })"
+            @click="setHeading(2)"
+          />
+          <TooltipToggleButton
+            :icon="Heading3"
+            value="h3"
+            tooltip="三级标题"
+            :pressed="isActive('heading', { level: 3 })"
+            @click="setHeading(3)"
+          />
+        </ToggleGroup>
+
+        <Separator orientation="vertical" class="h-6" />
+
+        <!-- 文本样式 -->
+        <ToggleGroup type="multiple" class="flex gap-1">
+          <TooltipToggleButton
+            :icon="Bold"
+            value="bold"
+            tooltip="加粗 (Ctrl+B)"
+            :pressed="isActive('bold')"
+            @click="toggleBold"
+          />
+          <TooltipToggleButton
+            :icon="Italic"
+            value="italic"
+            tooltip="斜体 (Ctrl+I)"
+            :pressed="isActive('italic')"
+            @click="toggleItalic"
+          />
+          <TooltipToggleButton
+            :icon="Strikethrough"
+            value="strike"
+            tooltip="删除线"
+            :pressed="isActive('strike')"
+            @click="toggleStrike"
+          />
+          <TooltipToggleButton
+            :icon="Code"
+            value="code"
+            tooltip="行内代码"
+            :pressed="isActive('code')"
+            @click="toggleCode"
+          />
+        </ToggleGroup>
+
+        <Separator orientation="vertical" class="h-6" />
+
+        <!-- 列表和引用 -->
+        <ToggleGroup type="multiple" class="flex gap-1">
+          <TooltipToggleButton
+            :icon="List"
+            value="bulletList"
+            tooltip="无序列表"
+            :pressed="isActive('bulletList')"
+            @click="toggleBulletList"
+          />
+          <TooltipToggleButton
+            :icon="ListOrdered"
+            value="orderedList"
+            tooltip="有序列表"
+            :pressed="isActive('orderedList')"
+            @click="toggleOrderedList"
+          />
+          <TooltipToggleButton
+            :icon="Quote"
+            value="blockquote"
+            tooltip="引用块"
+            :pressed="isActive('blockquote')"
+            @click="toggleBlockquote"
+          />
+          <TooltipToggleButton
+            :icon="Code2"
+            value="codeBlock"
+            tooltip="代码块"
+            :pressed="isActive('codeBlock')"
+            @click="toggleCodeBlock"
+          />
+        </ToggleGroup>
+
+        <Separator orientation="vertical" class="h-6" />
+
+        <!-- 链接 -->
+        <TooltipButton
+          :icon="LinkIcon"
+          tooltip="插入链接"
+          :active="isActive('link')"
+          @click="setLink"
+        />
+
+        <Separator orientation="vertical" class="h-6" />
+
+        <!-- 上传文件 -->
+        <TooltipButton
+          :icon="Upload"
+          @click="triggerFileUpload"
+        >
+          <template #tooltip>
+            <div class="text-xs">
+              <div class="font-medium mb-1">
+                上传文件
+              </div>
+              <div class="text-muted-foreground">
+                支持图片、PDF、文档等
+              </div>
+              <div class="text-muted-foreground">
+                最大 50MB
+              </div>
+            </div>
+          </template>
+        </TooltipButton>
+      </div>
+
+      <!-- 上传进度条 -->
+      <div
+        v-if="uploading"
+        class="upload-progress border-b bg-muted/50 p-3"
+      >
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <Upload class="h-4 w-4 animate-pulse text-primary" />
+            <span class="text-sm font-medium">上传中: {{ uploadFileName }}</span>
+          </div>
+          <span class="text-sm text-muted-foreground">{{ uploadProgress }}%</span>
+        </div>
+        <Progress :model-value="uploadProgress" class="h-2" />
+        <div v-if="uploadError" class="mt-2 text-sm text-destructive flex items-center gap-2">
+          <X class="h-4 w-4" />
+          {{ uploadError }}
+        </div>
+      </div>
+
+      <!-- 编辑器内容区 -->
+      <EditorContent
+        :editor="editor"
+        class="editor-content prose max-w-none p-4 focus:outline-none overflow-y-auto"
+        :style="{
+          minHeight,
+          maxHeight,
+        }"
+      />
+    </div>
+  </TooltipProvider>
 </template>
 
 <style scoped lang="scss">

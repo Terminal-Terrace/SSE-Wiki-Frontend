@@ -270,7 +270,10 @@ onUnmounted(() => {
 
     <!-- 进度指示器 -->
     <div class="mt-4 pt-3 border-t">
-      <div class="flex items-center justify-between text-xs text-muted-foreground">
+      <div
+        class="flex items-center justify-between text-xs text-muted-foreground cursor-help"
+        title="根据页面滚动位置自动计算"
+      >
         <span>阅读进度</span>
         <span>{{ Math.round(scrollProgress) }}%</span>
       </div>

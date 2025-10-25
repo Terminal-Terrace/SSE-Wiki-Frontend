@@ -3,12 +3,13 @@ import type { Page } from '@/types'
 import type { ThreeWayMergeData } from '@/types/article'
 import { Badge, Button, Dialog, DialogContent, Input, Label, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, toast } from '@sse-wiki/ui'
 
-import { Bot, Check, Save, X } from 'lucide-vue-next'
+import { Bot, Check, Edit2, Save, X } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import { TooltipWrapper } from '@/components/common/tooltip'
 import { DiscussionThread } from '@/components/discussion'
 import OutlineCard from '@/components/layout/OutlinePanel.vue'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
@@ -489,27 +490,49 @@ async function saveBasicInfo() {
               <!-- 普通显示模式 -->
               <div
                 v-else
-                class="space-y-4"
-                :class="{ 'cursor-pointer hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors': canManageBasicInfo }"
-                :title="canManageBasicInfo ? '双击编辑基础信息' : ''"
+                class="space-y-4 group"
+                :class="{ 'cursor-pointer hover:bg-gray-50 rounded-lg p-4 -m-4 transition-all duration-200 border-2 border-transparent hover:border-gray-200': canManageBasicInfo }"
                 @dblclick="enterEditBasicInfo"
               >
                 <div class="flex items-start justify-between">
-                  <h1 class="text-3xl font-bold tracking-tight">
-                    {{ page.title }}
-                  </h1>
-                  <div class="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      class="flex items-center space-x-2 transition-colors" :class="[
-                        showAiChat ? 'bg-primary text-primary-foreground' : '',
-                      ]"
-                      @click="toggleAiChat"
+                  <div class="flex-1 flex items-start gap-3">
+                    <h1 class="text-3xl font-bold tracking-tight">
+                      {{ page.title }}
+                    </h1>
+                    <div
+                      v-if="canManageBasicInfo"
+                      class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 mt-1"
                     >
-                      <Bot class="h-4 w-4" />
-                      <span>AI助手</span>
-                    </Button>
+                      <Badge variant="outline" class="text-xs gap-1">
+                        <Edit2 class="h-3 w-3" />
+                        双击编辑
+                      </Badge>
+                    </div>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <TooltipWrapper>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        class="flex items-center space-x-2 transition-colors" :class="[
+                          showAiChat ? 'bg-primary text-primary-foreground' : '',
+                        ]"
+                        @click="toggleAiChat"
+                      >
+                        <Bot class="h-4 w-4" />
+                        <span>AI助手</span>
+                      </Button>
+                      <template #tooltip>
+                        <div class="text-xs max-w-[200px]">
+                          <div class="font-medium mb-1">
+                            智能助手
+                          </div>
+                          <div class="text-muted-foreground">
+                            帮你总结、问答、改写文章内容
+                          </div>
+                        </div>
+                      </template>
+                    </TooltipWrapper>
                   </div>
                 </div>
 
@@ -527,20 +550,21 @@ async function saveBasicInfo() {
                   >
                     {{ tag.name }}
                   </Badge>
-                  <Badge
-                    v-if="(page as any).is_review_required"
-                    variant="outline"
-                    class="border-amber-500 text-amber-700"
-                  >
-                    <Check class="h-3 w-3 mr-1" />
-                    需要审核
-                  </Badge>
+                  <TooltipWrapper v-if="(page as any).is_review_required">
+                    <Badge
+                      variant="outline"
+                      class="border-amber-500 text-amber-700 cursor-help"
+                    >
+                      <Check class="h-3 w-3 mr-1" />
+                      需要审核
+                    </Badge>
+                    <template #tooltip>
+                      <div class="text-xs max-w-[220px]">
+                        此文章开启了审核模式，其他用户的修改需要管理员批准后才能生效
+                      </div>
+                    </template>
+                  </TooltipWrapper>
                 </div>
-
-                <!-- 管理员提示 -->
-                <p v-if="canManageBasicInfo" class="text-xs text-gray-500 italic">
-                  💡 提示：双击此区域可编辑标题、标签和审核设置
-                </p>
               </div>
 
               <div class="border-b" />

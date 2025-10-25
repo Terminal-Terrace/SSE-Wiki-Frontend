@@ -18,6 +18,7 @@ import {
 import { History } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { TooltipWrapper } from '@/components/common/tooltip'
 import { articleApi } from '@/services/articleApi'
 import { getSubmissionStatusConfig, getVersionStatusConfig } from '@/types/article'
 
@@ -90,6 +91,32 @@ function getBadgeConfig(entry: HistoryEntry) {
     return getVersionStatusConfig(entry.status)
   }
   return null
+}
+
+/**
+ * 获取状态的 Tooltip 说明
+ * @param entry - 历史条目数据
+ * @returns Tooltip 文本
+ */
+function getStatusTooltip(entry: HistoryEntry): string {
+  if (entry.entry_type === 'submission' && entry.submission_status) {
+    const tooltips: Record<string, string> = {
+      pending: '等待管理员审核通过',
+      conflict_detected: '与当前版本存在冲突，需要手动解决',
+      merged: '已通过审核并发布',
+      rejected: '审核未通过',
+      auto_published: '自动发布（作者有直接发布权限）',
+    }
+    return tooltips[entry.submission_status] || '未知状态'
+  }
+  if (entry.entry_type === 'version' && entry.status) {
+    const tooltips: Record<string, string> = {
+      published: '已发布的正式版本',
+      draft: '草稿状态',
+    }
+    return tooltips[entry.status] || '未知状态'
+  }
+  return ''
 }
 
 /**
@@ -250,20 +277,26 @@ watch(() => props.pageId, () => {
                 <div class="flex items-center gap-2 flex-wrap mb-1">
                   <span class="font-medium">{{ getTitle(entry) }}</span>
 
-                  <Badge v-if="isCurrent(entry)" class="bg-primary text-primary-foreground">
-                    当前版本
-                  </Badge>
+                  <TooltipWrapper v-if="isCurrent(entry)" tooltip="这是文章的最新发布版本">
+                    <Badge class="bg-primary text-primary-foreground cursor-help">
+                      当前版本
+                    </Badge>
+                  </TooltipWrapper>
 
-                  <Badge
-                    v-if="getBadgeConfig(entry)"
-                    :variant="getBadgeConfig(entry)?.variant"
-                  >
-                    {{ getBadgeConfig(entry)?.label }}
-                  </Badge>
+                  <TooltipWrapper v-if="getBadgeConfig(entry)" :tooltip="getStatusTooltip(entry)">
+                    <Badge
+                      :variant="getBadgeConfig(entry)?.variant"
+                      class="cursor-help"
+                    >
+                      {{ getBadgeConfig(entry)?.label }}
+                    </Badge>
+                  </TooltipWrapper>
 
-                  <Badge v-if="entry.has_conflict" variant="destructive">
-                    有冲突
-                  </Badge>
+                  <TooltipWrapper v-if="entry.has_conflict" tooltip="此提交与当前版本存在内容冲突，需要审核时手动合并">
+                    <Badge variant="destructive" class="cursor-help">
+                      有冲突
+                    </Badge>
+                  </TooltipWrapper>
                 </div>
                 <CardDescription>
                   {{ getSubtitle(entry) }} 于 {{ formatDate(entry.created_at) }}
