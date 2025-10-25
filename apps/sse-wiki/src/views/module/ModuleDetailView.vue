@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Article, BreadcrumbItem, Module, ModuleTreeNode } from '@/types/module'
+import type { Article, BreadcrumbItem, Module, ModuleModalState, ModuleTreeNode } from '@/types/module'
 import {
   Alert,
   AlertDescription,
@@ -50,10 +50,13 @@ import {
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import OverflowText from '@/components/common/OverflowText.vue'
+import CollaboratorsModal from '@/components/layout/components/ModuleCollaboratorsModal.vue'
+import DeleteModuleModal from '@/components/layout/components/ModuleDeleteModal.vue'
+import CreateEditModuleModal from '@/components/layout/components/ModuleFormModal.vue'
+
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { moduleApi } from '@/services/moduleApi'
 import { useAuthStore } from '@/stores/auth'
-
 import { useModuleStore } from '@/stores/module'
 
 const route = useRoute()
@@ -76,6 +79,12 @@ const sortBy = ref<'created_at' | 'updated_at' | 'title'>('created_at')
 const currentPage = ref(1)
 const pageSize = ref(20)
 const totalArticles = ref(0)
+
+// 模态框状态
+const modalState = ref<ModuleModalState>({
+  type: null,
+  isOpen: false,
+})
 
 // 计算属性
 const totalPages = computed(() => Math.ceil(totalArticles.value / pageSize.value))
@@ -340,15 +349,87 @@ function goToArticle(articleId: number) {
 }
 
 function editModule() {
-  // TODO: 触发编辑模块模态框
+  if (!moduleInfo.value)
+    return
+
+  const moduleForModal = {
+    ...moduleInfo.value,
+    name: moduleInfo.value.module_name || moduleInfo.value.name,
+  }
+
+  modalState.value = {
+    type: 'edit',
+    isOpen: true,
+    targetModule: moduleForModal,
+  }
 }
 
 function manageCollaborators() {
-  // TODO: 触发协作者管理模态框
+  if (!moduleInfo.value)
+    return
+
+  // 确保模块对象有 name 字段（ModuleCollaboratorsModal 需要）
+  const moduleForModal = {
+    ...moduleInfo.value,
+    name: moduleInfo.value.module_name || moduleInfo.value.name,
+  }
+
+  modalState.value = {
+    type: 'collaborators',
+    isOpen: true,
+    targetModule: moduleForModal,
+  }
 }
 
 function deleteModule() {
-  // TODO: 触发删除确认模态框
+  if (!moduleInfo.value)
+    return
+
+  const moduleForModal = {
+    ...moduleInfo.value,
+    name: moduleInfo.value.module_name || moduleInfo.value.name,
+  }
+
+  modalState.value = {
+    type: 'delete',
+    isOpen: true,
+    targetModule: moduleForModal,
+  }
+}
+
+// 关闭模态框
+function closeModal() {
+  modalState.value = {
+    type: null,
+    isOpen: false,
+  }
+}
+
+// 模态框操作成功后的处理
+async function handleModalSuccess() {
+  const currentType = modalState.value.type
+  closeModal()
+
+  // 对于删除操作，跳转到父模块
+  if (currentType === 'delete') {
+    // 如果有父模块，跳转到父模块，否则跳转到首页
+    if (breadcrumbs.value.length > 1) {
+      const parentModule = breadcrumbs.value[breadcrumbs.value.length - 2]
+      if (parentModule) {
+        router.push({
+          name: 'ModuleDetail',
+          params: { moduleId: parentModule.id },
+        })
+      }
+    }
+    else {
+      router.push({ name: 'Home' })
+    }
+  }
+  else {
+    // 其他操作刷新当前页面
+    await refreshData()
+  }
 }
 
 // 格式化日期
@@ -700,6 +781,25 @@ watch(
         </div>
       </div>
     </div>
+
+    <!-- 模态框组件 -->
+    <CreateEditModuleModal
+      :modal-state="modalState"
+      @close="closeModal"
+      @success="handleModalSuccess"
+    />
+
+    <DeleteModuleModal
+      :modal-state="modalState"
+      @close="closeModal"
+      @success="handleModalSuccess"
+    />
+
+    <CollaboratorsModal
+      :modal-state="modalState"
+      @close="closeModal"
+      @success="handleModalSuccess"
+    />
   </div>
 </template>
 

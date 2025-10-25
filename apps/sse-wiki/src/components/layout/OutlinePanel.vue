@@ -11,14 +11,47 @@ interface Heading {
 interface Props {
   content: string
   isSidebar?: boolean
+  scrollContainer?: HTMLElement | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isSidebar: false,
+  scrollContainer: null,
 })
 const headings = ref<Heading[]>([])
 const activeHeading = ref('')
 const scrollProgress = ref(0)
+const autoDetectedContainer = ref<HTMLElement | null>(null)
+
+// 自动检测可滚动的父容器
+function findScrollableParent(element: HTMLElement | null): HTMLElement | null {
+  if (!element)
+    return null
+
+  let parent = element.parentElement
+  while (parent) {
+    const overflow = window.getComputedStyle(parent).overflowY
+    if (overflow === 'auto' || overflow === 'scroll') {
+      return parent
+    }
+    parent = parent.parentElement
+  }
+  return null
+}
+
+// 获取实际使用的滚动容器
+function getScrollContainer(): HTMLElement | Window {
+  // 优先使用传入的容器
+  if (props.scrollContainer) {
+    return props.scrollContainer
+  }
+  // 其次使用自动检测的容器
+  if (autoDetectedContainer.value) {
+    return autoDetectedContainer.value
+  }
+  // 最后使用 window
+  return window
+}
 
 function extractHeadings(html: string): Heading[] {
   const extracted: Heading[] = []
@@ -76,22 +109,58 @@ function updateActiveHeading() {
   if (headingElements.length === 0)
     return
 
-  const scrollTop = window.scrollY + 100 // 偏移量考虑header高度
+  const container = getScrollContainer()
+  let scrollTop: number
 
-  for (let i = headingElements.length - 1; i >= 0; i--) {
-    const element = headingElements[i]
-    if (element && element.offsetTop <= scrollTop) {
-      activeHeading.value = element.id
-      break
+  if (container instanceof Window) {
+    // 使用 window 滚动
+    scrollTop = window.scrollY + 100
+
+    for (let i = headingElements.length - 1; i >= 0; i--) {
+      const element = headingElements[i]
+      if (element && element.offsetTop <= scrollTop) {
+        activeHeading.value = element.id
+        break
+      }
+    }
+  }
+  else {
+    // 使用自定义滚动容器
+    scrollTop = container.scrollTop + 100
+    const containerOffsetTop = container.offsetTop
+
+    for (let i = headingElements.length - 1; i >= 0; i--) {
+      const element = headingElements[i]
+      if (element) {
+        // 计算元素相对于容器的位置
+        const elementTop = element.offsetTop - containerOffsetTop
+        if (elementTop <= scrollTop) {
+          activeHeading.value = element.id
+          break
+        }
+      }
     }
   }
 }
 
 function updateScrollProgress() {
-  const windowHeight = window.innerHeight
-  const documentHeight = document.documentElement.scrollHeight - windowHeight
-  const scrolled = window.scrollY
-  scrollProgress.value = documentHeight > 0 ? (scrolled / documentHeight) * 100 : 0
+  const container = getScrollContainer()
+
+  if (container instanceof Window) {
+    // 使用 window 滚动
+    const windowHeight = window.innerHeight
+    const documentHeight = document.documentElement.scrollHeight - windowHeight
+    const scrolled = window.scrollY
+    scrollProgress.value = documentHeight > 0 ? (scrolled / documentHeight) * 100 : 0
+  }
+  else {
+    // 使用自定义滚动容器
+    const scrollHeight = container.scrollHeight
+    const clientHeight = container.clientHeight
+    const scrollTop = container.scrollTop
+    const scrollableHeight = scrollHeight - clientHeight
+    scrollProgress.value = scrollableHeight > 0 ? (scrollTop / scrollableHeight) * 100 : 0
+  }
 }
 
 function handleScroll() {
@@ -130,12 +199,47 @@ function addHeadingIds() {
 }
 
 onMounted(() => {
-  window.addEventListener('scroll', handleScroll, { passive: true })
-  handleScroll()
+  // 如果没有传入 scrollContainer，尝试自动检测
+  if (!props.scrollContainer) {
+    // 等待 DOM 渲染完成后再检测
+    requestAnimationFrame(() => {
+      const proseContainer = document.querySelector('.prose')
+      if (proseContainer) {
+        autoDetectedContainer.value = findScrollableParent(proseContainer as HTMLElement)
+      }
+
+      // 添加滚动监听
+      const container = getScrollContainer()
+      if (container instanceof Window) {
+        window.addEventListener('scroll', handleScroll, { passive: true })
+      }
+      else {
+        container.addEventListener('scroll', handleScroll, { passive: true })
+      }
+      handleScroll()
+    })
+  }
+  else {
+    // 使用传入的容器
+    const container = getScrollContainer()
+    if (container instanceof Window) {
+      window.addEventListener('scroll', handleScroll, { passive: true })
+    }
+    else {
+      container.addEventListener('scroll', handleScroll, { passive: true })
+    }
+    handleScroll()
+  }
 })
 
 onUnmounted(() => {
-  window.removeEventListener('scroll', handleScroll)
+  const container = getScrollContainer()
+  if (container instanceof Window) {
+    window.removeEventListener('scroll', handleScroll)
+  }
+  else {
+    container.removeEventListener('scroll', handleScroll)
+  }
 })
 </script>
 

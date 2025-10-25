@@ -21,6 +21,7 @@ import {
 } from '@sse-wiki/ui'
 import { Edit2, Plus, X } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import CollaboratorsModal from '@/components/layout/components/ModuleCollaboratorsModal.vue'
 import DeleteModuleModal from '@/components/layout/components/ModuleDeleteModal.vue'
 import CreateEditModuleModal from '@/components/layout/components/ModuleFormModal.vue'
@@ -31,6 +32,8 @@ import { useModuleStore } from '@/stores/module'
 
 // 状态管理
 const moduleStore = useModuleStore()
+const route = useRoute()
+const router = useRouter()
 
 // 响应式状态
 const isLoading = ref(false)
@@ -191,10 +194,38 @@ function closeModal() {
 }
 
 // 模态框操作成功后的处理
-function handleModalSuccess() {
+async function handleModalSuccess() {
+  const currentType = modalState.value.type
+  const deletedModuleId = modalState.value.targetModule?.id
+
   closeModal()
+
   // 重新获取模块树
-  fetchModules()
+  await fetchModules()
+
+  // 如果是删除操作，检查是否删除的是当前正在查看的模块
+  if (currentType === 'delete' && deletedModuleId) {
+    const currentModuleId = route.params.moduleId
+
+    // 如果删除的是当前模块，需要跳转到安全页面
+    if (currentModuleId && String(deletedModuleId) === String(currentModuleId)) {
+      // 尝试跳转到第一个可用的模块，否则跳转到首页
+      if (moduleStore.moduleTree.length > 0 && moduleStore.moduleTree[0]) {
+        router.push({
+          name: 'ModuleDetail',
+          params: { moduleId: moduleStore.moduleTree[0].id },
+        })
+      }
+      else {
+        router.push({ name: 'Home' })
+      }
+
+      toast({
+        title: '模块已删除',
+        description: '已为您跳转到其他页面',
+      })
+    }
+  }
 }
 
 // 格式化锁定时间

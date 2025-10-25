@@ -581,7 +581,10 @@ async function saveBasicInfo() {
                   <!-- 右侧目录大纲 - 只在AI对话关闭时显示 -->
                   <div v-if="!showAiChat" class="hidden lg:block w-72 flex-shrink-0">
                     <div class="sticky top-4">
-                      <OutlineCard :content="page.content" :is-sidebar="true" />
+                      <OutlineCard
+                        :content="page.content"
+                        :is-sidebar="true"
+                      />
                     </div>
                   </div>
                 </div>
