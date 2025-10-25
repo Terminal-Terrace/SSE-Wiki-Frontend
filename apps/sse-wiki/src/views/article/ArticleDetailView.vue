@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Page } from '@/types'
 import type { ThreeWayMergeData } from '@/types/article'
-import { Badge, Button, Dialog, DialogContent, Input, Label, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, toast } from '@sse-wiki/ui'
+import { Badge, Button, Dialog, DialogContent, Input, Label, ResizableHandle, ResizablePanel, ResizablePanelGroup, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, toast } from '@sse-wiki/ui'
 
 import { Bot, Check, Edit2, Save, X } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
@@ -405,14 +405,16 @@ async function saveBasicInfo() {
     <!-- 页面头部信息 - 始终显示，不受 loading 影响 -->
     <div v-if="page" class="relative">
       <!-- 主内容区域 -->
-      <div class="flex gap-6">
+      <ResizablePanelGroup
+        direction="horizontal"
+        class="gap-6"
+      >
         <!-- 左侧主内容 -->
-        <div
-          class="transition-all duration-300 ease-in-out" :class="[
-            showAiChat ? 'w-[calc(100%-24rem)] pr-6' : 'w-full',
-          ]"
+        <ResizablePanel
+          :default-size="showAiChat ? 65 : 100"
+          :min-size="30"
         >
-          <div class="space-y-6 w-full">
+          <div class="space-y-6 w-full pr-6">
             <!-- Page header -->
             <header class="space-y-4">
               <!-- 编辑模式 -->
@@ -650,23 +652,31 @@ async function saveBasicInfo() {
               </TabsContent>
             </Tabs>
           </div>
-        </div>
+        </ResizablePanel>
+
+        <!-- 拖动手柄 -->
+        <ResizableHandle
+          v-if="showAiChat"
+          with-handle
+          class="w-1.5"
+        />
 
         <!-- 右侧AI对话栏 -->
-        <div
-          class="transition-all duration-300 ease-in-out" :class="[
-            showAiChat ? 'w-96 opacity-100' : 'w-0 opacity-0 overflow-hidden',
-          ]"
+        <ResizablePanel
+          v-if="showAiChat"
+          :default-size="35"
+          :min-size="20"
+          :max-size="50"
         >
-          <div v-if="showAiChat" class="h-[calc(100vh-8rem)] sticky top-4">
+          <div class="h-[calc(100vh-8rem)] sticky top-4">
             <AiChatSidebar
               :article-title="page.title"
               :article-content="page.content"
               @close="toggleAiChat"
             />
           </div>
-        </div>
-      </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
 
     <!-- 初始加载时的骨架屏 -->
