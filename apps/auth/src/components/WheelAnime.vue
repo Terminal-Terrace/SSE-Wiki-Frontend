@@ -19,7 +19,7 @@ defineProps<{
   flex: 1;
   position: relative;
   overflow: hidden;
-  background: #222;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -27,7 +27,8 @@ defineProps<{
 
 .gear {
   position: absolute;
-  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.3));
+  opacity: 0.2;
+  filter: drop-shadow(0 0 15px rgba(34, 211, 238, 0.4));
 }
 
 .gear1 {

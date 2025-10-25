@@ -24,6 +24,7 @@ import { useRouter } from 'vue-router'
 
 import ComparisonPanel from '@/components/article/ComparisonPanel.vue'
 import MergeConflictPanel from '@/components/article/MergeConflictPanel.vue'
+import { TooltipWrapper } from '@/components/common/tooltip'
 import { articleApi } from '@/services/articleApi'
 import { useAuthStore } from '@/stores/auth'
 
@@ -394,14 +395,18 @@ onMounted(() => {
           </div>
 
           <div class="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span class="text-muted-foreground">基于版本:</span>
-              <span class="ml-2 font-mono">v{{ baseVersionNumber }}</span>
-            </div>
-            <div>
-              <span class="text-muted-foreground">当前版本:</span>
-              <span class="ml-2 font-mono">v{{ currentVersionNumber }}</span>
-            </div>
+            <TooltipWrapper tooltip="提交者基于此版本进行的修改">
+              <div class="cursor-help">
+                <span class="text-muted-foreground">基于版本:</span>
+                <span class="ml-2 font-mono">v{{ baseVersionNumber }}</span>
+              </div>
+            </TooltipWrapper>
+            <TooltipWrapper tooltip="文章的最新版本（可能包含其他人的修改）">
+              <div class="cursor-help">
+                <span class="text-muted-foreground">当前版本:</span>
+                <span class="ml-2 font-mono">v{{ currentVersionNumber }}</span>
+              </div>
+            </TooltipWrapper>
           </div>
 
           <div v-if="reviewData.has_conflict" class="flex items-center gap-2 text-destructive text-sm">

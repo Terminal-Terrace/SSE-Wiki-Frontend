@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ModuleTreeNode } from '@/types/module'
 import {
+  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -126,30 +127,34 @@ function deleteModule() {
           <Button
             variant="ghost"
             size="icon"
-            class="ml-auto h-6 w-6 transition-opacity"
-            :class="{ 'opacity-0': !isHovered, 'opacity-100': isHovered }"
+            class="ml-auto h-7 w-7 rounded-md transition-all duration-200"
+            :class="{
+              'opacity-0 -translate-x-1': !isHovered,
+              'opacity-100 translate-x-0': isHovered,
+            }"
+            title="模块操作"
             @click.stop
           >
             <MoreHorizontal class="w-4 h-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" class="w-48">
+        <DropdownMenuContent align="end" class="w-44">
           <DropdownMenuItem v-if="canCreateChild" @click="createChild">
             <Plus class="mr-2 w-4 h-4" />
-            <span>创建子模块</span>
+            <span class="text-sm">创建子模块</span>
           </DropdownMenuItem>
           <DropdownMenuItem v-if="canEdit" @click="rename">
             <Edit2 class="mr-2 w-4 h-4" />
-            <span>编辑信息</span>
+            <span class="text-sm">编辑信息</span>
           </DropdownMenuItem>
           <DropdownMenuItem v-if="canManageCollaborators" @click="manageCollaborators">
             <Users class="mr-2 w-4 h-4" />
-            <span>管理协作者</span>
+            <span class="text-sm">管理协作者</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator v-if="canDelete" />
-          <DropdownMenuItem v-if="canDelete" class="text-destructive focus:text-destructive" @click="deleteModule">
+          <DropdownMenuItem v-if="canDelete" class="text-destructive focus:text-destructive focus:bg-destructive/10" @click="deleteModule">
             <Trash2 class="mr-2 w-4 h-4" />
-            <span>删除模块</span>
+            <span class="text-sm">删除模块</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -178,45 +183,86 @@ function deleteModule() {
           <Button
             variant="ghost"
             size="icon"
-            class="ml-auto h-6 w-6 transition-opacity"
-            :class="{ 'opacity-0': !isHovered, 'opacity-100': isHovered }"
+            class="ml-auto h-7 w-7 rounded-md transition-all duration-200"
+            :class="{
+              'opacity-0 -translate-x-1': !isHovered,
+              'opacity-100 translate-x-0': isHovered,
+            }"
+            title="模块操作"
             @click.stop
           >
             <MoreHorizontal class="w-4 h-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" class="w-48">
+        <DropdownMenuContent align="end" class="w-44">
           <DropdownMenuItem v-if="canCreateChild" @click="createChild">
             <Plus class="mr-2 w-4 h-4" />
-            <span>创建子模块</span>
+            <span class="text-sm">创建子模块</span>
           </DropdownMenuItem>
           <DropdownMenuItem v-if="canEdit" @click="rename">
             <Edit2 class="mr-2 w-4 h-4" />
-            <span>编辑信息</span>
+            <span class="text-sm">编辑信息</span>
           </DropdownMenuItem>
           <DropdownMenuItem v-if="canManageCollaborators" @click="manageCollaborators">
             <Users class="mr-2 w-4 h-4" />
-            <span>管理协作者</span>
+            <span class="text-sm">管理协作者</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator v-if="canDelete" />
-          <DropdownMenuItem v-if="canDelete" class="text-destructive focus:text-destructive" @click="deleteModule">
+          <DropdownMenuItem v-if="canDelete" class="text-destructive focus:text-destructive focus:bg-destructive/10" @click="deleteModule">
             <Trash2 class="mr-2 w-4 h-4" />
-            <span>删除模块</span>
+            <span class="text-sm">删除模块</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </SidebarMenuButton>
 
-    <!-- 子菜单 -->
-    <SidebarMenuSub v-show="isExpanded">
-      <ModuleTree
-        v-for="child in node.children"
-        :key="child.id"
-        :node="child"
-        :level="level + 1"
-        :is-edit-mode="isEditMode"
-        @module-action="$emit('moduleAction', $event)"
-      />
-    </SidebarMenuSub>
+    <!-- 子菜单 - 添加流畅的展开/收起动画 -->
+    <Transition
+      enter-active-class="transition-all duration-300 ease-out"
+      leave-active-class="transition-all duration-200 ease-in"
+      enter-from-class="opacity-0 -translate-y-2 max-h-0"
+      enter-to-class="opacity-100 translate-y-0 max-h-[2000px]"
+      leave-from-class="opacity-100 translate-y-0 max-h-[2000px]"
+      leave-to-class="opacity-0 -translate-y-2 max-h-0"
+    >
+      <SidebarMenuSub v-show="isExpanded" class="overflow-hidden">
+        <ModuleTree
+          v-for="child in node.children"
+          :key="child.id"
+          :node="child"
+          :level="level + 1"
+          :is-edit-mode="isEditMode"
+          @module-action="$emit('moduleAction', $event)"
+        />
+      </SidebarMenuSub>
+    </Transition>
   </SidebarMenuItem>
 </template>
+
+<style scoped>
+:deep([data-sidebar='menu-button']) {
+  transition:
+    color 200ms ease-in-out,
+    background-color 150ms ease-in-out,
+    font-weight 200ms ease-in-out;
+}
+
+:deep([data-sidebar='menu-button'][data-active='true']) {
+  color: #f97316 !important;
+  font-weight: 600 !important;
+  background: transparent !important;
+}
+
+:deep([data-sidebar='menu-button']:hover) {
+  color: #3b82f6 !important;
+  background: hsl(var(--sidebar-accent) / 0.5) !important;
+}
+
+:deep(.lucide-chevron-right) {
+  transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+:deep(.ml-auto.transition-all) {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+</style>

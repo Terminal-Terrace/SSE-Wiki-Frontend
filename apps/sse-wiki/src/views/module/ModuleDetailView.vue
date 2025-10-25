@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Article, BreadcrumbItem, Module, ModuleTreeNode } from '@/types/module'
+import type { Article, BreadcrumbItem, Module, ModuleModalState, ModuleTreeNode } from '@/types/module'
 import {
   Alert,
   AlertDescription,
@@ -50,10 +50,14 @@ import {
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import OverflowText from '@/components/common/OverflowText.vue'
+import { TooltipIconButton } from '@/components/common/tooltip'
+import CollaboratorsModal from '@/components/layout/components/ModuleCollaboratorsModal.vue'
+import DeleteModuleModal from '@/components/layout/components/ModuleDeleteModal.vue'
+import CreateEditModuleModal from '@/components/layout/components/ModuleFormModal.vue'
+
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { moduleApi } from '@/services/moduleApi'
 import { useAuthStore } from '@/stores/auth'
-
 import { useModuleStore } from '@/stores/module'
 
 const route = useRoute()
@@ -76,6 +80,12 @@ const sortBy = ref<'created_at' | 'updated_at' | 'title'>('created_at')
 const currentPage = ref(1)
 const pageSize = ref(20)
 const totalArticles = ref(0)
+
+// 模态框状态
+const modalState = ref<ModuleModalState>({
+  type: null,
+  isOpen: false,
+})
 
 // 计算属性
 const totalPages = computed(() => Math.ceil(totalArticles.value / pageSize.value))
@@ -340,15 +350,87 @@ function goToArticle(articleId: number) {
 }
 
 function editModule() {
-  // TODO: 触发编辑模块模态框
+  if (!moduleInfo.value)
+    return
+
+  const moduleForModal = {
+    ...moduleInfo.value,
+    name: moduleInfo.value.module_name || moduleInfo.value.name,
+  }
+
+  modalState.value = {
+    type: 'edit',
+    isOpen: true,
+    targetModule: moduleForModal,
+  }
 }
 
 function manageCollaborators() {
-  // TODO: 触发协作者管理模态框
+  if (!moduleInfo.value)
+    return
+
+  // 确保模块对象有 name 字段（ModuleCollaboratorsModal 需要）
+  const moduleForModal = {
+    ...moduleInfo.value,
+    name: moduleInfo.value.module_name || moduleInfo.value.name,
+  }
+
+  modalState.value = {
+    type: 'collaborators',
+    isOpen: true,
+    targetModule: moduleForModal,
+  }
 }
 
 function deleteModule() {
-  // TODO: 触发删除确认模态框
+  if (!moduleInfo.value)
+    return
+
+  const moduleForModal = {
+    ...moduleInfo.value,
+    name: moduleInfo.value.module_name || moduleInfo.value.name,
+  }
+
+  modalState.value = {
+    type: 'delete',
+    isOpen: true,
+    targetModule: moduleForModal,
+  }
+}
+
+// 关闭模态框
+function closeModal() {
+  modalState.value = {
+    type: null,
+    isOpen: false,
+  }
+}
+
+// 模态框操作成功后的处理
+async function handleModalSuccess() {
+  const currentType = modalState.value.type
+  closeModal()
+
+  // 对于删除操作，跳转到父模块
+  if (currentType === 'delete') {
+    // 如果有父模块，跳转到父模块，否则跳转到首页
+    if (breadcrumbs.value.length > 1) {
+      const parentModule = breadcrumbs.value[breadcrumbs.value.length - 2]
+      if (parentModule) {
+        router.push({
+          name: 'ModuleDetail',
+          params: { moduleId: parentModule.id },
+        })
+      }
+    }
+    else {
+      router.push({ name: 'Home' })
+    }
+  }
+  else {
+    // 其他操作刷新当前页面
+    await refreshData()
+  }
 }
 
 // 格式化日期
@@ -478,16 +560,16 @@ watch(
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" class="w-48">
-                <DropdownMenuItem @click="editModule">
+                <DropdownMenuItem title="需要 Moderator 或更高权限" @click="editModule">
                   <Edit2 class="mr-2 w-4 h-4" />
                   <span>编辑模块</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem @click="manageCollaborators">
+                <DropdownMenuItem title="管理可以访问此模块的用户" @click="manageCollaborators">
                   <Users class="mr-2 w-4 h-4" />
                   <span>管理协作者</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem class="text-destructive focus:text-destructive" @click="deleteModule">
+                <DropdownMenuItem title="删除此模块及其所有子模块和文章（不可恢复）" class="text-destructive focus:text-destructive" @click="deleteModule">
                   <Trash2 class="mr-2 w-4 h-4" />
                   <span>删除模块</span>
                 </DropdownMenuItem>
@@ -504,22 +586,20 @@ watch(
           </h2>
           <div class="flex items-center gap-3">
             <div class="flex bg-gray-100 rounded-lg p-1">
-              <Button
+              <TooltipIconButton
+                :icon="Grid"
+                tooltip="网格视图"
                 :variant="viewMode === 'grid' ? 'default' : 'ghost'"
                 size="sm"
-                class="px-3 py-1"
                 @click="viewMode = 'grid'"
-              >
-                <Grid class="w-4 h-4" />
-              </Button>
-              <Button
+              />
+              <TooltipIconButton
+                :icon="List"
+                tooltip="列表视图"
                 :variant="viewMode === 'list' ? 'default' : 'ghost'"
                 size="sm"
-                class="px-3 py-1"
                 @click="viewMode = 'list'"
-              >
-                <List class="w-4 h-4" />
-              </Button>
+              />
             </div>
 
             <Select v-model="sortBy">
@@ -700,6 +780,25 @@ watch(
         </div>
       </div>
     </div>
+
+    <!-- 模态框组件 -->
+    <CreateEditModuleModal
+      :modal-state="modalState"
+      @close="closeModal"
+      @success="handleModalSuccess"
+    />
+
+    <DeleteModuleModal
+      :modal-state="modalState"
+      @close="closeModal"
+      @success="handleModalSuccess"
+    />
+
+    <CollaboratorsModal
+      :modal-state="modalState"
+      @close="closeModal"
+      @success="handleModalSuccess"
+    />
   </div>
 </template>
 

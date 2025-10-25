@@ -2,7 +2,9 @@
 import type { Page } from '@/types'
 import { Button, Input, Label, toast } from '@sse-wiki/ui'
 import { ref, watch } from 'vue'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import ContentEditor from '@/components/common/editor/ContentEditor.vue'
+import { useUnsavedChangesWarning } from '@/composables/useUnsavedChangesWarning'
 
 interface Props {
   page: Page
@@ -19,10 +21,35 @@ const formData = ref({
   commitMessage: '',
 })
 
+const initialContent = ref(props.page.content || '')
+const isSaving = ref(false)
+
+// 检测内容是否被修改
+function hasUnsavedChanges() {
+  return formData.value.content !== initialContent.value && !isSaving.value
+}
+
+// 使用未保存内容警告 Hook
+const { showConfirmDialog: showLeaveConfirm, confirmLeave, cancelLeave } = useUnsavedChangesWarning(hasUnsavedChanges)
+
+// 取消编辑确认对话框（单独的）
+const showCancelConfirm = ref(false)
+
 watch(() => props.page, (newPage) => {
   formData.value.content = newPage.content || ''
   formData.value.commitMessage = ''
+  initialContent.value = newPage.content || ''
 })
+
+// 确认取消编辑
+function confirmCancelEdit() {
+  showCancelConfirm.value = false
+  emit('cancel')
+}
+
+function cancelCancelEdit() {
+  showCancelConfirm.value = false
+}
 
 function handleSave() {
   if (!formData.value.commitMessage.trim()) {
@@ -33,13 +60,24 @@ function handleSave() {
     return
   }
 
+  isSaving.value = true
   emit('save', {
     content: formData.value.content,
     commitMessage: formData.value.commitMessage,
   })
+
+  // 保存成功后重置状态（假设父组件会处理成功后的逻辑）
+  setTimeout(() => {
+    isSaving.value = false
+    initialContent.value = formData.value.content
+  }, 1000)
 }
 
 function handleCancel() {
+  if (hasUnsavedChanges()) {
+    showCancelConfirm.value = true
+    return
+  }
   emit('cancel')
 }
 </script>
@@ -80,5 +118,27 @@ function handleCancel() {
         提交
       </Button>
     </div>
+
+    <!-- 路由离开确认对话框 -->
+    <ConfirmDialog
+      v-model:open="showLeaveConfirm"
+      title="确认离开？"
+      description="您有未保存的修改，离开后这些修改将会丢失。确定要离开吗？"
+      confirm-text="放弃修改"
+      cancel-text="继续编辑"
+      @confirm="confirmLeave"
+      @cancel="cancelLeave"
+    />
+
+    <!-- 取消编辑确认对话框 -->
+    <ConfirmDialog
+      v-model:open="showCancelConfirm"
+      title="确认取消？"
+      description="您有未保存的修改，取消后这些修改将会丢失。确定要取消编辑吗？"
+      confirm-text="确认取消"
+      cancel-text="继续编辑"
+      @confirm="confirmCancelEdit"
+      @cancel="cancelCancelEdit"
+    />
   </div>
 </template>

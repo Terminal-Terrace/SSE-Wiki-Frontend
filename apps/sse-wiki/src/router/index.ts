@@ -29,21 +29,19 @@ const router = createRouter({
           name: 'search',
           component: () => import('@/views/search/SearchView.vue'),
         },
-        // 模块详情页面
+        // 模块详情页面（允许游客浏览，编辑功能需要登录）
         {
           path: 'modules/:moduleId',
           name: 'ModuleDetail',
           component: () => import('@/views/module/ModuleDetailView.vue'),
           props: true,
-          meta: { requiresAuth: true },
         },
-        // 文章详情页面
+        // 文章详情页面（允许游客阅读，编辑功能需要登录）
         {
           path: 'articles/:articleId',
           name: 'ArticleDetail',
           component: () => import('@/views/article/ArticleDetailView.vue'),
           props: true,
-          meta: { requiresAuth: true },
         },
         // 文章版本查看页面
         {
@@ -55,15 +53,14 @@ const router = createRouter({
             versionId: route.query.versionId,
             submissionId: route.query.submissionId,
           }),
-          meta: { requiresAuth: true },
         },
-        // 文章审核页面
+        // 文章审核页面（需要审核权限）
         {
           path: 'articles/:articleId/review/:submissionId',
           name: 'ArticleReview',
           component: () => import('@/views/article/ArticleReviewView.vue'),
           props: true,
-          meta: { requiresAuth: true },
+          meta: { requiresAuth: true, strictAuth: true },
         },
         // 新建文章页面
         {
@@ -71,7 +68,7 @@ const router = createRouter({
           name: 'ArticleCreate',
           component: () => import('@/views/article/ArticleCreateView.vue'),
           props: route => ({ moduleId: route.query.moduleId }),
-          meta: { requiresAuth: true },
+          meta: { requiresAuth: true, strictAuth: true }, // 严格要求登录
         },
       ],
     },
@@ -87,15 +84,24 @@ router.beforeEach(async (to, _from, next) => {
     await authStore.checkLoginStatus()
   }
 
-  // 需要登录的页面
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    // 可以在这里跳转到登录页面，或显示登录提示
-    // 目前暂时允许访问，因为登录流程会在点击操作时触发
-    next()
+  // 严格要求登录的页面（如创建、审核等操作）
+  if (to.meta.strictAuth && !authStore.isAuthenticated) {
+    // 保存目标路由，登录后跳转回来
+    const redirect = to.fullPath
+
+    // 跳转到首页并提示登录
+    next({
+      path: '/',
+      query: { redirect },
+    })
+
+    // 在首页会显示登录提示
+    return
   }
-  else {
-    next()
-  }
+
+  // requiresAuth 标记的页面：允许访问，但页面内会提示登录后才能使用某些功能
+  // 这样用户可以先浏览内容，需要操作时再登录（更好的UX）
+  next()
 })
 
 export default router

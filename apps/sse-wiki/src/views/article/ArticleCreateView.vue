@@ -6,8 +6,10 @@ import { ArrowLeft, Loader2, Save } from 'lucide-vue-next'
 
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import ContentEditor from '@/components/common/editor/ContentEditor.vue'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
+import { useUnsavedChangesWarning } from '@/composables/useUnsavedChangesWarning'
 import { articleApi } from '@/services/articleApi'
 import { moduleApi } from '@/services/moduleApi'
 import { useAuthStore } from '@/stores/auth'
@@ -53,6 +55,15 @@ const canSubmit = computed(() => (
   && trimmedCommitMessage.value !== ''
   && formData.value.module_id > 0
 ))
+
+// 检测是否有未保存的内容
+function hasUnsavedContent() {
+  const hasContent = trimmedTitle.value !== '' || trimmedContent.value !== '' || (formData.value.tags?.length ?? 0) > 0
+  return hasContent && !isLoading.value
+}
+
+// 使用未保存内容警告 Hook
+const { showConfirmDialog, confirmLeave, cancelLeave, triggerConfirm } = useUnsavedChangesWarning(hasUnsavedContent)
 
 // 初始化
 onMounted(async () => {
@@ -168,8 +179,10 @@ async function handleSubmit() {
 
 // 返回
 function goBack() {
-  formData.value = { ...EMPTY_FORM }
-  router.back()
+  triggerConfirm(() => {
+    formData.value = { ...EMPTY_FORM }
+    router.back()
+  })
 }
 </script>
 
@@ -345,6 +358,17 @@ function goBack() {
         </Button>
       </div>
     </form>
+
+    <!-- 离开确认对话框 -->
+    <ConfirmDialog
+      v-model:open="showConfirmDialog"
+      title="确认离开？"
+      description="您有未保存的内容，离开后这些内容将会丢失。确定要离开吗？"
+      confirm-text="确认离开"
+      cancel-text="继续编辑"
+      @confirm="confirmLeave"
+      @cancel="cancelLeave"
+    />
   </div>
 </template>
 

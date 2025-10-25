@@ -18,9 +18,12 @@ import {
   SidebarMenu,
   SidebarMenuSkeleton,
   toast,
+  TooltipProvider,
 } from '@sse-wiki/ui'
 import { Edit2, Plus, X } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { TooltipButton } from '@/components/common/tooltip'
 import CollaboratorsModal from '@/components/layout/components/ModuleCollaboratorsModal.vue'
 import DeleteModuleModal from '@/components/layout/components/ModuleDeleteModal.vue'
 import CreateEditModuleModal from '@/components/layout/components/ModuleFormModal.vue'
@@ -31,6 +34,8 @@ import { useModuleStore } from '@/stores/module'
 
 // 状态管理
 const moduleStore = useModuleStore()
+const route = useRoute()
+const router = useRouter()
 
 // 响应式状态
 const isLoading = ref(false)
@@ -191,10 +196,38 @@ function closeModal() {
 }
 
 // 模态框操作成功后的处理
-function handleModalSuccess() {
+async function handleModalSuccess() {
+  const currentType = modalState.value.type
+  const deletedModuleId = modalState.value.targetModule?.id
+
   closeModal()
+
   // 重新获取模块树
-  fetchModules()
+  await fetchModules()
+
+  // 如果是删除操作，检查是否删除的是当前正在查看的模块
+  if (currentType === 'delete' && deletedModuleId) {
+    const currentModuleId = route.params.moduleId
+
+    // 如果删除的是当前模块，需要跳转到安全页面
+    if (currentModuleId && String(deletedModuleId) === String(currentModuleId)) {
+      // 尝试跳转到第一个可用的模块，否则跳转到首页
+      if (moduleStore.moduleTree.length > 0 && moduleStore.moduleTree[0]) {
+        router.push({
+          name: 'ModuleDetail',
+          params: { moduleId: moduleStore.moduleTree[0].id },
+        })
+      }
+      else {
+        router.push({ name: 'Home' })
+      }
+
+      toast({
+        title: '模块已删除',
+        description: '已为您跳转到其他页面',
+      })
+    }
+  }
 }
 
 // 格式化锁定时间
@@ -242,119 +275,136 @@ onMounted(() => {
 </script>
 
 <template>
-  <Sidebar>
-    <SidebarContent>
-      <SidebarGroup>
-        <SidebarGroupLabel>
-          <h1 class="text-xl font-semibold tracking-tight text-foreground">
-            知识分类
-          </h1>
-          <div class="ml-auto flex gap-x-2">
-            <!-- 编辑模式切换 -->
-            <Button
-              v-if="!isEditMode"
-              size="sm"
-              variant="ghost"
-              class="edit-btn"
-              :disabled="isLockLoading"
-              @click="enterEditMode"
-            >
-              <Edit2 class="w-3 h-3" />
-            </Button>
-            <Button
-              v-else
-              size="sm"
-              variant="destructive"
-              class="exit-edit-btn"
-              @click="exitEditMode"
-            >
-              <X class="w-3 h-3" />
-            </Button>
+  <TooltipProvider>
+    <Sidebar>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>
+            <h1 class="text-xl font-semibold tracking-tight text-foreground">
+              知识分类
+            </h1>
+            <div class="ml-auto flex gap-x-2">
+              <!-- 编辑模式切换 -->
+              <TooltipButton
+                v-if="!isEditMode"
+                size="sm"
+                variant="ghost"
+                class="edit-btn"
+                :disabled="isLockLoading"
+                @click="enterEditMode"
+              >
+                <Edit2 class="w-3 h-3 mr-1" />
+                <span class="text-xs">编辑</span>
+                <template #tooltip>
+                  <div class="text-xs">
+                    <div class="font-medium">
+                      进入编辑模式
+                    </div>
+                    <div class="text-muted-foreground">
+                      管理模块层级结构
+                    </div>
+                  </div>
+                </template>
+              </TooltipButton>
 
-            <!-- 创建顶级模块 -->
-            <Button
-              v-if="canCreateTopLevel && isEditMode"
-              size="sm"
-              variant="ghost"
-              class="add-module-btn"
-              @click="createTopLevelModule"
-            >
-              <Plus class="w-3 h-3" />
-            </Button>
-          </div>
-        </SidebarGroupLabel>
+              <TooltipButton
+                v-else
+                size="sm"
+                variant="destructive"
+                class="exit-edit-btn"
+                tooltip="退出编辑模式"
+                @click="exitEditMode"
+              >
+                <X class="w-3 h-3 mr-1" />
+                <span class="text-xs">完成</span>
+              </TooltipButton>
 
-        <SidebarGroupContent>
-          <div v-if="isLoading" class="px-2">
-            <SidebarMenuSkeleton v-for="i in 5" :key="i" />
-          </div>
+              <!-- 创建顶级模块 -->
+              <TooltipButton
+                v-if="canCreateTopLevel && isEditMode"
+                size="sm"
+                variant="ghost"
+                class="add-module-btn"
+                tooltip="创建顶级模块"
+                @click="createTopLevelModule"
+              >
+                <Plus class="w-3 h-3" />
+              </TooltipButton>
+            </div>
+          </SidebarGroupLabel>
 
-          <Alert v-else-if="error" variant="destructive" class="mx-2">
-            <AlertTitle>加载失败</AlertTitle>
-            <AlertDescription class="mt-2">
-              <p class="mb-2">
-                {{ error }}
-              </p>
-              <Button size="sm" variant="outline" @click="fetchModules">
-                重试
+          <SidebarGroupContent>
+            <div v-if="isLoading" class="px-2">
+              <SidebarMenuSkeleton v-for="i in 5" :key="i" />
+            </div>
+
+            <Alert v-else-if="error" variant="destructive" class="mx-2">
+              <AlertTitle>加载失败</AlertTitle>
+              <AlertDescription class="mt-2">
+                <p class="mb-2">
+                  {{ error }}
+                </p>
+                <Button size="sm" variant="outline" @click="fetchModules">
+                  重试
+                </Button>
+              </AlertDescription>
+            </Alert>
+
+            <SidebarMenu v-else-if="moduleTree && moduleTree.length">
+              <ModuleTree
+                v-for="module in moduleTree"
+                :key="module.id"
+                :node="module"
+                :is-edit-mode="isEditMode"
+                @module-action="handleModuleAction"
+              />
+            </SidebarMenu>
+
+            <Empty v-else class="py-6">
+              <EmptyMedia variant="icon">
+                <Plus class="h-5 w-5" />
+              </EmptyMedia>
+              <EmptyHeader>
+                <EmptyTitle class="text-sm">
+                  暂无模块
+                </EmptyTitle>
+                <EmptyDescription class="text-xs">
+                  系统中还没有创建任何模块
+                </EmptyDescription>
+              </EmptyHeader>
+              <Button v-if="canCreateTopLevel" size="sm" variant="outline" class="mt-3" @click="createTopLevelModule">
+                创建第一个模块
               </Button>
-            </AlertDescription>
-          </Alert>
+            </Empty>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
 
-          <SidebarMenu v-else-if="moduleTree && moduleTree.length">
-            <ModuleTree
-              v-for="module in moduleTree"
-              :key="module.id"
-              :node="module"
-              :is-edit-mode="isEditMode"
-              @module-action="handleModuleAction"
-            />
-          </SidebarMenu>
+      <CreateEditModuleModal
+        :modal-state="modalState"
+        @close="closeModal"
+        @success="handleModalSuccess"
+      />
 
-          <Empty v-else class="py-6">
-            <EmptyMedia variant="icon">
-              <Plus class="h-5 w-5" />
-            </EmptyMedia>
-            <EmptyHeader>
-              <EmptyTitle class="text-sm">
-                暂无模块
-              </EmptyTitle>
-              <EmptyDescription class="text-xs">
-                系统中还没有创建任何模块
-              </EmptyDescription>
-            </EmptyHeader>
-            <Button v-if="canCreateTopLevel" size="sm" variant="outline" class="mt-3" @click="createTopLevelModule">
-              创建第一个模块
-            </Button>
-          </Empty>
-        </SidebarGroupContent>
-      </SidebarGroup>
-    </SidebarContent>
+      <DeleteModuleModal
+        :modal-state="modalState"
+        @close="closeModal"
+        @success="handleModalSuccess"
+      />
 
-    <CreateEditModuleModal
-      :modal-state="modalState"
-      @close="closeModal"
-      @success="handleModalSuccess"
-    />
+      <CollaboratorsModal
+        :modal-state="modalState"
+        @close="closeModal"
+        @success="handleModalSuccess"
+      />
 
-    <DeleteModuleModal
-      :modal-state="modalState"
-      @close="closeModal"
-      @success="handleModalSuccess"
-    />
-
-    <CollaboratorsModal
-      :modal-state="modalState"
-      @close="closeModal"
-      @success="handleModalSuccess"
-    />
-
-    <div v-if="lockInfo && lockInfo.locked_by && !isEditMode" class="fixed bottom-4 left-4 right-4 bg-muted border border-border rounded-md p-2 px-3 z-[1000] md:left-auto md:right-4">
-      <div class="flex items-center gap-2 text-sm text-muted-foreground">
-        <Edit2 class="w-4 h-4" />
-        <span>{{ lockInfo.locked_by.username }} 正在编辑导航栏</span>
-        <span class="ml-auto text-xs opacity-70">{{ formatLockTime(lockInfo.locked_at) }}</span>
+      <div v-if="lockInfo && lockInfo.locked_by && !isEditMode" class="fixed bottom-4 left-4 right-4 bg-muted border border-border rounded-md p-2 px-3 z-[1000] md:left-auto md:right-4">
+        <div class="flex items-center gap-2 text-sm text-muted-foreground">
+          <Edit2 class="w-4 h-4" />
+          <span>{{ lockInfo.locked_by.username }} 正在编辑导航栏</span>
+          <span class="ml-auto text-xs opacity-70">{{ formatLockTime(lockInfo.locked_at) }}</span>
+        </div>
       </div>
-    </div>
-  </Sidebar>
+    </Sidebar>
+  </TooltipProvider>
 </template>
