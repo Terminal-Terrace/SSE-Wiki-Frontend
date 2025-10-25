@@ -17,6 +17,10 @@ import xml from 'highlight.js/lib/languages/xml'
 import { marked } from 'marked'
 import { computed } from 'vue'
 
+interface Props {
+  content: string
+}
+
 const props = defineProps<Props>()
 // 注册语言
 hljs.registerLanguage('javascript', javascript)
@@ -35,27 +39,34 @@ hljs.registerLanguage('bash', bash)
 hljs.registerLanguage('shell', bash)
 hljs.registerLanguage('css', css)
 
-interface Props {
-  content: string
-}
-
 // 配置 marked
 marked.setOptions({
   gfm: true, // GitHub Flavored Markdown
   breaks: true, // 支持换行
-  highlight: (code, lang) => {
-    // 代码高亮
-    if (lang && hljs.getLanguage(lang)) {
-      try {
-        return hljs.highlight(code, { language: lang }).value
-      }
-      catch (e) {
-        console.error('Highlight error:', e)
-      }
-    }
-    return code
-  },
 })
+
+// 创建自定义 renderer
+const renderer = new marked.Renderer()
+const originalCodeRenderer = renderer.code.bind(renderer)
+
+renderer.code = function (token: any) {
+  const code = typeof token === 'string' ? token : token.text
+  const lang = typeof token === 'string' ? '' : (token.lang || '')
+
+  // 代码高亮
+  if (lang && hljs.getLanguage(lang)) {
+    try {
+      const highlighted = hljs.highlight(code, { language: lang }).value
+      return `<pre><code class="hljs language-${lang}">${highlighted}</code></pre>`
+    }
+    catch (e) {
+      console.error('Highlight error:', e)
+    }
+  }
+  return originalCodeRenderer(token)
+}
+
+marked.use({ renderer })
 
 // 渲染 Markdown
 const renderedHtml = computed(() => {
