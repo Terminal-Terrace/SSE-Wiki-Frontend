@@ -55,38 +55,38 @@ function handleSearch() {
 </script>
 
 <template>
-  <header class="z-30 border-b bg-white">
+  <header class="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
     <div class="w-full px-6">
-      <div class="flex h-16 items-center justify-between">
-        <div class="flex items-center space-x-8">
+      <div class="flex h-14 items-center justify-between">
+        <div class="flex items-center gap-6">
           <RouterLink
             to="/"
-            class="flex items-center space-x-2 text-gray-900 transition-colors duration-200"
+            class="flex items-center gap-2 text-foreground transition-colors hover:text-foreground/80"
           >
-            <span class="text-xl font-semibold">SSE Wiki</span>
+            <span class="text-lg font-semibold">SSE Wiki</span>
           </RouterLink>
-          <nav class="hidden md:flex space-x-8 text-[18px]">
+          <nav class="hidden md:flex items-center gap-6">
             <RouterLink
               v-for="item in navItems"
               :key="item.label"
               :to="item.to"
-              class="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors duration-200"
-              active-class="font-semibold"
-              exact-active-class="font-semibold"
+              class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              active-class="text-foreground"
+              exact-active-class="text-foreground"
             >
               {{ item.label }}
             </RouterLink>
           </nav>
         </div>
 
-        <div class="flex-1 max-w-md mx-8">
+        <div class="flex-1 max-w-sm mx-6">
           <TooltipWrapper>
             <div class="relative">
-              <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 v-model="searchQuery"
-                placeholder="搜索..."
-                class="pl-10 pr-4 w-full"
+                placeholder="搜索文档..."
+                class="h-9 pl-9 pr-4 w-full"
                 @keydown.enter="handleSearch"
               />
             </div>
