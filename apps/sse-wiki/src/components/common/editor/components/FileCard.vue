@@ -25,7 +25,7 @@ const props = defineProps<{
       fileName: string
       fileSize: number
       fileType: string
-      fileUrl: string
+      fileUrl?: string
       category: 'image' | 'video' | 'audio' | 'document' | 'archive' | 'code' | 'other'
     }
   }
@@ -33,6 +33,11 @@ const props = defineProps<{
   editor?: any
   getPos?: () => number
 }>()
+
+// 动态获取文件URL（避免content存储完整URL）
+const fileUrl = computed(() => {
+  return props.node.attrs.fileUrl || `/api/v1/files/${props.node.attrs.fileId}`
+})
 
 // 格式化文件大小
 function formatFileSize(bytes: number): string {
@@ -67,14 +72,14 @@ const fileIcon = computed(() => {
 
 // 点击卡片打开文件（在线预览）
 function handleOpen() {
-  window.open(props.node.attrs.fileUrl, '_blank')
+  window.open(fileUrl.value, '_blank')
 }
 
 // 下载文件
 function handleDownload(e: Event) {
   e.stopPropagation()
   const link = document.createElement('a')
-  link.href = props.node.attrs.fileUrl
+  link.href = fileUrl.value
   link.download = props.node.attrs.fileName
   document.body.appendChild(link)
   link.click()

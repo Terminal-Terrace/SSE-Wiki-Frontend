@@ -8,14 +8,14 @@
 export const CHUNK_SIZE = 2 * 1024 * 1024
 
 /**
- * 最大并发上传数
+ * 最大并发上传数（可根据网络调整，建议3-5）
  */
-export const MAX_CONCURRENT = 3
+export const MAX_CONCURRENT = 5
 
 /**
- * 文件大小限制（100MB）
+ * 文件大小限制（50MB，可根据需要调整）
  */
-export const MAX_FILE_SIZE = 100 * 1024 * 1024
+export const MAX_FILE_SIZE = 50 * 1024 * 1024
 
 /**
  * 允许上传的文件类型

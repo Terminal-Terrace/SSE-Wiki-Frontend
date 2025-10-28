@@ -251,13 +251,12 @@ async function handleFileDrop(files: File[], position: number) {
         uploadProgress.value = progress.percentage
       })
 
-      // 插入文件卡片
+      // 插入文件卡片（不传fileUrl，避免content存储大量数据）
       ;(editor.value.commands as any).setFileCard({
         fileId: fileInfo.fileId,
         fileName: fileInfo.fileName,
         fileSize: fileInfo.fileSize,
         fileType: fileInfo.fileType,
-        fileUrl: fileInfo.fileUrl,
         category: fileInfo.category,
       })
 

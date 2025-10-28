@@ -12,7 +12,7 @@ export interface FileCardAttrs {
   fileName: string
   fileSize: number
   fileType: string
-  fileUrl: string
+  fileUrl?: string // 可选，避免content存储完整URL
   category: 'image' | 'video' | 'audio' | 'document' | 'archive' | 'code' | 'other'
   width?: number
   height?: number
@@ -60,10 +60,10 @@ export const FileCard = Node.create({
       },
       fileUrl: {
         default: '',
-        parseHTML: (element: HTMLElement) => element.getAttribute('data-file-url'),
-        renderHTML: (attributes: any) => ({
-          'data-file-url': attributes.fileUrl,
-        }),
+        // 不从HTML读取fileUrl，避免存储冗余数据
+        parseHTML: () => null,
+        // 不将fileUrl序列化到HTML
+        renderHTML: () => ({}),
       },
       category: {
         default: 'other',

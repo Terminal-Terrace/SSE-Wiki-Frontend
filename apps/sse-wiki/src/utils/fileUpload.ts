@@ -12,7 +12,7 @@ export interface FileInfo {
   fileName: string
   fileSize: number
   fileType: string
-  fileUrl: string
+  fileUrl?: string // 可选，避免content存储完整URL
   category: 'image' | 'video' | 'audio' | 'document' | 'archive' | 'code' | 'other'
 }
 
@@ -111,10 +111,11 @@ export async function uploadFile(
   if (!sizeValidation.valid)
     throw new Error(sizeValidation.message)
 
-  // 1) 计算文件哈希（一次性读取，100MB内可接受）
+  // 1) 计算文件哈希
   const fileHash = await calculateSHA256(file)
 
   // 2) 初始化上传（秒传检测）
+  const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
   const initResp = await fetch('/api/v1/upload/init', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -122,7 +123,7 @@ export async function uploadFile(
       fileName: file.name,
       fileSize: file.size,
       fileHash,
-      totalChunks: Math.ceil(file.size / (CHUNK_SIZE)),
+      totalChunks,
       mimeType: file.type,
     }),
   })
@@ -149,47 +150,120 @@ export async function uploadFile(
   // 3) 分块上传（并发3）
   const total = file.size
   const chunks = Math.ceil(total / CHUNK_SIZE)
-  let uploadedChunks = 0
+
+  // 跟踪每个分块的上传状态
+  const chunkStatus = Array.from({ length: chunks }, () => false)
+  let completedCount = 0
 
   // 并发上传队列
   const pool = new ConcurrencyPool(MAX_CONCURRENT)
   const tasks: Array<() => Promise<void>> = []
 
-  for (let i = 0; i < chunks; i++) {
-    const start = i * CHUNK_SIZE
+  // 上传单个分块（带重试）
+  const uploadChunk = async (chunkIndex: number, retryCount = 0): Promise<void> => {
+    const start = chunkIndex * CHUNK_SIZE
     const end = Math.min(start + CHUNK_SIZE, total)
     const blob = file.slice(start, end)
 
-    tasks.push(async () => {
-      const formData = new FormData()
-      formData.append('file', blob)
-      formData.append('uploadId', uploadId)
-      formData.append('chunkIndex', String(i))
+    const formData = new FormData()
+    formData.append('file', blob)
+    formData.append('uploadId', uploadId)
+    formData.append('chunkIndex', String(chunkIndex))
 
-      const resp = await fetch('/api/v1/upload/chunk', {
-        method: 'POST',
-        body: formData,
-      })
-      if (!resp.ok)
-        throw new Error(`分块上传失败: ${resp.status}`)
+    const resp = await fetch('/api/v1/upload/chunk', {
+      method: 'POST',
+      body: formData,
+    })
 
-      uploadedChunks += 1
-      const loaded = Math.min(uploadedChunks * CHUNK_SIZE, total)
+    if (!resp.ok) {
+      // 重试最多3次
+      if (retryCount < 3) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)))
+        return uploadChunk(chunkIndex, retryCount + 1)
+      }
+
+      throw new Error(`分块${chunkIndex}上传失败: ${resp.status}`)
+    }
+
+    // 确保响应读取完成
+    await resp.json()
+
+    // 标记分块完成
+    if (!chunkStatus[chunkIndex]) {
+      chunkStatus[chunkIndex] = true
+      completedCount++
+
+      const loaded = Math.min(completedCount * CHUNK_SIZE, total)
       const percentage = Math.round((loaded / total) * 100)
       onProgress?.({ loaded, total, percentage })
-    })
+    }
+  }
+
+  // 创建上传任务
+  const createUploadTask = (chunkIndex: number): () => Promise<void> => {
+    return () => uploadChunk(chunkIndex)
+  }
+
+  // 创建所有任务
+  for (let i = 0; i < chunks; i++) {
+    tasks.push(createUploadTask(i))
   }
 
   await pool.run(tasks)
 
-  // 4) 完成上传
-  const completeResp = await fetch('/api/v1/upload/complete', {
+  // 验证所有分块都已完成
+  const missingChunks = chunkStatus
+    .map((status, index) => status ? -1 : index)
+    .filter(index => index !== -1)
+
+  if (missingChunks.length > 0) {
+    throw new Error(`上传不完整，缺失分块: ${missingChunks.join(', ')}`)
+  }
+
+  // 4) 完成上传（带自动重传）
+  let completeResp = await fetch('/api/v1/upload/complete', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ uploadId }),
   })
-  if (!completeResp.ok)
-    throw new Error(`完成上传失败: ${completeResp.status}`)
+
+  if (!completeResp.ok) {
+    const errorData = await completeResp.json()
+    const errorMsg = errorData.error || ''
+
+    // 检查是否是分块缺失错误
+    const missingMatch = errorMsg.match(/分块 (\[.*?\]) 缺失/)
+    if (missingMatch) {
+      const missingChunksStr = missingMatch[1]
+      let missingChunks: number[]
+      try {
+        missingChunks = JSON.parse(missingChunksStr) as number[]
+      }
+      catch {
+        missingChunks = []
+      }
+
+      // 重传缺失的分块
+      for (const chunkIndex of missingChunks) {
+        await uploadChunk(chunkIndex)
+      }
+
+      // 再次尝试合并
+      completeResp = await fetch('/api/v1/upload/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uploadId }),
+      })
+
+      if (!completeResp.ok) {
+        const retryErrorData = await completeResp.json()
+        throw new Error(`完成上传失败: ${retryErrorData.error || completeResp.status}`)
+      }
+    }
+    else {
+      throw new Error(`完成上传失败: ${errorMsg || completeResp.status}`)
+    }
+  }
   const completeData: { fileId: number, fileName: string, fileUrl: string, category: FileInfo['category'] } = await completeResp.json()
 
   return {
@@ -215,21 +289,31 @@ class ConcurrencyPool {
 
   async run(tasks: Array<() => Promise<void>>): Promise<void> {
     return new Promise((resolve, reject) => {
+      let rejected = false // 防止多次reject
+
       const next = () => {
+        if (rejected)
+          return // 已经失败，停止新任务
+
         if (tasks.length === 0 && this.running === 0) {
           resolve()
           return
         }
-        while (this.running < this.max && tasks.length > 0) {
+
+        while (this.running < this.max && tasks.length > 0 && !rejected) {
           const task = tasks.shift()!
           this.running++
           task()
             .then(() => {
               this.running--
-              next()
+              if (!rejected)
+                next()
             })
             .catch((err) => {
-              reject(err)
+              if (!rejected) {
+                rejected = true
+                reject(err)
+              }
             })
         }
       }

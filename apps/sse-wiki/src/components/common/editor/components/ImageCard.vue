@@ -15,7 +15,7 @@ const props = defineProps<{
       fileName: string
       fileSize: number
       fileType: string
-      fileUrl: string
+      fileUrl?: string
       category: string
       width?: number
       height?: number
@@ -27,6 +27,11 @@ const props = defineProps<{
   editor?: any
   getPos?: () => number
 }>()
+
+// 动态获取文件URL（避免content存储完整URL）
+const fileUrl = computed(() => {
+  return props.node.attrs.fileUrl || `/api/v1/files/${props.node.attrs.fileId}`
+})
 
 const showPreview = ref(false)
 const imageLoaded = ref(false)
@@ -155,7 +160,7 @@ function handlePreview(e: Event) {
 function handleDownload(e: Event) {
   e.stopPropagation()
   const link = document.createElement('a')
-  link.href = props.node.attrs.fileUrl
+  link.href = fileUrl.value
   link.download = props.node.attrs.fileName
   document.body.appendChild(link)
   link.click()
@@ -192,7 +197,7 @@ function handleAlignChange(align: any) {
         <!-- 图片 -->
         <img
           ref="imageRef"
-          :src="node.attrs.fileUrl"
+          :src="fileUrl"
           :alt="node.attrs.fileName"
           :style="displayStyle"
           class="rounded-lg border bg-muted object-contain"
@@ -301,7 +306,7 @@ function handleAlignChange(align: any) {
           <X class="h-6 w-6" />
         </Button>
         <img
-          :src="node.attrs.fileUrl"
+          :src="fileUrl"
           :alt="node.attrs.fileName"
           class="max-w-[90vw] max-h-[90vh] object-contain"
           @click.stop

@@ -101,3 +101,11 @@ pnpm build
 
 - **主服务**: `http://localhost:8080` - 处理业务逻辑
 - **认证服务**: `http://localhost:8081` - 处理认证相关 API
+
+## 5. 文件上传配置
+
+在 `apps/sse-wiki/src/constants/upload.ts` 中配置：
+
+- `MAX_FILE_SIZE`: 文件大小限制（默认50MB）
+- `MAX_CONCURRENT`: 并发上传数（默认5）
+- `CHUNK_SIZE`: 分块大小（默认2MB）
