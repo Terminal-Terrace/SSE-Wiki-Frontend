@@ -12,7 +12,6 @@ import type { UploadProgress } from '@/utils/fileUpload'
  * - 拖拽上传文件
  */
 import { Progress, Separator, ToggleGroup, TooltipProvider } from '@sse-wiki/ui'
-import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
 import Typography from '@tiptap/extension-typography'
@@ -40,7 +39,14 @@ import {
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { TooltipButton, TooltipToggleButton } from '@/components/common/tooltip'
 import { uploadFile } from '@/utils/fileUpload'
+import LinkDialog from './components/LinkDialog.vue'
+import { createSlashCommandItemsProvider } from './config/slashCommands'
+import { CodeBlockWithActions } from './extensions/CodeBlockWithActions'
+import { FloatingToolbarExtension } from './extensions/FloatingToolbar'
+import { MathBlock } from './extensions/MathBlock'
+import { SlashCommandSuggestion } from './extensions/SlashCommandSuggestion'
 import { FileCard } from './utils'
+import 'highlight.js/styles/github-dark.css'
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: '',
@@ -60,6 +66,62 @@ const emit = defineEmits<{
 }>()
 
 const lowlight = createLowlight(common)
+
+// 上传状态
+const uploading = ref(false)
+const uploadProgress = ref(0)
+const uploadFileName = ref('')
+const uploadError = ref('')
+
+/**
+ * 文件上传处理函数
+ */
+async function handleFileUpload(files: File[], position: number, editorInstance: any) {
+  if (!editorInstance || files.length === 0)
+    return
+
+  // 设置光标位置
+  editorInstance.commands.setTextSelection(position)
+
+  // 逐个上传文件
+  for (const file of files) {
+    try {
+      uploading.value = true
+      uploadError.value = ''
+      uploadFileName.value = file.name
+      uploadProgress.value = 0
+
+      const fileInfo = await uploadFile(file, (progress: UploadProgress) => {
+        uploadProgress.value = progress.percentage
+      })
+
+      // 插入文件卡片（不传fileUrl，避免content存储大量数据）
+      ;(editorInstance.commands as any).setFileCard({
+        fileId: fileInfo.fileId,
+        fileName: fileInfo.fileName,
+        fileSize: fileInfo.fileSize,
+        fileType: fileInfo.fileType,
+        category: fileInfo.category,
+      })
+
+      // 上传成功后暂停一下，让用户看到进度
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+    catch (error) {
+      console.error('文件上传失败:', error)
+      uploadError.value = error instanceof Error ? error.message : '上传失败'
+      await new Promise(resolve => setTimeout(resolve, 2000))
+    }
+    finally {
+      uploading.value = false
+      uploadProgress.value = 0
+    }
+  }
+}
+
+// 创建一个延迟初始化的斜杠命令项提供者
+// 在 editor 创建后重新初始化
+let getSlashCommandItems: ReturnType<typeof createSlashCommandItemsProvider>
 
 interface Props {
   /**
@@ -96,12 +158,6 @@ interface Props {
   enableMarkdown?: boolean
 }
 
-// 上传状态
-const uploading = ref(false)
-const uploadProgress = ref(0)
-const uploadFileName = ref('')
-const uploadError = ref('')
-
 // 创建编辑器实例
 const editor = useEditor({
   content: props.modelValue || '',
@@ -109,9 +165,9 @@ const editor = useEditor({
   autofocus: props.autofocus,
   extensions: [
     StarterKit.configure({
-      codeBlock: false, // 禁用默认的代码块，使用 CodeBlockLowlight
+      codeBlock: false, // 禁用默认的代码块，使用 CodeBlockWithActions
     }),
-    CodeBlockLowlight.configure({
+    CodeBlockWithActions.configure({
       lowlight,
     }),
     Link.configure({
@@ -125,6 +181,26 @@ const editor = useEditor({
     }),
     Typography, // 自动转换引号、省略号等
     FileCard, // 文件卡片扩展
+    MathBlock, // 数学公式块扩展（支持 $$$$ 语法）
+    SlashCommandSuggestion.configure({
+      items: (query: string) => {
+        // 延迟初始化，确保 editor 已创建
+        if (!getSlashCommandItems) {
+          getSlashCommandItems = createSlashCommandItemsProvider(
+            async (files: File[], position: number) => {
+              if (editor?.value) {
+                await handleFileUpload(files, position, editor.value)
+              }
+            },
+          )
+        }
+        return getSlashCommandItems(query)
+      },
+      char: '/',
+      allowedPrefixes: [' ', '\n'],
+      startOfLine: false,
+    }),
+    FloatingToolbarExtension, // 浮动工具栏扩展
   ],
   onUpdate: ({ editor }) => {
     const html = editor.getHTML()
@@ -161,7 +237,9 @@ const editor = useEditor({
         return true
 
       // 处理文件上传
-      handleFileDrop(Array.from(files), pos.pos)
+      if (editor?.value) {
+        handleFileUpload(Array.from(files), pos.pos, editor.value)
+      }
       return true
     },
     handlePaste: (view, event) => {
@@ -179,7 +257,9 @@ const editor = useEditor({
 
       // 在当前光标位置插入
       const pos = view.state.selection.from
-      handleFileDrop(Array.from(files), pos)
+      if (editor?.value) {
+        handleFileUpload(Array.from(files), pos, editor.value)
+      }
       return true
     },
   },
@@ -221,59 +301,18 @@ function setHeading(level: 1 | 2 | 3) {
   editor.value?.chain().focus().toggleHeading({ level }).run()
 }
 
+const linkDialogOpen = ref(false)
+
 function setLink() {
-  const url = window.prompt('输入链接地址:')
-  if (url) {
-    editor.value?.chain().focus().setLink({ href: url }).run()
-  }
+  linkDialogOpen.value = true
+}
+
+function handleLinkConfirm(url: string) {
+  editor.value?.chain().focus().setLink({ href: url }).run()
 }
 
 const undo = () => editor.value?.chain().focus().undo().run()
 const redo = () => editor.value?.chain().focus().redo().run()
-
-// 文件上传处理
-async function handleFileDrop(files: File[], position: number) {
-  if (!editor.value || files.length === 0)
-    return
-
-  // 设置光标位置
-  editor.value.commands.setTextSelection(position)
-
-  // 逐个上传文件
-  for (const file of files) {
-    try {
-      uploading.value = true
-      uploadError.value = ''
-      uploadFileName.value = file.name
-      uploadProgress.value = 0
-
-      const fileInfo = await uploadFile(file, (progress: UploadProgress) => {
-        uploadProgress.value = progress.percentage
-      })
-
-      // 插入文件卡片（不传fileUrl，避免content存储大量数据）
-      ;(editor.value.commands as any).setFileCard({
-        fileId: fileInfo.fileId,
-        fileName: fileInfo.fileName,
-        fileSize: fileInfo.fileSize,
-        fileType: fileInfo.fileType,
-        category: fileInfo.category,
-      })
-
-      // 上传成功后暂停一下，让用户看到进度
-      await new Promise(resolve => setTimeout(resolve, 500))
-    }
-    catch (error) {
-      console.error('文件上传失败:', error)
-      uploadError.value = error instanceof Error ? error.message : '上传失败'
-      await new Promise(resolve => setTimeout(resolve, 2000))
-    }
-    finally {
-      uploading.value = false
-      uploadProgress.value = 0
-    }
-  }
-}
 
 // 手动选择文件上传
 function triggerFileUpload() {
@@ -287,7 +326,9 @@ function triggerFileUpload() {
 
     // 在当前光标位置插入
     const pos = editor.value?.state.selection.from ?? 0
-    await handleFileDrop(Array.from(files), pos)
+    if (editor.value) {
+      await handleFileUpload(Array.from(files), pos, editor.value)
+    }
   }
   input.click()
 }
@@ -475,6 +516,13 @@ onBeforeUnmount(() => {
           maxHeight,
         }"
       />
+
+      <!-- 链接输入对话框 -->
+      <LinkDialog
+        :open="linkDialogOpen"
+        @update:open="linkDialogOpen = $event"
+        @confirm="handleLinkConfirm"
+      />
     </div>
   </TooltipProvider>
 </template>
@@ -566,13 +614,19 @@ onBeforeUnmount(() => {
   }
 
   /* 代码块 */
-  pre {
+  pre:not(.code-block-with-actions pre) {
     @apply bg-muted p-4 rounded-md my-4 overflow-x-auto;
 
     code {
       @apply bg-transparent p-0 text-sm;
       color: inherit;
     }
+  }
+
+  /* 数学公式块 */
+  div[data-math-block] {
+    @apply my-4;
+    display: block;
   }
 
   /* 链接 */
