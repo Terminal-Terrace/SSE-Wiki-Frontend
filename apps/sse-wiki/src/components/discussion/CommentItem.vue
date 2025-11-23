@@ -3,6 +3,7 @@ import type { Comment } from '@/types/discussion'
 import { Avatar, AvatarFallback, AvatarImage, Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@sse-wiki/ui'
 import { MessageSquare, MoreVertical, Pencil, Trash2 } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
+import MarkdownRenderer from '@/components/common/MarkdownRenderer.vue'
 import { useDiscussionStore } from '@/stores/discussion'
 import { CommentEditorMode } from '@/types/discussion'
 import { formatDate } from '@/utils/format'
@@ -230,9 +231,11 @@ function cancelEdit() {
 
         <div
           v-else
-          class="prose prose-sm max-w-none mb-2"
-          v-html="comment.content"
-        />
+          class="mb-2"
+        >
+          <!-- 统一使用 MarkdownRenderer，它会正确处理 HTML 和 Markdown -->
+          <MarkdownRenderer :content="comment.content" />
+        </div>
 
         <!-- 编辑模式 -->
         <div v-if="showEditEditor" class="mb-2">
@@ -335,16 +338,42 @@ function cancelEdit() {
   @apply border-b border-border/50;
 }
 
-/* 深度样式：评论内容 */
-.prose :deep(p) {
+/* Markdown 渲染样式优化 */
+.comment-item :deep(.markdown-body),
+.comment-item .comment-content {
+  @apply text-sm;
+}
+
+.comment-item :deep(.markdown-body p) {
   @apply my-1;
 }
 
-.prose :deep(p:first-child) {
+.comment-item :deep(.markdown-body p:first-child) {
   @apply mt-0;
 }
 
-.prose :deep(p:last-child) {
+.comment-item :deep(.markdown-body p:last-child) {
   @apply mb-0;
+}
+
+/* 代码块样式适配 */
+.comment-item :deep(.markdown-body pre) {
+  @apply my-2 text-xs;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.comment-item :deep(.markdown-body code) {
+  @apply text-xs;
+}
+
+/* 列表样式 */
+.comment-item :deep(.markdown-body ul),
+.comment-item :deep(.markdown-body ol) {
+  @apply my-1 ml-4;
+}
+
+.comment-item :deep(.markdown-body li) {
+  @apply my-0.5;
 }
 </style>

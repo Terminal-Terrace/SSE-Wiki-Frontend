@@ -68,10 +68,36 @@ renderer.code = function (token: any) {
 
 marked.use({ renderer })
 
-// 渲染 Markdown
+/**
+ * 检测内容是否已经是 HTML 格式
+ * 简单检测：如果内容以 < 开头并包含 >，且看起来像 HTML 标签，就认为是 HTML
+ */
+function isHtmlContent(content: string): boolean {
+  if (!content || typeof content !== 'string') {
+    return false
+  }
+  const trimmed = content.trim()
+  // 检查是否包含常见的 HTML 标签模式
+  // 例如: <p>, <div>, <span>, <strong> 等
+  const htmlTagPattern = /^<[a-z][a-z0-9]*[\s>]/i
+  // 或者包含闭合标签，如 <p>...</p>
+  const htmlWithCloseTag = /<[a-z][^>]*>[\s\S]*<\/[a-z][a-z0-9]*>/i
+
+  return htmlTagPattern.test(trimmed) || htmlWithCloseTag.test(trimmed)
+}
+
+// 渲染 Markdown 或 HTML
 const renderedHtml = computed(() => {
   try {
-    return marked.parse(props.content)
+    const content = props.content || ''
+
+    // 如果内容已经是 HTML 格式，直接返回
+    if (isHtmlContent(content)) {
+      return content
+    }
+
+    // 否则使用 Markdown 解析
+    return marked.parse(content)
   }
   catch (e) {
     console.error('Markdown parse error:', e)
