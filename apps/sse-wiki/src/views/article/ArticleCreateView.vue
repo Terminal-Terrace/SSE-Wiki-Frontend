@@ -63,7 +63,7 @@ function hasUnsavedContent() {
 }
 
 // 使用未保存内容警告 Hook
-const { showConfirmDialog, confirmLeave, cancelLeave, triggerConfirm } = useUnsavedChangesWarning(hasUnsavedContent)
+const { showConfirmDialog, confirmLeave, cancelLeave, triggerConfirm, skipGuard } = useUnsavedChangesWarning(hasUnsavedContent)
 
 // 初始化
 onMounted(async () => {
@@ -157,6 +157,12 @@ async function handleSubmit() {
       title: '创建成功',
       description: '文章已创建',
     })
+
+    // 清空表单，避免路由守卫检测到"未保存内容"
+    formData.value = { ...EMPTY_FORM }
+
+    // 跳过路由守卫检查，直接跳转
+    skipGuard()
 
     // 跳转到文章详情页
     router.push({
