@@ -18,6 +18,7 @@ import { onBeforeRouteLeave } from 'vue-router'
 export function useUnsavedChangesWarning(hasUnsavedChanges: () => boolean) {
   const showConfirmDialog = ref(false)
   const pendingLeaveAction = ref<(() => void) | null>(null)
+  const skipNextGuard = ref(false)
 
   // 浏览器关闭/刷新警告
   function handleBeforeUnload(e: BeforeUnloadEvent) {
@@ -29,6 +30,13 @@ export function useUnsavedChangesWarning(hasUnsavedChanges: () => boolean) {
 
   // 路由跳转警告
   onBeforeRouteLeave((to, from, next) => {
+    // 如果设置了跳过标志，直接放行
+    if (skipNextGuard.value) {
+      skipNextGuard.value = false
+      next()
+      return
+    }
+
     if (hasUnsavedChanges()) {
       pendingLeaveAction.value = () => next(true)
       showConfirmDialog.value = true
@@ -77,10 +85,19 @@ export function useUnsavedChangesWarning(hasUnsavedChanges: () => boolean) {
     window.removeEventListener('beforeunload', handleBeforeUnload)
   })
 
+  /**
+   * 跳过下一次路由守卫检查
+   * 用于成功保存后的跳转场景
+   */
+  function skipGuard() {
+    skipNextGuard.value = true
+  }
+
   return {
     showConfirmDialog,
     confirmLeave,
     cancelLeave,
     triggerConfirm,
+    skipGuard,
   }
 }
