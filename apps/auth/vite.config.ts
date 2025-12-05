@@ -16,9 +16,9 @@ export default defineConfig(({ mode }) => {
       port: 3001,
       strictPort: true, // 端口占用时报错
       proxy: {
-        // 代理认证相关请求到认证服务
+        // 代理认证相关请求到 Node.js Gateway
         '/api/v1/auth': {
-          target: env.VITE_AUTH_SERVICE_URL || 'http://localhost:8081',
+          target: env.VITE_AUTH_SERVICE_URL || 'http://localhost:3002',
           changeOrigin: true,
           secure: false,
         },
@@ -27,8 +27,9 @@ export default defineConfig(({ mode }) => {
     plugins: [
       vue(),
       vueDevTools(),
-      cloudflare(),
-    ],
+      // cloudflare 插件仅在生产构建时启用，避免本地代理冲突
+      mode === 'production' && cloudflare(),
+    ].filter(Boolean),
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
