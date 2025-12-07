@@ -25,30 +25,10 @@ export async function hydrateContent(content: string): Promise<string> {
 
     // 3. 创建文件ID到文件信息的映射
     const fileInfoMap = new Map<string, FileInfo>()
-    for (const raw of fileInfoList as any[]) {
-      if (!raw)
+    for (const fileInfo of fileInfoList) {
+      if (!fileInfo?.fileId)
         continue
-
-      // 兼容两种结构：
-      // - 后端 DTO: { id, name, size, mimeType, url, ... }
-      // - 已符合 FileInfo 的对象: { fileId, fileName, fileSize, mimeType, url, ... }
-      const fileId = raw.fileId ?? raw.id
-      if (!fileId)
-        continue
-
-      const normalized: FileInfo = {
-        fileId,
-        fileName: raw.fileName ?? raw.name ?? '',
-        fileSize: raw.fileSize ?? raw.size ?? 0,
-        mimeType: raw.mimeType ?? raw.mime_type ?? 'application/octet-stream',
-        url: raw.url ?? '',
-        // category/status/missing 如果后端没给，就用本地推断/默认
-        category: raw.category ?? getCategoryFromMimeType(raw.mimeType ?? raw.mime_type ?? ''),
-        status: raw.status ?? 'uploaded',
-        missing: raw.missing ?? false,
-      }
-
-      fileInfoMap.set(normalized.fileId, normalized)
+      fileInfoMap.set(fileInfo.fileId, fileInfo)
     }
 
     // 4. 解析所有占位符
@@ -119,7 +99,7 @@ function createFileCard(
 
   const layoutStr = layoutAttrs.length ? ` ${layoutAttrs.join(' ')}` : ''
 
-  return `<file-card data-file-id="${fileInfo.fileId}" data-file-name="${escapeHtml(fileInfo.fileName)}" data-file-size="${fileInfo.fileSize}" data-file-type="${escapeHtml(fileInfo.mimeType)}" data-file-url="${escapeHtml(fileInfo.url)}" data-category="${category}"${layoutStr}></file-card>`
+  return `<file-card data-file-id="${escapeHtml(fileInfo.fileId)}" data-file-name="${escapeHtml(fileInfo.fileName)}" data-file-size="${fileInfo.fileSize}" data-file-type="${escapeHtml(fileInfo.mimeType)}" data-file-url="${escapeHtml(fileInfo.url)}" data-category="${category}"${layoutStr}></file-card>`
 }
 
 /**
@@ -140,7 +120,7 @@ function createMissingFileCard(
 
   const layoutStr = layoutAttrs.length ? ` ${layoutAttrs.join(' ')}` : ''
 
-  return `<file-card data-file-id="${fileId}" data-file-name="${escapeHtml(fileName)}" data-file-size="0" data-file-type="unknown" data-file-url="" data-category="other" data-missing="true"${layoutStr}></file-card>`
+  return `<file-card data-file-id="${escapeHtml(fileId)}" data-file-name="${escapeHtml(fileName)}" data-file-size="0" data-file-type="unknown" data-file-url="" data-category="other" data-missing="true"${layoutStr}></file-card>`
 }
 
 /**
