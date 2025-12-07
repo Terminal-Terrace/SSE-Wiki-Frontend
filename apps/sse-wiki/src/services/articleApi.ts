@@ -335,6 +335,24 @@ export class ArticleAPI {
     return request.get(`/api/v1/modules/${moduleId}/articles`, { params })
   }
 
+  // ========== 用户收藏 ==========
+
+  /**
+   * 获取用户收藏的文章列表
+   * GET /api/v1/articles/:userId/user-favour
+   */
+  async getUserFavourites(userId: number | string): Promise<{
+    articles: Array<{ article?: Article }>
+  }> {
+    const resp = await request.get(`${this.baseURL}/${userId}/user-favour`)
+    const articles = Array.isArray(resp?.data?.articles)
+      ? resp.data.articles
+      : Array.isArray(resp?.articles)
+        ? resp.articles
+        : []
+    return { articles }
+  }
+
   // ========== 便捷方法 ==========
 
   /**

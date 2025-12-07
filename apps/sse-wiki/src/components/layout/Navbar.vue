@@ -43,6 +43,10 @@ function handleLogout() {
   logout()
 }
 
+function goToUserInfo() {
+  router.push('/user-info')
+}
+
 function handleSearch() {
   if (searchQuery.value.trim()) {
     // 跳转到搜索页面并传递查询参数
@@ -122,7 +126,7 @@ function handleSearch() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" class="w-48">
-              <DropdownMenuItem>
+              <DropdownMenuItem @click="goToUserInfo">
                 <User class="mr-2 h-4 w-4" />
                 <span>个人资料</span>
               </DropdownMenuItem>
