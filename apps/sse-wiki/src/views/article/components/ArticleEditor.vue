@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Page } from '@/types'
 import { Button, Input, Label, toast } from '@sse-wiki/ui'
-import { ref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import ContentEditor from '@/components/common/editor/ContentEditor.vue'
 import { useUnsavedChangesWarning } from '@/composables/useUnsavedChangesWarning'
@@ -17,12 +17,13 @@ const emit = defineEmits<{
 }>()
 
 const formData = ref({
-  content: props.page.content || '',
+  content: '',
   commitMessage: '',
 })
 
-const initialContent = ref(props.page.content || '')
+const initialContent = ref('')
 const isSaving = ref(false)
+const isLoading = ref(true)
 
 // 检测内容是否被修改
 function hasUnsavedChanges() {
@@ -35,10 +36,20 @@ const { showConfirmDialog: showLeaveConfirm, confirmLeave, cancelLeave } = useUn
 // 取消编辑确认对话框（单独的）
 const showCancelConfirm = ref(false)
 
+// 初始化内容（不再需要水合，ContentEditor 内部会处理）
+onMounted(() => {
+  const content = props.page.content || ''
+  formData.value.content = content
+  initialContent.value = content
+  isLoading.value = false
+})
+
+// 监听页面变化
 watch(() => props.page, (newPage) => {
-  formData.value.content = newPage.content || ''
+  const content = newPage.content || ''
+  formData.value.content = content
+  initialContent.value = content
   formData.value.commitMessage = ''
-  initialContent.value = newPage.content || ''
 })
 
 // 确认取消编辑

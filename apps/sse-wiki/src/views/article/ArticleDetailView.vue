@@ -146,7 +146,9 @@ async function loadPage() {
   loading.value = true
   try {
     const data = await articleApi.getArticle(pageId.value)
-    page.value = mapArticleToPage(data)
+    const mapped = mapArticleToPage(data)
+    // 水合操作由 ArticleContent.vue 组件内部处理，避免重复水合
+    page.value = mapped
   }
   catch (error) {
     console.error('Failed to load page:', error)

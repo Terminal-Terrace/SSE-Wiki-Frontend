@@ -13,14 +13,16 @@ import StarterKit from '@tiptap/starter-kit'
  */
 import { EditorContent, useEditor } from '@tiptap/vue-3'
 import { common, createLowlight } from 'lowlight'
-import { onBeforeUnmount, watch } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 import { FileCard } from '@/components/common/editor/utils'
+import { hydrateContent } from '@/utils/editor/hydrateContent'
 
 interface Props {
   content: string
 }
 
 const props = defineProps<Props>()
+const isHydrating = ref(false)
 
 const lowlight = createLowlight(common)
 
@@ -46,14 +48,32 @@ const editor = useEditor({
   ],
 })
 
-// 监听 content 变化
+// 监听 content 变化，水合占位符
 watch(
   () => props.content,
-  (newContent) => {
-    if (editor.value && newContent !== editor.value.getHTML()) {
-      editor.value.commands.setContent(newContent || '')
+  async (newContent) => {
+    if (!editor.value || !newContent)
+      return
+
+    isHydrating.value = true
+    try {
+      // 水合内容：将占位符替换为 file-card
+      const hydratedHtml = await hydrateContent(newContent)
+
+      if (hydratedHtml !== editor.value.getHTML()) {
+        editor.value.commands.setContent(hydratedHtml)
+      }
+    }
+    catch (error) {
+      console.error('Failed to hydrate content:', error)
+      // 如果水合失败，直接设置原始内容
+      editor.value.commands.setContent(newContent)
+    }
+    finally {
+      isHydrating.value = false
     }
   },
+  { immediate: true }, // 立即执行一次，处理初始内容
 )
 
 // 清理

@@ -15,7 +15,13 @@ export default defineConfig(({ mode }) => {
       port: 3000,
       strictPort: true, // 端口占用时报错
       proxy: {
-        // 代理所有 API 请求到 Node.js Gateway (统一 BFF)
+        // 文件上传相关 API 走独立 file-service
+        '/api/v1/files': {
+          target: env.VITE_FILE_SERVICE_URL || 'http://localhost:3003',
+          changeOrigin: true,
+          secure: false,
+        },
+        // 其他 API 仍然走 Node.js Gateway (统一 BFF)
         '/api': {
           target: env.VITE_GATEWAY_URL || 'http://localhost:3002',
           changeOrigin: true,
