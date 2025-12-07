@@ -39,6 +39,7 @@ import {
 } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { TooltipButton, TooltipToggleButton } from '@/components/common/tooltip'
+import { hydrateContent } from '@/utils/editor/hydrateContent'
 import { uploadFile } from '@/utils/fileUpload'
 import { FileCard } from './utils'
 
@@ -126,10 +127,8 @@ const editor = useEditor({
     Typography, // 自动转换引号、省略号等
     FileCard, // 文件卡片扩展
   ],
-  onUpdate: ({ editor }) => {
-    const html = editor.getHTML()
-    emit('update:modelValue', html)
-  },
+  // onUpdate 不再需要，transaction 监听器会处理所有文档变化
+  // 包括内容变化和节点属性变化（如图片大小调整）
   onBlur: ({ editor }) => {
     emit('blur', editor)
   },
@@ -185,12 +184,59 @@ const editor = useEditor({
   },
 })
 
-// 监听外部 modelValue 变化
-watch(() => props.modelValue, (newValue) => {
-  if (editor.value && newValue !== editor.value.getHTML()) {
-    editor.value.commands.setContent(newValue || '')
-  }
-})
+// 用于追踪上一次 emit 的内容，避免重复触发
+const lastEmittedHtml = ref<string>('')
+
+// 监听 transaction 以捕获节点属性变化（如图片大小调整）
+// onUpdate 只在文档结构变化时触发，属性变化需要 transaction 监听
+watch(
+  editor,
+  (ed) => {
+    if (!ed)
+      return
+
+    ed.on('transaction', ({ transaction }) => {
+      // 只在文档实际变化时触发（排除纯选择变化）
+      if (!transaction.docChanged)
+        return
+
+      const html = ed.getHTML()
+      // 避免重复 emit 相同内容
+      if (html !== lastEmittedHtml.value) {
+        lastEmittedHtml.value = html
+        emit('update:modelValue', html)
+      }
+    })
+  },
+  { immediate: true },
+)
+
+// 用于追踪上一次设置的原始内容，避免重复水合
+const lastRawContent = ref<string>('')
+
+// 监听外部 modelValue 变化 + editor 就绪
+// 同时监听两者，确保 editor 初始化完成后也能触发水合
+watch(
+  [() => props.modelValue, editor],
+  async ([newValue, ed]) => {
+    if (!ed)
+      return
+
+    const raw = newValue || ''
+
+    // 如果原始内容没有变化，跳过水合（避免循环）
+    if (raw === lastRawContent.value)
+      return
+
+    lastRawContent.value = raw
+
+    // 将占位符（{{file:...}}）转换为 file-card HTML 进行渲染
+    const valueToSet = await hydrateContent(raw)
+
+    ed.commands.setContent(valueToSet || '')
+  },
+  { immediate: true },
+)
 
 // 监听 readonly 变化
 watch(() => props.readonly, (readonly) => {

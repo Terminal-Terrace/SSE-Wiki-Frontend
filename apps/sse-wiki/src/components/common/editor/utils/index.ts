@@ -3,8 +3,9 @@
  * 自定义文件卡片节点，用于在编辑器中嵌入文件
  */
 import type { Component } from 'vue'
-import { mergeAttributes, Node } from '@tiptap/core'
+import { Node } from '@tiptap/core'
 import { VueNodeViewRenderer } from '@tiptap/vue-3'
+import { createPlaceholder } from '@/utils/editor/filePlaceholder'
 import FileCardComponent from '../components/FileCard.vue'
 
 export interface FileCardAttrs {
@@ -17,6 +18,7 @@ export interface FileCardAttrs {
   width?: number
   height?: number
   align?: 'left' | 'center' | 'right'
+  missing?: boolean // 文件是否已失效
 }
 
 export const FileCard = Node.create({
@@ -103,6 +105,15 @@ export const FileCard = Node.create({
           'data-align': attributes.align || 'left',
         }),
       },
+      missing: {
+        default: false,
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-missing') === 'true',
+        renderHTML: (attributes: any) => {
+          if (!attributes.missing)
+            return {}
+          return { 'data-missing': 'true' }
+        },
+      },
     }
   },
 
@@ -114,8 +125,23 @@ export const FileCard = Node.create({
     ]
   },
 
-  renderHTML({ HTMLAttributes }: any) {
-    return ['file-card', mergeAttributes(HTMLAttributes)]
+  renderHTML({ node }) {
+    // 序列化为纯文本占位符 {{file:ID:NAME|w=...,h=...,align=...}}
+    // 这样保存到数据库时，content 只包含占位符，不包含 HTML 标签或 URL
+    const fileId = node.attrs.fileId || ''
+    const fileName = node.attrs.fileName || 'unknown'
+    const width = node.attrs.width ?? null
+    const height = node.attrs.height ?? null
+    const align = node.attrs.align ?? null
+
+    const placeholder = createPlaceholder(fileId, fileName, {
+      width: typeof width === 'number' ? width : null,
+      height: typeof height === 'number' ? height : null,
+      align,
+    })
+
+    // 返回纯文本节点
+    return ['span', { 'data-type': 'file-placeholder' }, placeholder]
   },
 
   addNodeView(): any {

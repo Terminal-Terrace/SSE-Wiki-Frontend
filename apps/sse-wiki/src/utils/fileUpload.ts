@@ -1,11 +1,14 @@
 /**
  * 文件上传工具
  *
- * 分块上传实现，支持秒传、断点续传
- *
+ * 云存储直传实现，支持秒传、断点续传
+ * 流程：BFF init → OSS 直传 → BFF complete
  */
 
 import { ALLOWED_FILE_TYPES, CHUNK_SIZE, MAX_CONCURRENT, MAX_FILE_SIZE } from '@/constants/upload'
+import { completeUpload, getUploadPartUrl, initUpload } from '@/services/upload/api'
+import { getCategoryFromMimeType } from '@/services/upload/fileInfo'
+import { calculateFileSHA256 } from '@/services/upload/hash'
 
 export interface FileInfo {
   fileId: string
@@ -22,41 +25,8 @@ export interface UploadProgress {
   percentage: number
 }
 
-/**
- * 判断文件类别
- */
-export function getFileCategory(mimeType: string): FileInfo['category'] {
-  if (mimeType.startsWith('image/'))
-    return 'image'
-  if (mimeType.startsWith('video/'))
-    return 'video'
-  if (mimeType.startsWith('audio/'))
-    return 'audio'
-  if (mimeType.includes('zip') || mimeType.includes('rar') || mimeType.includes('7z') || mimeType.includes('tar')) {
-    return 'archive'
-  }
-  if (
-    mimeType.includes('javascript')
-    || mimeType.includes('json')
-    || mimeType.includes('xml')
-    || mimeType.includes('typescript')
-    || mimeType.includes('python')
-    || mimeType.includes('java')
-  ) {
-    return 'code'
-  }
-  if (
-    mimeType.includes('pdf')
-    || mimeType.includes('word')
-    || mimeType.includes('document')
-    || mimeType.includes('text')
-    || mimeType.includes('spreadsheet')
-    || mimeType.includes('presentation')
-  ) {
-    return 'document'
-  }
-  return 'other'
-}
+// 使用 services/upload/fileInfo.ts 中的 getCategoryFromMimeType
+// 避免重复定义
 
 /**
  * 验证文件类型
@@ -87,16 +57,17 @@ export function validateFileSize(file: File): { valid: boolean, message?: string
 }
 
 /**
- * 上传文件
+ * 上传文件到云存储
  *
  * 实现步骤：
  * 1. 计算文件 SHA256 Hash
- * 2. 调用 /api/v1/upload/init 初始化上传（秒传检测）
+ * 2. 调用 BFF /api/v1/files/upload/init 初始化上传（秒传检测）
  * 3. 如果返回 exists=true，直接返回文件信息（秒传）
- * 4. 否则，将文件分块（2MB/块）
- * 5. 并发上传分块到 /api/v1/upload/chunk（最多3个并发）
- * 6. 所有分块完成后调用 /api/v1/upload/complete
- * 7. 返回服务器生成的文件信息
+ * 4. 否则，分块上传：
+ *    - 对每个分块调用 BFF 获取预签名 URL
+ *    - 直接 PUT 到 OSS（不经过 BFF）
+ * 5. 所有分块完成后调用 BFF /api/v1/files/upload/complete
+ * 6. 返回文件信息
  */
 export async function uploadFile(
   file: File,
@@ -111,33 +82,26 @@ export async function uploadFile(
   if (!sizeValidation.valid)
     throw new Error(sizeValidation.message)
 
-  // 1) 计算文件哈希（一次性读取，100MB内可接受）
-  const fileHash = await calculateSHA256(file)
+  // 1) 计算文件哈希
+  const fileHash = await calculateFileSHA256(file)
 
   // 2) 初始化上传（秒传检测）
-  const initResp = await fetch('/api/v1/upload/init', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      fileName: file.name,
-      fileSize: file.size,
-      fileHash,
-      totalChunks: Math.ceil(file.size / (CHUNK_SIZE)),
-      mimeType: file.type,
-    }),
+  const initData = await initUpload({
+    fileHash,
+    fileName: file.name,
+    fileSize: file.size,
+    mimeType: file.type,
   })
-  if (!initResp.ok)
-    throw new Error(`初始化上传失败: ${initResp.status}`)
-  const initData: { exists: boolean, fileId?: number, fileUrl?: string, uploadId?: string } = await initResp.json()
 
-  if (initData.exists && initData.fileId != null) {
+  // 秒传：文件已存在
+  if (initData.exists && initData.fileId && initData.url) {
     return {
-      fileId: String(initData.fileId),
+      fileId: initData.fileId,
       fileName: file.name,
       fileSize: file.size,
       fileType: file.type,
-      fileUrl: `/api/v1/files/${initData.fileId}`,
-      category: getFileCategory(file.type),
+      fileUrl: initData.url,
+      category: getCategoryFromMimeType(file.type),
     }
   }
 
@@ -146,12 +110,11 @@ export async function uploadFile(
 
   const uploadId = initData.uploadId
 
-  // 3) 分块上传（并发3）
+  // 3) 分块上传到 OSS（并发）
   const total = file.size
   const chunks = Math.ceil(total / CHUNK_SIZE)
   let uploadedChunks = 0
 
-  // 并发上传队列
   const pool = new ConcurrencyPool(MAX_CONCURRENT)
   const tasks: Array<() => Promise<void>> = []
 
@@ -159,17 +122,21 @@ export async function uploadFile(
     const start = i * CHUNK_SIZE
     const end = Math.min(start + CHUNK_SIZE, total)
     const blob = file.slice(start, end)
+    const partNumber = i + 1 // OSS partNumber 从 1 开始
 
     tasks.push(async () => {
-      const formData = new FormData()
-      formData.append('file', blob)
-      formData.append('uploadId', uploadId)
-      formData.append('chunkIndex', String(i))
+      // 获取预签名 URL
+      const presignedUrl = await getUploadPartUrl({ uploadId, partNumber })
 
-      const resp = await fetch('/api/v1/upload/chunk', {
-        method: 'POST',
-        body: formData,
+      // 直接 PUT 到 OSS
+      const resp = await fetch(presignedUrl, {
+        method: 'PUT',
+        body: blob,
+        headers: {
+          'Content-Type': 'application/octet-stream',
+        },
       })
+
       if (!resp.ok)
         throw new Error(`分块上传失败: ${resp.status}`)
 
@@ -183,22 +150,15 @@ export async function uploadFile(
   await pool.run(tasks)
 
   // 4) 完成上传
-  const completeResp = await fetch('/api/v1/upload/complete', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ uploadId }),
-  })
-  if (!completeResp.ok)
-    throw new Error(`完成上传失败: ${completeResp.status}`)
-  const completeData: { fileId: number, fileName: string, fileUrl: string, category: FileInfo['category'] } = await completeResp.json()
+  const completeData = await completeUpload({ uploadId })
 
   return {
-    fileId: String(completeData.fileId),
+    fileId: completeData.fileId,
     fileName: file.name,
     fileSize: file.size,
     fileType: file.type,
-    fileUrl: `/api/v1/files/${completeData.fileId}`,
-    category: completeData.category ?? getFileCategory(file.type),
+    fileUrl: completeData.url,
+    category: getCategoryFromMimeType(file.type),
   }
 }
 
@@ -245,15 +205,6 @@ class ConcurrencyPool {
       fn()
     }
   }
-}
-
-async function calculateSHA256(file: File): Promise<string> {
-  const buffer = await file.arrayBuffer()
-  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
-  const bytes = new Uint8Array(hashBuffer)
-  let hex = ''
-  for (const b of bytes) hex += b.toString(16).padStart(2, '0')
-  return hex
 }
 
 /**

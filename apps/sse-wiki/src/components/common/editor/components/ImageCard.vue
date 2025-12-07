@@ -91,17 +91,35 @@ function handleImageLoad(event: Event) {
       imageWidth.value = naturalWidth
       imageHeight.value = naturalHeight
     }
+
+    // 首次确定尺寸后，同步到节点属性，便于序列化到占位符
   }
+
+  // 无论是否已有尺寸，都同步一次到节点属性，确保 attrs 中有最新宽高
+  updateNodeAttributes({
+    width: imageWidth.value,
+    height: imageHeight.value,
+  })
 }
 
 // 更新节点属性的统一方法
 function updateNodeAttributes(attrs: any) {
+  // 检查是否有实际变化，避免不必要的更新
+  const currentAttrs = props.node.attrs
+  const hasChange = Object.keys(attrs).some((key) => {
+    return attrs[key] !== currentAttrs[key as keyof typeof currentAttrs]
+  })
+
+  if (!hasChange)
+    return
+
   if (props.updateAttributes) {
     props.updateAttributes(attrs)
   }
   else if (props.editor && typeof props.getPos === 'function') {
-    // 使用 editor.commands 更新属性
-    props.editor.commands.updateAttributes('fileCard', attrs)
+    // 使用 editor.chain 更新当前节点的属性
+    const pos = props.getPos()
+    props.editor.chain().focus().setNodeSelection(pos).updateAttributes('fileCard', attrs).run()
   }
 }
 

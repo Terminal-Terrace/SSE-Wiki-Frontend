@@ -27,6 +27,7 @@ const props = defineProps<{
       fileType: string
       fileUrl: string
       category: 'image' | 'video' | 'audio' | 'document' | 'archive' | 'code' | 'other'
+      missing?: boolean
     }
   }
   selected: boolean
@@ -94,7 +95,33 @@ function handleDownload(e: Event) {
 
   <!-- 其他类型文件使用 Card 组件 -->
   <NodeViewWrapper v-else class="file-card-wrapper">
+    <!-- 文件已失效的占位符 -->
     <Card
+      v-if="node.attrs.missing"
+      class="file-card my-4 border-dashed border-2 border-gray-300 bg-gray-50"
+      :class="{ 'ring-2 ring-primary': selected }"
+    >
+      <CardContent class="flex items-center gap-4 p-4">
+        <!-- 失效图标 -->
+        <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-gray-300 text-gray-500">
+          <File class="h-6 w-6" />
+        </div>
+
+        <!-- 文件信息 -->
+        <div class="flex-1 overflow-hidden">
+          <div class="font-medium text-gray-500 truncate">
+            {{ node.attrs.fileName }}
+          </div>
+          <div class="text-sm text-gray-400">
+            文件已失效或已删除
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+
+    <!-- 正常文件卡片 -->
+    <Card
+      v-else
       class="file-card group my-4 cursor-pointer transition-all hover:shadow-md"
       :class="{ 'ring-2 ring-primary': selected }"
       @click="handleOpen"
