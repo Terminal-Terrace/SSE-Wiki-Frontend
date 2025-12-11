@@ -4,6 +4,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFavorite } from '@/composables/useFavorite'
 import { formatDate } from '@/utils/format'
+import { Heart, User, Eye, Folder } from 'lucide-vue-next'
 
 export interface ArticleCardData {
   id: number
