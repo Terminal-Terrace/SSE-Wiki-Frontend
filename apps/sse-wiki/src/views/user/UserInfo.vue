@@ -27,6 +27,7 @@ import articleApi from '@/services/articleApi'
 import { useAuthStore } from '@/stores/auth'
 import { useFavoriteStore } from '@/stores/favorite'
 import { uploadFile } from '@/utils/fileUpload'
+import { getAvatarFallback } from '@/utils/format'
 
 const authStore = useAuthStore()
 const favoriteStore = useFavoriteStore()
@@ -148,9 +149,7 @@ async function handleAvatarChange(event: Event) {
   }
 }
 
-const userInitial = computed(() => {
-  return user.value?.username?.charAt(0).toUpperCase() || 'U'
-})
+const userInitial = computed(() => getAvatarFallback(user.value?.username))
 
 const roleDisplay = computed(() => {
   const roleMap: Record<string, string> = {

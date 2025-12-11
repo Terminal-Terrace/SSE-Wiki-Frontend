@@ -16,6 +16,7 @@ import { LogOut, Search, User } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { TooltipWrapper } from '@/components/common/tooltip'
+import { getAvatarFallback } from '@/utils/format'
 import { useAuth } from '../../composables/useAuth'
 
 interface NavItem {
@@ -27,9 +28,7 @@ const { startLogin, logout, loading, isAuthenticated, user } = useAuth()
 const router = useRouter()
 const searchQuery = ref('')
 
-const userInitial = computed(() => {
-  return user.value?.username?.charAt(0).toUpperCase() || 'U'
-})
+const userInitial = computed(() => getAvatarFallback(user.value?.username))
 
 const navItems: NavItem[] = [
   {

@@ -94,7 +94,11 @@ export interface ArticleCollaborator {
   role: ArticleRole
   created_at: string
 
-  // 扩展字段
+  // API 直接返回的用户信息字段
+  username: string
+  avatar: string
+
+  // 扩展字段（可选，用于嵌套用户对象）
   user?: User
 }
 
