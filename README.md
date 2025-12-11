@@ -101,3 +101,7 @@ pnpm build
 
 - **主服务**: `http://localhost:8080` - 处理业务逻辑
 - **认证服务**: `http://localhost:8081` - 处理认证相关 API
+
+## 5. TODO
+
+为重要的组件配置vitestdance
