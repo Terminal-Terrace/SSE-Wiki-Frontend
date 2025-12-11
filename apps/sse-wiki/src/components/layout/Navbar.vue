@@ -28,7 +28,7 @@ const { startLogin, logout, loading, isAuthenticated, user } = useAuth()
 const router = useRouter()
 const searchQuery = ref('')
 
-const userInitial = computed(() => getAvatarFallback(user?.username))
+const userInitial = computed(() => getAvatarFallback(user.value?.username))
 
 const navItems: NavItem[] = [
   {
