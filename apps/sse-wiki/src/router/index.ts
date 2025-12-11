@@ -18,6 +18,7 @@ const router = createRouter({
           path: 'user-info',
           name: 'user-info',
           component: () => import('@/views/user/UserInfo.vue'),
+          meta: { requiresAuth: true, strictAuth: true }, // 需要登录才能访问个人中心
         },
         {
           path: 'knowledge-space',

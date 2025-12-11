@@ -4,15 +4,10 @@ import {
   Alert,
   AlertDescription,
   AlertTitle,
-  Avatar,
-  AvatarFallback,
-  Badge,
   Button,
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -49,6 +44,7 @@ import {
 } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import ArticleCard from '@/components/common/ArticleCard.vue'
 import OverflowText from '@/components/common/OverflowText.vue'
 import { TooltipIconButton } from '@/components/common/tooltip'
 import CollaboratorsModal from '@/components/layout/components/ModuleCollaboratorsModal.vue'
@@ -339,13 +335,6 @@ async function createArticle() {
   router.push({
     name: 'ArticleCreate',
     query: { moduleId: route.params.moduleId },
-  })
-}
-
-function goToArticle(articleId: number) {
-  router.push({
-    name: 'ArticleDetail',
-    params: { articleId },
   })
 }
 
@@ -654,91 +643,43 @@ watch(
         </Empty>
 
         <div v-else-if="viewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card
+          <ArticleCard
             v-for="article in sortedArticles"
             :key="article.id"
-            class="hover:shadow-md transition-shadow cursor-pointer"
-            @click="goToArticle(article.id)"
-          >
-            <CardHeader>
-              <div class="flex items-start justify-between gap-3">
-                <CardTitle class="line-clamp-2 text-lg">
-                  {{ article.title }}
-                </CardTitle>
-                <time class="text-sm text-muted-foreground whitespace-nowrap">
-                  {{ formatDate(article.created_at) }}
-                </time>
-              </div>
-            </CardHeader>
-            <CardContent class="space-y-4">
-              <CardDescription class="line-clamp-3">
-                {{ article.summary }}
-              </CardDescription>
-
-              <!-- 标签 -->
-              <div v-if="article.tags && article.tags.length > 0" class="flex flex-wrap gap-2">
-                <Badge
-                  v-for="tag in article.tags"
-                  :key="tag"
-                  variant="secondary"
-                  class="text-xs"
-                >
-                  {{ tag }}
-                </Badge>
-              </div>
-
-              <div class="flex items-center gap-2 pt-2 border-t">
-                <Avatar size="sm" class="h-8 w-8">
-                  <AvatarFallback class="text-sm">
-                    {{ (article.author?.username?.charAt(0) || 'U').toUpperCase() }}
-                  </AvatarFallback>
-                </Avatar>
-                <span class="text-sm text-muted-foreground">
-                  {{ article.author?.username || '未知作者' }}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
+            :article="{
+              id: article.id,
+              title: article.title,
+              summary: article.summary,
+              tags: article.tags,
+              createdAt: article.created_at,
+              updatedAt: article.updated_at,
+              viewCount: article.view_count,
+              author: article.author,
+            }"
+            :show-view-count="true"
+            :show-tags="true"
+            :show-author="true"
+          />
         </div>
 
         <div v-else class="space-y-4">
-          <Card
+          <ArticleCard
             v-for="article in sortedArticles"
             :key="article.id"
-            class="hover:shadow-md transition-shadow cursor-pointer"
-            @click="goToArticle(article.id)"
-          >
-            <CardHeader>
-              <CardTitle class="text-lg">
-                {{ article.title }}
-              </CardTitle>
-            </CardHeader>
-            <CardContent class="space-y-3">
-              <CardDescription class="line-clamp-2">
-                {{ article.summary }}
-              </CardDescription>
-
-              <!-- 标签 -->
-              <div v-if="article.tags && article.tags.length > 0" class="flex flex-wrap gap-2">
-                <Badge
-                  v-for="tag in article.tags"
-                  :key="tag"
-                  variant="secondary"
-                  class="text-xs"
-                >
-                  {{ tag }}
-                </Badge>
-              </div>
-
-              <div class="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
-                <span>{{ article.author?.username || '未知作者' }}</span>
-                <span>·</span>
-                <time>{{ formatDate(article.created_at) }}</time>
-                <span>·</span>
-                <span>最后更新 {{ formatDate(article.updated_at) }}</span>
-              </div>
-            </CardContent>
-          </Card>
+            :article="{
+              id: article.id,
+              title: article.title,
+              summary: article.summary,
+              tags: article.tags,
+              createdAt: article.created_at,
+              updatedAt: article.updated_at,
+              viewCount: article.view_count,
+              author: article.author,
+            }"
+            :show-view-count="true"
+            :show-tags="true"
+            :show-author="true"
+          />
         </div>
 
         <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 mt-8">

@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
   Button,
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +13,7 @@ import {
 } from '@sse-wiki/ui'
 
 import { LogOut, Search, User } from 'lucide-vue-next'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { TooltipWrapper } from '@/components/common/tooltip'
 import { useAuth } from '../../composables/useAuth'
@@ -23,6 +26,10 @@ interface NavItem {
 const { startLogin, logout, loading, isAuthenticated, user } = useAuth()
 const router = useRouter()
 const searchQuery = ref('')
+
+const userInitial = computed(() => {
+  return user.value?.username?.charAt(0).toUpperCase() || 'U'
+})
 
 const navItems: NavItem[] = [
   {
@@ -120,8 +127,18 @@ function handleSearch() {
 
           <DropdownMenu v-else>
             <DropdownMenuTrigger as-child>
-              <Button variant="ghost" size="sm" class="flex items-center space-x-2">
-                <User class="h-4 w-4" />
+              <Button variant="ghost" size="sm" class="flex items-center gap-2">
+                <Avatar class="h-7 w-7">
+                  <AvatarImage
+                    v-if="user?.avatar"
+                    :src="user.avatar"
+                    :alt="user?.username"
+                    class="object-cover"
+                  />
+                  <AvatarFallback class="text-xs">
+                    {{ userInitial }}
+                  </AvatarFallback>
+                </Avatar>
                 <span class="text-sm">{{ user?.username || '用户' }}</span>
               </Button>
             </DropdownMenuTrigger>
