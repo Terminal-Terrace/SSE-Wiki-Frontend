@@ -343,14 +343,48 @@ export class ArticleAPI {
    */
   async getUserFavourites(userId: number | string): Promise<{
     articles: Array<{ article?: Article }>
+    article_id?: number[]
   }> {
-    const resp = await request.get(`${this.baseURL}/${userId}/user-favour`)
-    const articles = Array.isArray(resp?.data?.articles)
-      ? resp.data.articles
-      : Array.isArray(resp?.articles)
-        ? resp.articles
-        : []
-    return { articles }
+    const resp: any = await request.get(`${this.baseURL}/${userId}/user-favour`)
+    const articles = Array.isArray(resp?.articles) ? resp.articles : []
+    const articleIds = Array.isArray(resp?.article_id) ? resp.article_id : []
+    return { articles, article_id: articleIds }
+  }
+
+  /**
+   * 添加文章到收藏
+   * POST /api/v1/articles/update-user-favour
+   */
+  async addFavorite(userId: number, articleId: number): Promise<{ status: string }> {
+    const resp = await request.post(`${this.baseURL}/update-user-favour`, {
+      user_id: userId,
+      article_id: articleId,
+      is_added: true,
+    })
+    return { status: resp?.data || resp?.status || 'success' }
+  }
+
+  /**
+   * 从收藏中移除文章
+   * POST /api/v1/articles/update-user-favour
+   */
+  async removeFavorite(userId: number, articleId: number): Promise<{ status: string }> {
+    const resp = await request.post(`${this.baseURL}/update-user-favour`, {
+      user_id: userId,
+      article_id: articleId,
+      is_added: false,
+    })
+    return { status: resp?.data || resp?.status || 'success' }
+  }
+
+  /**
+   * 切换文章收藏状态
+   * POST /api/v1/articles/update-user-favour
+   */
+  async toggleFavorite(userId: number, articleId: number, isFavorited: boolean): Promise<{ status: string }> {
+    return isFavorited
+      ? this.removeFavorite(userId, articleId)
+      : this.addFavorite(userId, articleId)
   }
 
   // ========== 便捷方法 ==========
