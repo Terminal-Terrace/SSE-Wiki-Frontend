@@ -9,6 +9,7 @@ import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import FavoriteButton from '@/components/common/FavoriteButton.vue'
 import { TooltipWrapper } from '@/components/common/tooltip'
 import { DiscussionThread } from '@/components/discussion'
 import OutlineCard from '@/components/layout/OutlinePanel.vue'
@@ -544,34 +545,35 @@ async function saveBasicInfo() {
                   <span>最近编辑于 {{ formatDate(page.lastEditedAt) }}</span>
                   <span>由 {{ page.editor.username }}</span>
                   <span>{{ page.viewCount }} 次阅读</span>
-                </div>
+                  <FavoriteButton :article-id="Number(pageId)" />
 
-                <div class="flex flex-wrap gap-2">
-                  <Badge
-                    v-for="tag in page.tags"
-                    :key="tag.id"
-                    variant="secondary"
-                  >
-                    {{ tag.name }}
-                  </Badge>
-                  <TooltipWrapper v-if="(page as any).is_review_required">
+                  <div class="flex flex-wrap gap-2">
                     <Badge
-                      variant="outline"
-                      class="border-amber-500 text-amber-700 cursor-help"
+                      v-for="tag in page.tags"
+                      :key="tag.id"
+                      variant="secondary"
                     >
-                      <Check class="h-3 w-3 mr-1" />
-                      需要审核
+                      {{ tag.name }}
                     </Badge>
-                    <template #tooltip>
-                      <div class="text-xs max-w-[220px]">
-                        此文章开启了审核模式，其他用户的修改需要管理员批准后才能生效
-                      </div>
-                    </template>
-                  </TooltipWrapper>
+                    <TooltipWrapper v-if="(page as any).is_review_required">
+                      <Badge
+                        variant="outline"
+                        class="border-amber-500 text-amber-700 cursor-help"
+                      >
+                        <Check class="h-3 w-3 mr-1" />
+                        需要审核
+                      </Badge>
+                      <template #tooltip>
+                        <div class="text-xs max-w-[220px]">
+                          此文章开启了审核模式，其他用户的修改需要管理员批准后才能生效
+                        </div>
+                      </template>
+                    </TooltipWrapper>
+                  </div>
                 </div>
-              </div>
 
-              <div class="border-b" />
+                <div class="border-b" />
+              </div>
             </header>
 
             <!-- Tab navigation -->

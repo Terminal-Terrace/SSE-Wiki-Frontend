@@ -21,6 +21,12 @@ export interface UserInfo {
   username: string
   email?: string
   role?: string
+  avatar?: string
+}
+
+export interface UpdateProfileRequest {
+  avatar?: string
+  username?: string
 }
 
 const AUTH_BASE_URL = import.meta.env.VITE_AUTH_API_PATH || '/api/v1/auth'
@@ -111,6 +117,26 @@ export class AuthAPI {
     loginUrl.searchParams.set('redirect', encodeURIComponent(redirectUrl))
 
     window.location.href = loginUrl.toString()
+  }
+
+  /**
+   * 更新用户资料
+   * PATCH /api/v1/auth/profile
+   *
+   * @param data 更新的资料数据
+   * @returns Promise<UserInfo> 更新后的用户信息
+   */
+  static async updateProfile(data: UpdateProfileRequest): Promise<UserInfo> {
+    const response = await authHttp.patch<ApiResponse<UserInfo>>(
+      `${AUTH_BASE_URL}/profile`,
+      data,
+    )
+
+    if (response.data.code !== 100) {
+      throw new Error(response.data.message || '更新资料失败')
+    }
+
+    return response.data.data
   }
 }
 

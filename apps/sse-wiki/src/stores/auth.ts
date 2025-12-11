@@ -10,6 +10,11 @@ export interface User {
   role?: string
 }
 
+export interface UpdateProfileData {
+  avatar?: string
+  username?: string
+}
+
 export const useAuthStore = defineStore('auth', () => {
   // 状态
   const user = ref<User | null>(null)
@@ -41,6 +46,7 @@ export const useAuthStore = defineStore('auth', () => {
         username: userInfo.username,
         email: userInfo.email,
         role: userInfo.role,
+        avatar: userInfo.avatar,
       }
       hasChecked.value = true
       return true
@@ -51,6 +57,21 @@ export const useAuthStore = defineStore('auth', () => {
       hasChecked.value = true
       return false
     }
+  }
+
+  /**
+   * 更新用户资料
+   */
+  async function updateProfile(data: UpdateProfileData) {
+    const updatedUser = await AuthAPI.updateProfile(data)
+    if (user.value) {
+      user.value = {
+        ...user.value,
+        username: updatedUser.username || user.value.username,
+        avatar: updatedUser.avatar || user.value.avatar,
+      }
+    }
+    return updatedUser
   }
 
   // 兼容旧代码的空方法
@@ -86,5 +107,6 @@ export const useAuthStore = defineStore('auth', () => {
     setUser,
     clearUser,
     checkLoginStatus,
+    updateProfile,
   }
 })
