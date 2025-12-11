@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { Button } from '@sse-wiki/ui'
+import { Eye, Folder, Heart, User } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFavorite } from '@/composables/useFavorite'
 import { formatDate } from '@/utils/format'
-import { Heart, User, Eye, Folder } from 'lucide-vue-next'
 
 export interface ArticleCardData {
   id: number

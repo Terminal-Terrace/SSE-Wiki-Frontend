@@ -5,7 +5,7 @@ import { MessageSquare, MoreVertical, Pencil, Trash2 } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { useDiscussionStore } from '@/stores/discussion'
 import { CommentEditorMode } from '@/types/discussion'
-import { formatDate } from '@/utils/format'
+import { formatDate, getAvatarFallback } from '@/utils/format'
 /**
  * 评论项组件（支持递归渲染子评论）
  *
@@ -65,9 +65,7 @@ const hasReplies = computed(() => {
   return props.comment.replies && props.comment.replies.length > 0
 })
 
-const userInitial = computed(() => {
-  return props.comment.creator?.username?.charAt(0).toUpperCase() || '?'
-})
+const userInitial = computed(() => getAvatarFallback(props.comment.creator?.username))
 
 const isDeleted = computed(() => props.comment.is_deleted === true)
 

@@ -57,3 +57,47 @@ export function formatFileSize(bytes: number): string {
 export function formatNumber(num: number): string {
   return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 }
+
+/**
+ * 格式化简单日期（仅年月日）
+ */
+export function formatSimpleDate(date: string | Date): string {
+  const d = typeof date === 'string' ? new Date(date) : date
+  return d.toLocaleDateString('zh-CN')
+}
+
+/**
+ * 获取用户头像首字母
+ */
+export function getAvatarFallback(username?: string | null): string {
+  return username?.charAt(0).toUpperCase() || 'U'
+}
+
+/**
+ * 角色标签映射
+ */
+const ROLE_LABELS: Record<string, string> = {
+  owner: '所有者',
+  admin: '管理员',
+  moderator: '协作者',
+  editor: '编辑者',
+}
+
+/**
+ * 获取角色显示名称
+ */
+export function getRoleLabel(role: string): string {
+  return ROLE_LABELS[role] || role
+}
+
+/**
+ * 防抖函数
+ */
+export function useDebounceFn<T extends (...args: any[]) => any>(fn: T, delay: number) {
+  let timer: ReturnType<typeof setTimeout> | null = null
+  return (...args: Parameters<T>) => {
+    if (timer)
+      clearTimeout(timer)
+    timer = setTimeout(() => fn(...args), delay)
+  }
+}

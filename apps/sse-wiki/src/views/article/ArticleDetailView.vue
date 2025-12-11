@@ -3,12 +3,13 @@ import type { Page } from '@/types'
 import type { ThreeWayMergeData } from '@/types/article'
 import { Badge, Button, Dialog, DialogContent, Input, Label, ResizableHandle, ResizablePanel, ResizablePanelGroup, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, toast } from '@sse-wiki/ui'
 
-import { Bot, Check, Edit2, Save, X } from 'lucide-vue-next'
+import { Bot, Check, Edit2, Save, Users, X } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import ArticleCollaboratorsModal from '@/components/article/ArticleCollaboratorsModal.vue'
 import FavoriteButton from '@/components/common/FavoriteButton.vue'
 import { TooltipWrapper } from '@/components/common/tooltip'
 import { DiscussionThread } from '@/components/discussion'
@@ -41,6 +42,7 @@ const loading = ref(true)
 const page = ref<Page | null>(null)
 const activeTab = ref('content')
 const showAiChat = ref(false)
+const showCollaboratorsModal = ref(false)
 
 // 冲突处理状态
 const showConflictDialog = ref(false)
@@ -515,6 +517,29 @@ async function saveBasicInfo() {
                     </div>
                   </div>
                   <div class="flex items-center space-x-2">
+                    <!-- 协作者管理按钮 -->
+                    <TooltipWrapper v-if="canManageBasicInfo">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        class="flex items-center space-x-2"
+                        @click="showCollaboratorsModal = true"
+                      >
+                        <Users class="h-4 w-4" />
+                        <span>协作者</span>
+                      </Button>
+                      <template #tooltip>
+                        <div class="text-xs max-w-[200px]">
+                          <div class="font-medium mb-1">
+                            管理协作者
+                          </div>
+                          <div class="text-muted-foreground">
+                            添加或移除文章协作者
+                          </div>
+                        </div>
+                      </template>
+                    </TooltipWrapper>
+
                     <TooltipWrapper>
                       <Button
                         variant="outline"
@@ -546,30 +571,31 @@ async function saveBasicInfo() {
                   <span>由 {{ page.editor.username }}</span>
                   <span>{{ page.viewCount }} 次阅读</span>
                   <FavoriteButton :article-id="Number(pageId)" />
+                </div>
 
-                  <div class="flex flex-wrap gap-2">
+                <!-- 标签行 -->
+                <div v-if="page.tags?.length || (page as any).is_review_required" class="flex flex-wrap items-center gap-2">
+                  <Badge
+                    v-for="tag in page.tags"
+                    :key="tag.id"
+                    variant="secondary"
+                  >
+                    {{ tag.name }}
+                  </Badge>
+                  <TooltipWrapper v-if="(page as any).is_review_required">
                     <Badge
-                      v-for="tag in page.tags"
-                      :key="tag.id"
-                      variant="secondary"
+                      variant="outline"
+                      class="border-amber-500 text-amber-700 cursor-help"
                     >
-                      {{ tag.name }}
+                      <Check class="h-3 w-3 mr-1" />
+                      需要审核
                     </Badge>
-                    <TooltipWrapper v-if="(page as any).is_review_required">
-                      <Badge
-                        variant="outline"
-                        class="border-amber-500 text-amber-700 cursor-help"
-                      >
-                        <Check class="h-3 w-3 mr-1" />
-                        需要审核
-                      </Badge>
-                      <template #tooltip>
-                        <div class="text-xs max-w-[220px]">
-                          此文章开启了审核模式，其他用户的修改需要管理员批准后才能生效
-                        </div>
-                      </template>
-                    </TooltipWrapper>
-                  </div>
+                    <template #tooltip>
+                      <div class="text-xs max-w-[220px]">
+                        此文章开启了审核模式，其他用户的修改需要管理员批准后才能生效
+                      </div>
+                    </template>
+                  </TooltipWrapper>
                 </div>
 
                 <div class="border-b" />
@@ -716,5 +742,15 @@ async function saveBasicInfo() {
         />
       </DialogContent>
     </Dialog>
+
+    <!-- 协作者管理模态框 -->
+    <ArticleCollaboratorsModal
+      v-if="page"
+      v-model:open="showCollaboratorsModal"
+      :article-id="Number(page.id)"
+      :article-title="page.title"
+      :current-user-role="(page as any).current_user_role"
+      @success="loadPage"
+    />
   </div>
 </template>
