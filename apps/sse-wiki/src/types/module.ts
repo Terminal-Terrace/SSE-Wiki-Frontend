@@ -59,6 +59,7 @@ export interface Article {
   created_at: string
   updated_at: string
   tags?: string[] // 文章标签
+  view_count?: number // 浏览次数
 }
 
 export interface ArticleListResponse {
@@ -76,6 +77,7 @@ export interface BreadcrumbItem {
 export interface ModuleModerator {
   user_id: number
   username: string
+  avatar?: string
   role: 'admin' | 'moderator'
   created_at: string
 }
