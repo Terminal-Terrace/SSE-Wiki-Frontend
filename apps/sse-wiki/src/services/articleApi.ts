@@ -322,7 +322,7 @@ export class ArticleAPI {
    * GET /api/v1/articles/:userId/user-favour
    */
   async getUserFavourites(userId: number | string): Promise<{
-    articles: Array<{ article?: Article }>
+    articles: Article[]
     article_id?: number[]
   }> {
     const resp: any = await request.get(`${this.baseURL}/${userId}/user-favour`)
