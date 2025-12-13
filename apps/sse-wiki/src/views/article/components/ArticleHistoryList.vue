@@ -38,7 +38,7 @@ const currentVersionId = ref<number | null>(null)
 // 判断当前用户是否有审核权限
 const canReview = computed(() => {
   const role = currentUserRole.value
-  return role === 'admin' || role === 'moderator' || role === 'owner'
+  return role === 'admin' || role === 'moderator'
 })
 
 /**

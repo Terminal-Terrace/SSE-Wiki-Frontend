@@ -63,6 +63,8 @@ interface Props {
   currentUserRole?: string | null
   /** 可选的角色列表 */
   roleOptions?: RoleOption[]
+  /** 文章创建者ID（仅文章类型使用，用于标识作者） */
+  createdBy?: number | null
   /** 获取协作者列表的函数 */
   fetchCollaborators: () => Promise<Collaborator[]>
   /** 添加协作者的函数 */
@@ -79,6 +81,7 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {
   currentUserRole: null,
   roleOptions: () => [],
+  createdBy: null,
 })
 const emit = defineEmits<Emits>()
 
@@ -90,7 +93,7 @@ const defaultModuleRoles: RoleOption[] = [
 
 const defaultArticleRoles: RoleOption[] = [
   { value: 'moderator', label: '协作者' },
-  { value: 'owner', label: '所有者' },
+  { value: 'admin', label: '管理员' },
 ]
 
 // 计算实际使用的角色选项
@@ -102,10 +105,15 @@ const availableRoles = computed(() => {
   const baseRoles = props.resourceType === 'module' ? defaultModuleRoles : defaultArticleRoles
 
   // 根据当前用户角色过滤可选角色
+  // 文章协作者：只有作者（通过 isAuthor 属性判断）可以添加 admin
+  // Admin 协作者只能添加 moderator
   if (props.resourceType === 'article') {
-    const canAddOwner = props.currentUserRole === 'owner' || props.currentUserRole === 'admin'
-    if (!canAddOwner) {
-      return baseRoles.filter(r => r.value !== 'owner')
+    // 如果当前用户不是 admin 角色，则不能添加 admin 协作者
+    // 注意：作者身份需要通过 isAuthor 属性传入，这里暂时保留 admin 角色可以添加 admin
+    // 实际权限控制由后端执行
+    const canAddAdmin = props.currentUserRole === 'admin'
+    if (!canAddAdmin) {
+      return baseRoles.filter(r => r.value !== 'admin')
     }
   }
 
@@ -309,9 +317,26 @@ function resetForm() {
   addError.value = ''
 }
 
-// 判断是否可以移除（owner 不能被移除）
-function canRemove(collaborator: Collaborator) {
-  return collaborator.role !== 'owner'
+// 判断是否可以移除
+// 注意：作者（created_by）不能被移除，但这个检查由后端执行
+// 前端只需要显示移除按钮，后端会返回错误如果尝试移除作者
+function canRemove(_collaborator: Collaborator) {
+  // 所有协作者都显示移除按钮，权限由后端控制
+  return true
+}
+
+// 判断协作者是否是作者
+function isAuthor(collaborator: Collaborator): boolean {
+  return props.resourceType === 'article' && props.createdBy != null && collaborator.user_id === props.createdBy
+}
+
+// 获取协作者的显示角色标签
+function getCollaboratorRoleLabel(collaborator: Collaborator): string {
+  // 如果是文章作者，显示"作者"
+  if (isAuthor(collaborator)) {
+    return '作者'
+  }
+  return getRoleLabel(collaborator.role)
 }
 </script>
 
@@ -485,12 +510,12 @@ function canRemove(collaborator: Collaborator) {
                       <span
                         class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
                         :class="{
-                          'bg-amber-100 text-amber-800': collaborator.role === 'owner',
-                          'bg-primary text-primary-foreground': collaborator.role === 'admin',
-                          'bg-secondary text-secondary-foreground': collaborator.role === 'moderator' || collaborator.role === 'editor',
+                          'bg-amber-500 text-white': isAuthor(collaborator),
+                          'bg-primary text-primary-foreground': !isAuthor(collaborator) && collaborator.role === 'admin',
+                          'bg-secondary text-secondary-foreground': !isAuthor(collaborator) && collaborator.role === 'moderator',
                         }"
                       >
-                        {{ getRoleLabel(collaborator.role) }}
+                        {{ getCollaboratorRoleLabel(collaborator) }}
                       </span>
                       <span class="text-xs text-muted-foreground">
                         {{ formatSimpleDate(collaborator.created_at) }}

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { Page } from '@/types'
 import type { ThreeWayMergeData } from '@/types/article'
-import { Badge, Button, Dialog, DialogContent, Input, Label, ResizableHandle, ResizablePanel, ResizablePanelGroup, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, toast } from '@sse-wiki/ui'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Badge, Button, Dialog, DialogContent, Input, Label, ResizableHandle, ResizablePanel, ResizablePanelGroup, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, toast } from '@sse-wiki/ui'
 
-import { Bot, Check, Edit2, Save, Users, X } from 'lucide-vue-next'
+import { AlertTriangle, Bot, Check, Edit2, Save, Trash2, Users, X } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 
 import { computed, onMounted, ref, watch } from 'vue'
@@ -43,6 +43,8 @@ const page = ref<Page | null>(null)
 const activeTab = ref('content')
 const showAiChat = ref(false)
 const showCollaboratorsModal = ref(false)
+const showDeleteDialog = ref(false)
+const isDeleting = ref(false)
 
 // 冲突处理状态
 const showConflictDialog = ref(false)
@@ -73,13 +75,24 @@ const tabs = [
   { label: '讨论', value: 'discussion' },
 ]
 
-// 判断是否可以管理基础信息（需要 moderator 或更高权限）
+// 判断是否可以管理基础信息（需要 moderator 或更高权限，或者是作者）
 const canManageBasicInfo = computed(() => {
   if (!page.value || !isAuthenticated.value) {
     return false
   }
   const role = (page.value as any).current_user_role
-  return role === 'admin' || role === 'owner' || role === 'moderator'
+  const isAuthor = (page.value as any).is_author
+  // 作者或 admin/moderator 协作者可以管理基础信息
+  // 注意：owner 角色已移除，使用 is_author 判断作者身份
+  return isAuthor || role === 'admin' || role === 'moderator'
+})
+
+// 判断是否可以删除文章（使用后端返回的 can_delete 字段）
+const canDeleteArticle = computed(() => {
+  if (!page.value || !isAuthenticated.value) {
+    return false
+  }
+  return (page.value as any).can_delete === true
 })
 
 // 从 URL 查询参数初始化 activeTab
@@ -142,6 +155,10 @@ function mapArticleToPage(article: any): Page {
     // 保留权限和设置信息，用于管理基础信息
     current_user_role: article.current_user_role,
     is_review_required: article.is_review_required,
+    // 新增权限字段（后端计算）
+    is_author: article.is_author ?? false, // 当前用户是否是文章作者
+    can_delete: article.can_delete ?? false, // 当前用户是否可以删除文章
+    created_by: article.created_by, // 文章创建者ID
   } as any // 使用 any 类型避免 Page 接口限制
 }
 
@@ -403,6 +420,38 @@ async function saveBasicInfo() {
     })
   }
 }
+
+/**
+ * 删除文章
+ */
+async function handleDeleteArticle() {
+  if (!page.value || !canDeleteArticle.value) {
+    return
+  }
+
+  isDeleting.value = true
+  try {
+    await articleApi.deleteArticle(pageId.value)
+    toast({
+      title: '删除成功',
+      description: '文章已被删除',
+    })
+    showDeleteDialog.value = false
+    // 跳转到首页或模块页
+    router.push('/')
+  }
+  catch (error: any) {
+    console.error('Failed to delete article:', error)
+    toast({
+      title: '删除失败',
+      description: error.response?.data?.message || '请重试',
+      variant: 'destructive',
+    })
+  }
+  finally {
+    isDeleting.value = false
+  }
+}
 </script>
 
 <template>
@@ -535,6 +584,29 @@ async function saveBasicInfo() {
                           </div>
                           <div class="text-muted-foreground">
                             添加或移除文章协作者
+                          </div>
+                        </div>
+                      </template>
+                    </TooltipWrapper>
+
+                    <!-- 删除文章按钮 -->
+                    <TooltipWrapper v-if="canDeleteArticle">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        class="flex items-center space-x-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                        @click="showDeleteDialog = true"
+                      >
+                        <Trash2 class="h-4 w-4" />
+                        <span>删除</span>
+                      </Button>
+                      <template #tooltip>
+                        <div class="text-xs max-w-[200px]">
+                          <div class="font-medium mb-1">
+                            删除文章
+                          </div>
+                          <div class="text-muted-foreground">
+                            永久删除此文章及其所有版本
                           </div>
                         </div>
                       </template>
@@ -750,7 +822,45 @@ async function saveBasicInfo() {
       :article-id="Number(page.id)"
       :article-title="page.title"
       :current-user-role="(page as any).current_user_role"
+      :is-author="(page as any).is_author"
+      :created-by="(page as any).created_by"
       @success="loadPage"
     />
+
+    <!-- 删除确认对话框 -->
+    <AlertDialog v-model:open="showDeleteDialog">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle class="flex items-center gap-2 text-red-600">
+            <AlertTriangle class="h-5 w-5" />
+            确认删除文章
+          </AlertDialogTitle>
+          <AlertDialogDescription class="space-y-2">
+            <p>您确定要删除文章「{{ page?.title }}」吗？</p>
+            <p class="text-red-600 font-medium">
+              此操作不可撤销，将永久删除：
+            </p>
+            <ul class="list-disc list-inside text-sm text-muted-foreground">
+              <li>文章内容及所有历史版本</li>
+              <li>所有待审核的提交</li>
+              <li>所有协作者关系</li>
+              <li>所有用户的收藏记录</li>
+            </ul>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="isDeleting">
+            取消
+          </AlertDialogCancel>
+          <AlertDialogAction
+            class="bg-red-600 hover:bg-red-700"
+            :disabled="isDeleting"
+            @click="handleDeleteArticle"
+          >
+            {{ isDeleting ? '删除中...' : '确认删除' }}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>
