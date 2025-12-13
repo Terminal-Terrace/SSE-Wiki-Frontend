@@ -169,7 +169,9 @@ export interface Favorite {
 // ========== 枚举类型 ==========
 
 // 文章角色
-export type ArticleRole = 'owner' | 'admin' | 'moderator' | 'editor'
+// admin: 管理员协作者，可以编辑、审核、删除、管理协作者
+// moderator: 审核员协作者，可以编辑、审核
+export type ArticleRole = 'admin' | 'moderator'
 
 // 版本状态
 export type VersionStatus = 'published' | 'rejected'
@@ -275,6 +277,9 @@ export interface ArticleDetailResponse extends Article {
   collaborators?: ArticleCollaborator[]
   history?: HistoryEntry[] // 统一历史列表（替代 pending_submissions）
   references?: ArticleReference[]
+  // 权限相关字段（后端计算）
+  is_author?: boolean // 当前用户是否是文章作者（created_by == userID）
+  can_delete?: boolean // 当前用户是否可以删除文章（Global_Admin 或 Author/Admin）
 }
 
 // 三路合并冲突数据
@@ -297,12 +302,15 @@ export interface VersionDiffResponse {
   diff?: string
 }
 
-// 审核详情响应
-export interface ReviewDetailResponse extends ReviewSubmission {
-  base_version?: ArticleVersion
-  current_version?: ArticleVersion // 当前线上版本
+// 审核详情响应（API 返回的嵌套结构）
+export interface ReviewDetailResponse {
+  submission: ReviewSubmission | null
+  proposed_version: ArticleVersion | null
+  base_version: ArticleVersion | null
+  article: Article | null
+  // 便捷访问字段（从嵌套对象中提取）
+  current_version?: ArticleVersion // 当前线上版本（从 article 获取）
   conflict_data?: ThreeWayMergeData
-  current_user_role?: string // 当前用户在该文章的角色（admin/owner/moderator/空）
 }
 
 // 冲突解决请求
@@ -399,34 +407,42 @@ export interface ArticlePermissions {
 }
 
 // 根据角色计算权限
-export function getArticlePermissions(role: ArticleRole | null | undefined): ArticlePermissions {
-  if (!role) {
+// 注意：canDelete 应该使用后端返回的 can_delete 字段，而不是仅根据角色判断
+// 因为 Global_Admin 也可以删除文章，但他们没有文章角色
+export function getArticlePermissions(
+  role: ArticleRole | null | undefined,
+  options?: { isAuthor?: boolean, canDelete?: boolean },
+): ArticlePermissions {
+  const { isAuthor = false, canDelete: canDeleteFromBackend } = options || {}
+
+  if (!role && !isAuthor) {
     return {
       canRead: true,
       canEdit: false,
       canReview: false,
       canManageSettings: false,
       canManageCollaborators: false,
-      canDelete: false,
+      canDelete: canDeleteFromBackend ?? false,
     }
   }
 
+  // 角色等级：admin > moderator
+  // 注意：owner 角色已移除，作者身份通过 isAuthor 参数传入
   const roleLevel = {
-    editor: 1,
-    moderator: 2,
-    admin: 3,
-    owner: 4,
+    moderator: 1,
+    admin: 2,
   }
 
-  const level = roleLevel[role] || 0
+  const level = role ? (roleLevel[role] || 0) : 0
 
   return {
     canRead: true,
-    canEdit: level >= 1, // editor 及以上
-    canReview: level >= 2, // moderator 及以上
-    canManageSettings: level >= 3, // admin 及以上
-    canManageCollaborators: level >= 3, // admin 及以上
-    canDelete: level >= 4, // owner
+    canEdit: level >= 1 || isAuthor, // moderator 及以上，或作者
+    canReview: level >= 1 || isAuthor, // moderator 及以上，或作者
+    canManageSettings: level >= 2 || isAuthor, // admin 或作者
+    canManageCollaborators: level >= 2 || isAuthor, // admin 或作者
+    // 删除权限使用后端返回的 can_delete 字段（考虑 Global_Admin）
+    canDelete: canDeleteFromBackend ?? (level >= 2 || isAuthor),
   }
 }
 

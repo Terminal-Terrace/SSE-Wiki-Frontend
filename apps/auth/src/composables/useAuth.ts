@@ -86,7 +86,7 @@ export function useAuth() {
    * 登出
    */
   function logout() {
-    authStore.clearTokens()
+    authStore.clearUser()
     router.push('/login')
   }
 

@@ -10,8 +10,6 @@
  */
 
 export { default as TooltipButton } from './TooltipButton.vue'
-// 向后兼容（可选）
-export { default as TooltipIconButton } from './TooltipButton.vue'
 export { default as TooltipToggleButton } from './TooltipToggleButton.vue'
 
 export { default as TooltipWrapper } from './TooltipWrapper.vue'

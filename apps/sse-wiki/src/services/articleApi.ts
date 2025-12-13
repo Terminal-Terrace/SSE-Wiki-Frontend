@@ -109,26 +109,6 @@ export class ArticleAPI {
     return request.get(`${this.versionURL}/${versionId}/diff`, { params })
   }
 
-  /**
-   * 比较两个版本（旧接口，保留兼容）
-   * GET /api/v1/versions/compare?from=:fromId&to=:toId
-   */
-  async compareVersions(
-    fromVersionId: number,
-    toVersionId: number,
-  ): Promise<{
-    from_version: ArticleVersion
-    to_version: ArticleVersion
-    diff: string
-  }> {
-    return request.get(`${this.versionURL}/compare`, {
-      params: {
-        from: fromVersionId,
-        to: toVersionId,
-      },
-    })
-  }
-
   // ========== 提交和审核 ==========
 
   /**
