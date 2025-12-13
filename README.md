@@ -1,5 +1,13 @@
 # SSE Wiki 前端大仓
 
+## TODO
+
+1. 为重要的组件配置vitest
+
+2. contentEditor有点复杂了，要拆分
+
+3. shadcn-vue的组件还是有点重, 感觉用一个就要引入一堆shadcn-vue的基础组件, 代码挺多的, 打算进行一次二次封装, 让代码尽可能少一些
+
 ## 1. 项目开发
 
 ### 安装 pnpm
@@ -101,7 +109,3 @@ pnpm build
 
 - **主服务**: `http://localhost:8080` - 处理业务逻辑
 - **认证服务**: `http://localhost:8081` - 处理认证相关 API
-
-## 5. TODO
-
-为重要的组件配置vitestdance
