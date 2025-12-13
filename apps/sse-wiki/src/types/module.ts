@@ -33,6 +33,7 @@ export interface ModuleTreeNode {
 
   // 权限相关
   isModerator?: boolean // 当前用户是否为该模块的协作者或管理员
+  role?: string // 当前用户在该模块的角色: owner, admin, moderator, 空字符串表示无权限
 
   // 前端计算的权限
   canEdit?: boolean
