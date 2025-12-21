@@ -8,12 +8,12 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "run-p type-check \"build-only {@}\" --",
-    "preview": "vite preview",
+    "build:local": "run-p type-check \"build-only {@}\" --",
+    "build": "pnpm run build:local && wrangler deploy",
+    "preview": "pnpm run build:local && wrangler dev",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
-    "lint": "eslint --ext .ts,.tsx,.vue src --fix",
-    "deploy": "node ../../scripts/deploy-if-change.js"
+    "lint": "eslint --ext .ts,.tsx,.vue src --fix"
   },
   "dependencies": {
     "@sse-wiki/ui": "workspace:*",

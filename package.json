@@ -11,6 +11,8 @@
     }
   },
   "scripts": {
+    "publish": "nx run-many -t build",
+    "version": "nx release",
     "lint": "eslint --ext .ts,.tsx,.vue . --fix",
     "prepare": "husky",
     "cz": "cz",
@@ -21,6 +23,7 @@
     "@antfu/eslint-config": "^5.3.0",
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
+    "@nx/js": "^22.3.3",
     "@types/node": "^24.3.3",
     "commitizen": "^4.3.1",
     "cz-conventional-changelog": "^3.3.0",
@@ -28,6 +31,7 @@
     "eslint-plugin-format": "^1.0.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.1.6",
+    "nx": "^22.3.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.2",
     "wrangler": "^4.36.0"
