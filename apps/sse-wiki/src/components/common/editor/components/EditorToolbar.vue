@@ -43,6 +43,13 @@ function run(fn: () => void) {
   props.editor?.chain().focus()
   fn()
 }
+
+function insertLink() {
+  const url = window.prompt('输入链接:')
+  if (url) {
+    props.editor?.chain().focus().setLink({ href: url }).run()
+  }
+}
 </script>
 
 <template>
@@ -80,7 +87,7 @@ function run(fn: () => void) {
 
     <Separator orientation="vertical" class="h-6" />
 
-    <TooltipButton :icon="LinkIcon" tooltip="插入链接" :active="isActive('link')" @click="() => { const url = prompt('输入链接:'); if (url) editor?.chain().focus().setLink({ href: url }).run() }" />
+    <TooltipButton :icon="LinkIcon" tooltip="插入链接" :active="isActive('link')" @click="insertLink" />
 
     <Separator orientation="vertical" class="h-6" />
 

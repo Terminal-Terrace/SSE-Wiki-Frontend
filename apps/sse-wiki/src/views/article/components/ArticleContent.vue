@@ -15,7 +15,7 @@ import { EditorContent, useEditor } from '@tiptap/vue-3'
 import { common, createLowlight } from 'lowlight'
 import { onBeforeUnmount, watch } from 'vue'
 import { FileCard } from '@/components/common/editor/utils'
-import { hydrateContent } from '@/utils/editor/hydrateContent'
+import { hydrateContent } from '@/components/common/editor/utils/hydrateContent'
 
 interface Props {
   content: string

@@ -234,7 +234,8 @@ describe('filePlaceholder', () => {
    */
   describe('property 10: 多占位符解析', () => {
     // 生成安全的文件 ID (fast-check 不支持 /i flag，用字符类代替)
-    const safeFileId = fc.stringMatching(/^[a-z0-9]{1,16}$/i)
+    // eslint-disable-next-line regexp/use-ignore-case
+    const safeFileId = fc.stringMatching(/^[a-zA-Z0-9]{1,16}$/)
 
     // 生成安全的文件名（不含特殊字符）
     const safeFileName = fc.stringMatching(/^[\w.-]{1,20}$/)
