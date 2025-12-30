@@ -209,20 +209,6 @@ export const useArticleStore = defineStore('article', () => {
     }
   }
 
-  /**
-   * 比较两个版本
-   */
-  async function compareVersions(fromVersionId: number, toVersionId: number) {
-    try {
-      const result = await articleApi.compareVersions(fromVersionId, toVersionId)
-      return result
-    }
-    catch (err: any) {
-      console.error('Failed to compare versions:', err)
-      throw err
-    }
-  }
-
   // 标签管理函数已移除，标签现在由用户直接输入
 
   /**
@@ -316,7 +302,6 @@ export const useArticleStore = defineStore('article', () => {
     submitArticle,
     reviewSubmission,
     deleteArticle,
-    compareVersions,
     incrementViewCount,
     clearCurrentArticle,
     clearError,

@@ -48,14 +48,15 @@ const showConflict = ref(false)
 const conflictData = ref<ThreeWayMergeData | null>(null)
 
 // 判断当前用户是否有审核权限
-// 需要是 admin、owner 或 moderator
+// 需要是 admin 或 moderator
 const canReview = computed(() => {
   if (!authStore.isAuthenticated || !reviewData.value) {
     return false
   }
 
-  const userRole = reviewData.value.current_user_role
-  return userRole === 'admin' || userRole === 'owner' || userRole === 'moderator'
+  // 从 article.current_user_role 读取用户角色
+  const userRole = reviewData.value.article?.current_user_role
+  return userRole === 'admin' || userRole === 'moderator'
 })
 
 // 是否为只读模式（无权限或已审核完成）
@@ -70,18 +71,24 @@ const isReadOnly = computed(() => {
   }
 
   // 已经处理过的提交（merged 或 rejected）
-  const status = reviewData.value.status
+  // 从 submission.status 读取状态
+  const status = reviewData.value.submission?.status
   return status !== 'pending' && status !== 'conflict_detected'
 })
 
 // 提交者信息
 const submitterName = computed(() => {
-  return reviewData.value?.submitter?.username || `用户${reviewData.value?.submitted_by || '未知'}`
+  return reviewData.value?.submission?.submitter?.username || `用户${reviewData.value?.submission?.submitted_by || '未知'}`
 })
 
 // 提交说明
 const commitMessage = computed(() => {
   return reviewData.value?.proposed_version?.commit_message || '未命名提交'
+})
+
+// 提交时间
+const createdAt = computed(() => {
+  return reviewData.value?.submission?.created_at || ''
 })
 
 // 基础版本号
@@ -96,10 +103,10 @@ const currentVersionNumber = computed(() => {
 
 // 状态Badge
 const statusBadge = computed(() => {
-  if (!reviewData.value)
+  if (!reviewData.value?.submission)
     return null
 
-  const status = reviewData.value.status
+  const status = reviewData.value.submission.status
   if (status === 'pending') {
     return { label: '待审核', variant: 'secondary' as const }
   }
@@ -130,7 +137,8 @@ async function loadReviewData() {
     reviewData.value = data
 
     // 如果检测到冲突，直接显示 ThreeWayMerge（不管是否已有 conflict_data）
-    if (data.has_conflict || data.conflict_data) {
+    const hasConflict = data.submission?.has_conflict || data.conflict_data
+    if (hasConflict) {
       // 如果后端已经返回了 conflict_data，直接使用
       if (data.conflict_data) {
         conflictData.value = data.conflict_data
@@ -147,7 +155,7 @@ async function loadReviewData() {
           base_version_number: data.base_version?.version_number,
           their_version_number: data.proposed_version?.version_number,
           our_version_number: data.current_version?.version_number,
-          submitter_name: data.submitter?.username,
+          submitter_name: data.submission?.submitter?.username,
         }
       }
       showConflict.value = true
@@ -389,7 +397,7 @@ onMounted(() => {
                 {{ commitMessage }}
               </h2>
               <p class="text-sm text-muted-foreground mt-1">
-                由 {{ submitterName }} 提交于 {{ formatDate(reviewData.created_at) }}
+                由 {{ submitterName }} 提交于 {{ formatDate(createdAt) }}
               </p>
             </div>
           </div>
@@ -409,17 +417,17 @@ onMounted(() => {
             </TooltipWrapper>
           </div>
 
-          <div v-if="reviewData.has_conflict" class="flex items-center gap-2 text-destructive text-sm">
+          <div v-if="reviewData.submission?.has_conflict" class="flex items-center gap-2 text-destructive text-sm">
             <XCircle class="h-4 w-4" />
             <span>检测到冲突，需要手动解决</span>
           </div>
 
-          <div v-if="reviewData.review_notes" class="pt-3 border-t">
+          <div v-if="reviewData.submission?.review_notes" class="pt-3 border-t">
             <p class="text-sm text-muted-foreground mb-1">
               审核备注
             </p>
             <p class="text-sm">
-              {{ reviewData.review_notes }}
+              {{ reviewData.submission.review_notes }}
             </p>
           </div>
         </div>
@@ -455,7 +463,7 @@ onMounted(() => {
               <label class="text-sm font-medium mb-2 block">审核备注</label>
               <Textarea
                 v-model="reviewNotes"
-                :placeholder="reviewData.status === 'rejected' ? '请填写驳回原因（必填）' : '审核备注（可选）'"
+                :placeholder="reviewData.submission?.status === 'rejected' ? '请填写驳回原因（必填）' : '审核备注（可选）'"
                 class="min-h-[100px]"
               />
             </div>
@@ -488,10 +496,10 @@ onMounted(() => {
             <p v-if="!canReview">
               您没有审核权限，只能查看审核内容
             </p>
-            <p v-else-if="reviewData.status === 'merged'">
+            <p v-else-if="reviewData.submission?.status === 'merged'">
               此提交已审核通过并合并
             </p>
-            <p v-else-if="reviewData.status === 'rejected'">
+            <p v-else-if="reviewData.submission?.status === 'rejected'">
               此提交已被驳回
             </p>
             <p v-else>

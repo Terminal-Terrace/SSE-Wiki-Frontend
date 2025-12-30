@@ -46,7 +46,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ArticleCard from '@/components/common/ArticleCard.vue'
 import OverflowText from '@/components/common/OverflowText.vue'
-import { TooltipIconButton } from '@/components/common/tooltip'
+import { TooltipButton } from '@/components/common/tooltip'
 import CollaboratorsModal from '@/components/layout/components/ModuleCollaboratorsModal.vue'
 import DeleteModuleModal from '@/components/layout/components/ModuleDeleteModal.vue'
 import CreateEditModuleModal from '@/components/layout/components/ModuleFormModal.vue'
@@ -575,14 +575,14 @@ watch(
           </h2>
           <div class="flex items-center gap-3">
             <div class="flex bg-gray-100 rounded-lg p-1">
-              <TooltipIconButton
+              <TooltipButton
                 :icon="Grid"
                 tooltip="网格视图"
                 :variant="viewMode === 'grid' ? 'default' : 'ghost'"
                 size="sm"
                 @click="viewMode = 'grid'"
               />
-              <TooltipIconButton
+              <TooltipButton
                 :icon="List"
                 tooltip="列表视图"
                 :variant="viewMode === 'list' ? 'default' : 'ghost'"

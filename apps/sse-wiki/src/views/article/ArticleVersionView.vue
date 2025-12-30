@@ -52,8 +52,9 @@ const canReview = computed(() => {
   if (!reviewData.value) {
     return false
   }
-  const userRole = reviewData.value.current_user_role
-  return userRole === 'admin' || userRole === 'owner' || userRole === 'moderator'
+  // 从 article.current_user_role 读取用户角色
+  const userRole = reviewData.value.article?.current_user_role
+  return userRole === 'admin' || userRole === 'moderator'
 })
 
 // 页面标题
@@ -72,8 +73,9 @@ const pageTitle = computed(() => {
 
 // 作者信息
 const authorName = computed(() => {
-  if (isSubmission.value && reviewData.value?.submitter) {
-    return reviewData.value.submitter.username
+  // 从 submission.submitter 读取提交者信息
+  if (isSubmission.value && reviewData.value?.submission?.submitter) {
+    return reviewData.value.submission.submitter.username
   }
   if (currentVersion.value?.author) {
     return currentVersion.value.author.username
@@ -83,8 +85,9 @@ const authorName = computed(() => {
 
 // 创建时间
 const createdAt = computed(() => {
-  if (isSubmission.value && reviewData.value) {
-    return reviewData.value.created_at
+  // 从 submission.created_at 读取创建时间
+  if (isSubmission.value && reviewData.value?.submission) {
+    return reviewData.value.submission.created_at
   }
   if (currentVersion.value) {
     return currentVersion.value.created_at
@@ -94,8 +97,9 @@ const createdAt = computed(() => {
 
 // 状态Badge
 const statusBadge = computed(() => {
-  if (isSubmission.value && reviewData.value) {
-    const status = reviewData.value.status
+  // 从 submission.status 读取状态
+  if (isSubmission.value && reviewData.value?.submission) {
+    const status = reviewData.value.submission.status
     if (status === 'pending') {
       return { label: '待审核', variant: 'secondary' as const }
     }
@@ -151,7 +155,7 @@ async function loadVersionData() {
       currentVersion.value = data.proposed_version || null
 
       // 如果检测到冲突，构建 conflict_data（只读查看模式）
-      if (data.has_conflict || data.conflict_data) {
+      if (data.submission?.has_conflict || data.conflict_data) {
         if (data.conflict_data) {
           conflictData.value = data.conflict_data
         }
@@ -166,7 +170,7 @@ async function loadVersionData() {
             base_version_number: data.base_version?.version_number,
             their_version_number: data.proposed_version?.version_number,
             our_version_number: data.current_version?.version_number,
-            submitter_name: data.submitter?.username,
+            submitter_name: data.submission?.submitter?.username,
           }
         }
       }
@@ -263,13 +267,13 @@ onMounted(() => {
             <span class="text-muted-foreground">基于版本:</span>
             <span class="ml-2 font-mono">初始版本</span>
           </div>
-          <div v-if="reviewData.has_conflict" class="text-sm text-destructive">
+          <div v-if="reviewData.submission?.has_conflict" class="text-sm text-destructive">
             <span class="font-semibold">检测到冲突</span>
             <span class="ml-2">此提交与当前版本存在冲突</span>
           </div>
-          <div v-if="reviewData.review_notes" class="text-sm">
+          <div v-if="reviewData.submission?.review_notes" class="text-sm">
             <span class="text-muted-foreground">审核备注:</span>
-            <span class="ml-2">{{ reviewData.review_notes }}</span>
+            <span class="ml-2">{{ reviewData.submission.review_notes }}</span>
           </div>
         </div>
 
@@ -298,7 +302,7 @@ onMounted(() => {
         />
       </div>
 
-      <div v-if="isSubmission && reviewData && canReview && (reviewData.status === 'pending' || reviewData.status === 'conflict_detected')" class="flex justify-end gap-4">
+      <div v-if="isSubmission && reviewData && canReview && (reviewData.submission?.status === 'pending' || reviewData.submission?.status === 'conflict_detected')" class="flex justify-end gap-4">
         <Button variant="default" @click="goToReview">
           进入审核
         </Button>

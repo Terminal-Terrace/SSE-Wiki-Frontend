@@ -17,7 +17,9 @@ export interface ArticleCardData {
   updatedAt?: string
   viewCount?: number
   author?: {
+    id?: number
     username?: string
+    avatar?: string
   }
 }
 
@@ -116,8 +118,14 @@ async function handleToggleFavorite(event: Event) {
       <div class="flex items-center justify-between text-xs text-gray-500">
         <!-- 左侧：作者 + 模块 -->
         <div class="flex items-center gap-3 min-w-0 flex-1">
-          <div v-if="showAuthor && article.author?.username" class="flex items-center gap-1 truncate">
-            <User class="h-3.5 w-3.5 shrink-0" />
+          <div v-if="showAuthor && article.author?.username" class="flex items-center gap-1.5 truncate">
+            <img
+              v-if="article.author.avatar"
+              :src="article.author.avatar"
+              :alt="article.author.username"
+              class="h-5 w-5 rounded-full object-cover shrink-0"
+            >
+            <User v-else class="h-4 w-4 shrink-0 text-gray-400" />
             <span class="truncate">{{ article.author.username }}</span>
           </div>
           <div v-if="article.module" class="flex items-center gap-1 truncate">

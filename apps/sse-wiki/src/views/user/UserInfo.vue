@@ -63,7 +63,6 @@ async function loadFavourites() {
 
     const articleIds: number[] = []
     articles.value = list
-      .map((item: any) => item?.article)
       .filter((a: any) => !!a)
       .map((a: any) => {
         articleIds.push(a.id)

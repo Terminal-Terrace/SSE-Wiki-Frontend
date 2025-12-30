@@ -74,24 +74,6 @@ export const useAuthStore = defineStore('auth', () => {
     return updatedUser
   }
 
-  // 兼容旧代码的空方法
-  function setTokens(_refresh: string, _access: string) {
-    // Token 现在通过 HttpOnly Cookie 管理，无需前端存储
-    console.warn('setTokens is deprecated: tokens are now managed via HttpOnly cookies')
-  }
-
-  function clearTokens() {
-    // 清除用户信息
-    clearUser()
-    // 清除旧的 localStorage token（如果有的话）
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('refresh_token')
-  }
-
-  // 兼容旧的方法名
-  const setToken = setTokens
-  const clearToken = clearTokens
-
   return {
     // 状态
     user,
@@ -100,10 +82,6 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     isAdmin,
     // 方法
-    setTokens,
-    clearTokens,
-    setToken,
-    clearToken,
     setUser,
     clearUser,
     checkLoginStatus,

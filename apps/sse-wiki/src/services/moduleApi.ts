@@ -28,7 +28,23 @@ export class ModuleAPI {
    * @returns Promise<ModuleTreeNode[]> 模块树数组
    */
   async getModuleTree(): Promise<ModuleTreeNode[]> {
-    return request.get(this.baseURL)
+    const data: any[] = await request.get(this.baseURL)
+    // 转换字段名：is_moderator -> isModerator（后端返回 snake_case，前端使用 camelCase）
+    return this.transformModuleTree(data || [])
+  }
+
+  /**
+   * 递归转换模块树字段名
+   */
+  private transformModuleTree(nodes: any[]): ModuleTreeNode[] {
+    return nodes.map((node) => {
+      const { is_moderator, children, ...rest } = node
+      return {
+        ...rest,
+        isModerator: is_moderator,
+        children: children ? this.transformModuleTree(children) : [],
+      }
+    })
   }
 
   /**

@@ -75,12 +75,11 @@ export function getAvatarFallback(username?: string | null): string {
 
 /**
  * 角色标签映射
+ * 注意：owner 角色已从文章协作者中移除，文章作者通过 created_by 字段判断
  */
 const ROLE_LABELS: Record<string, string> = {
-  owner: '所有者',
   admin: '管理员',
   moderator: '协作者',
-  editor: '编辑者',
 }
 
 /**
