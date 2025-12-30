@@ -47,28 +47,43 @@ const editor = useEditor({
   ],
 })
 
+// 水合并设置内容
+async function hydrateAndSetContent(content: string) {
+  if (!editor.value || !content)
+    return
+
+  try {
+    // 水合内容：将占位符替换为 file-card
+    const hydratedHtml = await hydrateContent(content)
+
+    if (hydratedHtml !== editor.value.getHTML()) {
+      editor.value.commands.setContent(hydratedHtml)
+    }
+  }
+  catch (error) {
+    console.error('Failed to hydrate content:', error)
+    // 如果水合失败，直接设置原始内容
+    editor.value.commands.setContent(content)
+  }
+}
+
 // 监听 content 变化，水合占位符
 watch(
   () => props.content,
   async (newContent) => {
-    if (!editor.value || !newContent)
-      return
+    await hydrateAndSetContent(newContent)
+  },
+)
 
-    try {
-      // 水合内容：将占位符替换为 file-card
-      const hydratedHtml = await hydrateContent(newContent)
-
-      if (hydratedHtml !== editor.value.getHTML()) {
-        editor.value.commands.setContent(hydratedHtml)
-      }
-    }
-    catch (error) {
-      console.error('Failed to hydrate content:', error)
-      // 如果水合失败，直接设置原始内容
-      editor.value.commands.setContent(newContent)
+// 监听 editor 初始化完成，处理初始内容
+// useEditor 是异步的，需要等待 editor 准备好后再水合
+watch(
+  () => editor.value,
+  async (newEditor) => {
+    if (newEditor && props.content) {
+      await hydrateAndSetContent(props.content)
     }
   },
-  { immediate: true }, // 立即执行一次，处理初始内容
 )
 
 // 清理
