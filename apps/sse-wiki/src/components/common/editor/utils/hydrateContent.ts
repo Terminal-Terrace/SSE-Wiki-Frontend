@@ -4,10 +4,12 @@
  */
 import type { FileInfo } from '@/services/upload/fileInfo'
 import { batchGetFileInfo, getCategoryFromMimeType } from '@/services/upload/fileInfo'
+import { fileInfoCache } from './fileInfoCache'
 import { extractFileIds, parsePlaceholders } from './filePlaceholder'
 
 /**
  * 水合内容：将占位符替换为 file-card 节点
+ * 使用缓存避免重复请求已获取的文件信息
  * @param content 包含占位符的内容
  * @returns 水合后的内容（包含 file-card HTML）
  */
@@ -20,21 +22,35 @@ export async function hydrateContent(content: string): Promise<string> {
   }
 
   try {
-    // 2. 批量获取文件信息（已由 batchGetFileInfo 解包为 FileInfo[]）
-    const fileInfoList = await batchGetFileInfo(fileIds)
+    // 2. 检查缓存，找出需要请求的文件ID
+    const cachedInfoMap = fileInfoCache.getMany(fileIds)
+    const uncachedIds = fileIds.filter(id => !cachedInfoMap.has(id))
 
-    // 3. 创建文件ID到文件信息的映射
-    const fileInfoMap = new Map<string, FileInfo>()
-    for (const fileInfo of fileInfoList) {
-      if (!fileInfo?.fileId)
-        continue
-      fileInfoMap.set(fileInfo.fileId, fileInfo)
+    // 3. 只请求缓存中不存在的文件ID
+    let newFileInfoList: FileInfo[] = []
+    if (uncachedIds.length > 0) {
+      newFileInfoList = await batchGetFileInfo(uncachedIds)
+
+      // 4. 将新获取的文件信息存入缓存
+      for (const fileInfo of newFileInfoList) {
+        if (fileInfo?.fileId) {
+          fileInfoCache.set(fileInfo.fileId, fileInfo)
+        }
+      }
     }
 
-    // 4. 解析所有占位符
+    // 5. 合并缓存和新获取的文件信息
+    const fileInfoMap = new Map<string, FileInfo>(cachedInfoMap)
+    for (const fileInfo of newFileInfoList) {
+      if (fileInfo?.fileId) {
+        fileInfoMap.set(fileInfo.fileId, fileInfo)
+      }
+    }
+
+    // 6. 解析所有占位符
     const placeholders = parsePlaceholders(content)
 
-    // 5. 替换占位符为 file-card HTML
+    // 7. 替换占位符为 file-card HTML
     let hydratedContent = content
 
     // 从后往前替换，避免索引偏移问题

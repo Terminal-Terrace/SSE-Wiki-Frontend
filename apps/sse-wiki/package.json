@@ -13,7 +13,10 @@
     "preview": "pnpm run build:local && wrangler dev",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
-    "lint": "eslint --ext .ts,.tsx,.vue src --fix"
+    "lint": "eslint --ext .ts,.tsx,.vue src --fix",
+    "test": "vitest --run",
+    "test:watch": "vitest",
+    "deploy": "node ../../scripts/deploy-if-change.js"
   },
   "dependencies": {
     "@sse-wiki/ui": "workspace:*",
@@ -42,10 +45,12 @@
     "@vitejs/plugin-vue": "^6.0.1",
     "@vitejs/plugin-vue-jsx": "^5.1.1",
     "@vue/tsconfig": "^0.8.1",
+    "fast-check": "^3.23.2",
     "jsdom": "^27.0.0",
     "npm-run-all2": "^8.0.4",
     "sass": "^1.92.1",
     "vite": "^7.1.5",
+    "vitest": "^3.2.4",
     "vue-tsc": "^3.0.6",
     "wrangler": "^4.36.0"
   }
