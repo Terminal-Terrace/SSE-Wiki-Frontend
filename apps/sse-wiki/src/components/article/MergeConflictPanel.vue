@@ -1,11 +1,20 @@
 <script setup lang="ts">
 import type { ThreeWayMergeData } from '@/types/article'
 import { Badge, Button, Card, Textarea, toast, ToggleGroup, ToggleGroupItem } from '@sse-wiki/ui'
+import { RichEditor } from '@sse-wiki/vue-rich-editor'
 import { Code, Eye, GitMerge, XCircle } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
-import ContentEditor from '@/components/common/editor/ContentEditor.vue'
 import { simpleThreeWayMerge, threeWayMerge } from '@/utils/diff'
+
+import { createFileHandlers } from '@/utils/editorFileHandlers'
 import ComparisonPanel from './ComparisonPanel.vue'
+import '@sse-wiki/vue-rich-editor/styles'
+
+const props = defineProps<Props>()
+
+const emit = defineEmits<Emits>()
+
+const fileHandlers = createFileHandlers()
 
 interface Props {
   conflictData: ThreeWayMergeData
@@ -18,9 +27,6 @@ interface Emits {
   (e: 'resolve', mergedContent: string, notes?: string): void
   (e: 'reject', notes: string): void
 }
-
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
 
 /**
  * 生成合并内容（带文本冲突标记）
@@ -257,8 +263,9 @@ function togglePreview() {
 
       <!-- 富文本模式（默认，用于可视化查看和编辑） -->
       <div v-if="editorMode === 'wysiwyg'" class="relative">
-        <ContentEditor
+        <RichEditor
           v-model="mergedContent"
+          :file-handlers="fileHandlers"
           :readonly="!canReview || isReadOnly"
           :show-toolbar="canReview && !isReadOnly"
           min-height="400px"

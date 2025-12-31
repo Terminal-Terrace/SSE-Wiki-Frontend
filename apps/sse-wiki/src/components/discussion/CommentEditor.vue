@@ -1,21 +1,10 @@
 <script setup lang="ts">
 import { Button } from '@sse-wiki/ui'
+import { RichEditor } from '@sse-wiki/vue-rich-editor'
 import { computed, ref, watch } from 'vue'
-/**
- * 评论编辑器组件
- * 支持三种模式：新建评论、回复评论、编辑评论
- */
-import ContentEditor from '@/components/common/editor/ContentEditor.vue'
 import { CommentEditorMode } from '@/types/discussion'
-
-interface Props {
-  mode?: CommentEditorMode
-  initialContent?: string
-  placeholder?: string
-  minHeight?: string
-  loading?: boolean
-  autoFocus?: boolean
-}
+import { createFileHandlers } from '@/utils/editorFileHandlers'
+import '@sse-wiki/vue-rich-editor/styles'
 
 const props = withDefaults(defineProps<Props>(), {
   mode: CommentEditorMode.CREATE,
@@ -30,6 +19,21 @@ const emit = defineEmits<{
   submit: [content: string]
   cancel: []
 }>()
+
+/**
+ * 评论编辑器组件
+ * 支持三种模式：新建评论、回复评论、编辑评论
+ */
+const fileHandlers = createFileHandlers()
+
+interface Props {
+  mode?: CommentEditorMode
+  initialContent?: string
+  placeholder?: string
+  minHeight?: string
+  loading?: boolean
+  autoFocus?: boolean
+}
 
 // ========== 状态 ==========
 const content = ref(props.initialContent)
@@ -89,12 +93,13 @@ function handleCancel() {
 
 <template>
   <div class="comment-editor">
-    <ContentEditor
+    <RichEditor
       v-model="content"
+      :file-handlers="fileHandlers"
       :placeholder="placeholder"
       :min-height="minHeight"
       max-height="400px"
-      :auto-focus="autoFocus"
+      :autofocus="autoFocus"
       :readonly="loading || isSubmitting"
     />
 

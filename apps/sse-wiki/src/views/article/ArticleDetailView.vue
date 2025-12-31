@@ -6,9 +6,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { AlertTriangle, Bot, Check, Edit2, Save, Trash2, Users, X } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
+// import ArticleDiscussionList from '@/views/article/components/ArticleDiscussionList.vue'
+// 延迟加载编辑器组件：只在编辑 tab 激活时才加载，减少初始 bundle 大小
 
+import { useRoute, useRouter } from 'vue-router'
 import ArticleCollaboratorsModal from '@/components/article/ArticleCollaboratorsModal.vue'
 import FavoriteButton from '@/components/common/FavoriteButton.vue'
 import { TooltipWrapper } from '@/components/common/tooltip'
@@ -19,19 +21,20 @@ import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { articleApi } from '@/services/articleApi'
 import { useAuthStore } from '@/stores/auth'
 import { formatDate } from '@/utils/format'
-import AiChatSidebar from '@/views/article/components/AiChatPanel.vue'
 
+import AiChatSidebar from '@/views/article/components/AiChatPanel.vue'
 import ArticleContentCard from '@/views/article/components/ArticleContent.vue'
-// import ArticleDiscussionList from '@/views/article/components/ArticleDiscussionList.vue'
-import ArticleEditCard from '@/views/article/components/ArticleEditor.vue'
 import ArticleHistoryList from '@/views/article/components/ArticleHistoryList.vue'
+
+const props = defineProps<Props>()
+
+const ArticleEditCard = defineAsyncComponent(() => import('@/views/article/components/ArticleEditor.vue'))
 
 interface Props {
   id?: string
   articleId?: string
 }
 
-const props = defineProps<Props>()
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()

@@ -1,9 +1,21 @@
 <script setup lang="ts">
 import { Badge, Button, Card, ScrollArea } from '@sse-wiki/ui'
+import { RichViewer } from '@sse-wiki/vue-rich-editor'
 import { Code, Eye } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
-import ContentEditor from '@/components/common/editor/ContentEditor.vue'
+
 import { computeDiff as computeDiffAlgo } from '@/utils/diff'
+import { createFileHandlers } from '@/utils/editorFileHandlers'
+import '@sse-wiki/vue-rich-editor/styles'
+
+const props = withDefaults(defineProps<Props>(), {
+  oldContent: null,
+  oldLabel: '旧版本',
+  newLabel: '新版本',
+  height: '600px',
+})
+
+const fileHandlers = createFileHandlers()
 
 interface Props {
   oldContent?: string | null
@@ -12,13 +24,6 @@ interface Props {
   newLabel?: string
   height?: string // 自定义高度，默认 600px
 }
-
-const props = withDefaults(defineProps<Props>(), {
-  oldContent: null,
-  oldLabel: '旧版本',
-  newLabel: '新版本',
-  height: '600px',
-})
 
 // 视图模式：rendered（渲染模式，使用 Tiptap）或 text（文本对比模式）
 type ViewMode = 'rendered' | 'text'
@@ -121,11 +126,9 @@ const hasMoreLines = computed(() => {
       <div v-if="viewMode === 'rendered'" class="h-full">
         <!-- 单版本模式 -->
         <div v-if="isSingleVersion" class="p-4">
-          <ContentEditor
-            :model-value="newContent"
-            :readonly="true"
-            :show-toolbar="false"
-            min-height="500px"
+          <RichViewer
+            :content="newContent"
+            :file-handlers="{ getFileInfo: fileHandlers.getFileInfo }"
           />
         </div>
 
@@ -137,11 +140,9 @@ const hasMoreLines = computed(() => {
               {{ oldLabel }}
             </div>
             <div class="p-4">
-              <ContentEditor
-                :model-value="oldContent || ''"
-                :readonly="true"
-                :show-toolbar="false"
-                min-height="500px"
+              <RichViewer
+                :content="oldContent || ''"
+                :file-handlers="{ getFileInfo: fileHandlers.getFileInfo }"
               />
             </div>
           </div>
@@ -152,11 +153,9 @@ const hasMoreLines = computed(() => {
               {{ newLabel }}
             </div>
             <div class="p-4">
-              <ContentEditor
-                :model-value="newContent"
-                :readonly="true"
-                :show-toolbar="false"
-                min-height="500px"
+              <RichViewer
+                :content="newContent"
+                :file-handlers="{ getFileInfo: fileHandlers.getFileInfo }"
               />
             </div>
           </div>
