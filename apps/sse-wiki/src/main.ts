@@ -12,8 +12,12 @@ const pinia = createPinia()
 app.use(pinia)
 app.use(router)
 
-// 在应用启动时检查登录状态
+// 优化：先挂载应用，再异步检查登录状态（不阻塞首次渲染）
+app.mount('#app')
+
+// 异步检查登录状态（不阻塞渲染）
 const authStore = useAuthStore()
-authStore.checkLoginStatus().then(() => {
-  app.mount('#app')
+// 使用 void 明确表示我们不等待这个 Promise
+void authStore.checkLoginStatus().catch((err) => {
+  console.error('Failed to check login status:', err)
 })

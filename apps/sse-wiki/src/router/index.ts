@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -81,29 +80,31 @@ const router = createRouter({
   ],
 })
 
-// 路由守卫
+// 路由守卫 - 延迟加载认证 store，只在需要时加载
 router.beforeEach(async (to, _from, next) => {
-  const authStore = useAuthStore()
+  // 优化：只在需要认证的页面才加载认证 store
+  if (to.meta.strictAuth) {
+    // 动态导入认证 store（延迟加载）
+    const { useAuthStore } = await import('@/stores/auth')
+    const authStore = useAuthStore()
 
-  // 如果是首次访问且未检查登录状态
-  if (!authStore.hasChecked) {
-    await authStore.checkLoginStatus()
+    // 严格要求登录的页面：先检查登录状态
+    if (!authStore.hasChecked) {
+      await authStore.checkLoginStatus()
+    }
+
+    if (!authStore.isAuthenticated) {
+      // 保存目标路由，登录后跳转回来
+      const redirect = to.fullPath
+      next({
+        path: '/',
+        query: { redirect },
+      })
+      return
+    }
   }
-
-  // 严格要求登录的页面（如创建、审核等操作）
-  if (to.meta.strictAuth && !authStore.isAuthenticated) {
-    // 保存目标路由，登录后跳转回来
-    const redirect = to.fullPath
-
-    // 跳转到首页并提示登录
-    next({
-      path: '/',
-      query: { redirect },
-    })
-
-    // 在首页会显示登录提示
-    return
-  }
+  // 普通页面：不加载认证 store，不阻塞导航
+  // 如果页面内需要认证，组件内部会处理
 
   // requiresAuth 标记的页面：允许访问，但页面内会提示登录后才能使用某些功能
   // 这样用户可以先浏览内容，需要操作时再登录（更好的UX）
