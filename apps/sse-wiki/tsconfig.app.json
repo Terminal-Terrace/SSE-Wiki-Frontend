@@ -2,7 +2,10 @@
   "extends": "@vue/tsconfig/tsconfig.dom.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-
+    // 评估严格模式：先不启用，避免大量类型错误
+    // "strict": true,
+    // "noImplicitAny": true,
+    // "strictNullChecks": true,
     "paths": {
       "@/*": ["./src/*"]
     }
