@@ -1,21 +1,13 @@
 <script setup lang="ts">
-import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
-import Link from '@tiptap/extension-link'
-import Typography from '@tiptap/extension-typography'
-import StarterKit from '@tiptap/starter-kit'
 /**
  * 文章内容渲染组件
  *
- * 使用 TipTap 只读编辑器渲染内容，确保：
- * 1. 自定义节点（如文件卡片）正确显示
- * 2. 保持与编辑器一致的样式
- * 3. 支持所有 TipTap 扩展功能
+ * 使用 RichViewer 只读组件渲染内容
  */
-import { EditorContent, useEditor } from '@tiptap/vue-3'
-import { common, createLowlight } from 'lowlight'
-import { onBeforeUnmount, watch } from 'vue'
-import { FileCard } from '@/components/common/editor/utils'
-import { hydrateContent } from '@/components/common/editor/utils/hydrateContent'
+// 延迟加载 RichViewer：减少初始 bundle 大小
+import { defineAsyncComponent } from 'vue'
+import { createFileHandlers } from '@/utils/editorFileHandlers'
+import '@sse-wiki/vue-rich-editor/styles'
 
 interface Props {
   content: string
@@ -23,79 +15,18 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const lowlight = createLowlight(common)
-
-// 创建只读编辑器实例
-const editor = useEditor({
-  content: props.content || '',
-  editable: false, // 只读模式
-  extensions: [
-    StarterKit.configure({
-      codeBlock: false,
-    }),
-    CodeBlockLowlight.configure({
-      lowlight,
-    }),
-    Link.configure({
-      openOnClick: true, // 预览模式下可以直接点击链接
-      HTMLAttributes: {
-        class: 'text-primary underline cursor-pointer',
-      },
-    }),
-    Typography,
-    FileCard, // 文件卡片扩展
-  ],
-})
-
-// 水合并设置内容
-async function hydrateAndSetContent(content: string) {
-  if (!editor.value || !content)
-    return
-
-  try {
-    // 水合内容：将占位符替换为 file-card
-    const hydratedHtml = await hydrateContent(content)
-
-    if (hydratedHtml !== editor.value.getHTML()) {
-      editor.value.commands.setContent(hydratedHtml)
-    }
-  }
-  catch (error) {
-    console.error('Failed to hydrate content:', error)
-    // 如果水合失败，直接设置原始内容
-    editor.value.commands.setContent(content)
-  }
-}
-
-// 监听 content 变化，水合占位符
-watch(
-  () => props.content,
-  async (newContent) => {
-    await hydrateAndSetContent(newContent)
-  },
+const RichViewer = defineAsyncComponent(() =>
+  import('@sse-wiki/vue-rich-editor').then(m => m.RichViewer),
 )
 
-// 监听 editor 初始化完成，处理初始内容
-// useEditor 是异步的，需要等待 editor 准备好后再水合
-watch(
-  () => editor.value,
-  async (newEditor) => {
-    if (newEditor && props.content) {
-      await hydrateAndSetContent(props.content)
-    }
-  },
-)
-
-// 清理
-onBeforeUnmount(() => {
-  editor.value?.destroy()
-})
+const fileHandlers = createFileHandlers()
 </script>
 
 <template>
   <div class="article-content">
-    <EditorContent
-      :editor="editor"
+    <RichViewer
+      :content="props.content"
+      :file-handlers="{ getFileInfo: fileHandlers.getFileInfo }"
       class="prose prose-slate dark:prose-invert max-w-none"
     />
   </div>

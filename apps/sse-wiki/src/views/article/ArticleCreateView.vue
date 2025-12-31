@@ -2,17 +2,22 @@
 import type { CreateArticleRequest } from '@/types/article'
 import type { Module } from '@/types/module'
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, useToast } from '@sse-wiki/ui'
-import { ArrowLeft, Loader2, Save } from 'lucide-vue-next'
+import { RichEditor } from '@sse-wiki/vue-rich-editor'
 
-import { computed, onMounted, ref } from 'vue'
+import { ArrowLeft, Loader2, Save } from 'lucide-vue-next'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
-import ContentEditor from '@/components/common/editor/ContentEditor.vue'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useUnsavedChangesWarning } from '@/composables/useUnsavedChangesWarning'
 import { articleApi } from '@/services/articleApi'
 import { moduleApi } from '@/services/moduleApi'
+
 import { useAuthStore } from '@/stores/auth'
+import { createFileHandlers } from '@/utils/editorFileHandlers'
+import '@sse-wiki/vue-rich-editor/styles'
+
+const fileHandlers = createFileHandlers()
 
 const route = useRoute()
 const router = useRouter()
@@ -63,7 +68,15 @@ function hasUnsavedContent() {
 }
 
 // 使用未保存内容警告 Hook
-const { showConfirmDialog, confirmLeave, cancelLeave, triggerConfirm, skipGuard } = useUnsavedChangesWarning(hasUnsavedContent)
+const { showConfirmDialog, confirmLeave, cancelLeave, skipGuard } = useUnsavedChangesWarning(hasUnsavedContent)
+
+// 本地对话框状态（用于 v-model 绑定，同步 computed 属性）
+const showRouteConfirm = ref(false)
+
+// 同步 computed 属性到本地 ref
+watch(showConfirmDialog, (value) => {
+  showRouteConfirm.value = value
+})
 
 // 初始化
 onMounted(async () => {
@@ -183,12 +196,54 @@ async function handleSubmit() {
   }
 }
 
+// 返回按钮的自定义操作
+const pendingGoBackAction = ref<(() => void) | null>(null)
+const showGoBackConfirm = ref(false)
+
 // 返回
 function goBack() {
-  triggerConfirm(() => {
+  if (hasUnsavedContent()) {
+    // 如果有未保存内容，显示确认对话框
+    pendingGoBackAction.value = () => {
+      formData.value = { ...EMPTY_FORM }
+      // 跳过路由守卫检查，直接返回
+      skipGuard()
+      router.back()
+    }
+    showGoBackConfirm.value = true
+  }
+  else {
+    // 没有未保存内容，直接返回
     formData.value = { ...EMPTY_FORM }
+    skipGuard()
     router.back()
-  })
+  }
+}
+
+// 确认返回
+function confirmGoBack() {
+  if (pendingGoBackAction.value) {
+    pendingGoBackAction.value()
+    pendingGoBackAction.value = null
+  }
+  showGoBackConfirm.value = false
+}
+
+// 路由离开确认处理
+function handleRouteConfirmLeave() {
+  confirmLeave()
+  showRouteConfirm.value = false
+}
+
+function handleRouteCancelLeave() {
+  cancelLeave()
+  showRouteConfirm.value = false
+}
+
+// 取消返回
+function cancelGoBack() {
+  showGoBackConfirm.value = false
+  pendingGoBackAction.value = null
 }
 </script>
 
@@ -336,8 +391,9 @@ function goBack() {
           <CardDescription>使用富文本编辑器编写文章内容</CardDescription>
         </CardHeader>
         <CardContent>
-          <ContentEditor
+          <RichEditor
             v-model="formData.content"
+            :file-handlers="fileHandlers"
             :readonly="isLoading"
             min-height="500px"
           />
@@ -365,15 +421,26 @@ function goBack() {
       </div>
     </form>
 
-    <!-- 离开确认对话框 -->
+    <!-- 路由离开确认对话框（用于路由跳转） -->
     <ConfirmDialog
-      v-model:open="showConfirmDialog"
+      v-model:open="showRouteConfirm"
       title="确认离开？"
       description="您有未保存的内容，离开后这些内容将会丢失。确定要离开吗？"
       confirm-text="确认离开"
       cancel-text="继续编辑"
-      @confirm="confirmLeave"
-      @cancel="cancelLeave"
+      @confirm="handleRouteConfirmLeave"
+      @cancel="handleRouteCancelLeave"
+    />
+
+    <!-- 返回确认对话框（用于"返回"按钮） -->
+    <ConfirmDialog
+      v-model:open="showGoBackConfirm"
+      title="确认返回？"
+      description="您有未保存的内容，返回后这些内容将会丢失。确定要返回吗？"
+      confirm-text="确认返回"
+      cancel-text="继续编辑"
+      @confirm="confirmGoBack"
+      @cancel="cancelGoBack"
     />
   </div>
 </template>
