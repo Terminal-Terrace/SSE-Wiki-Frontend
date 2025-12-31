@@ -1,10 +1,21 @@
-import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { onBeforeRouteLeave } from 'vue-router'
+import type { RouteLocationRaw } from 'vue-router'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { onBeforeRouteLeave, useRouter } from 'vue-router'
 
 /**
- * 未保存内容警告 Hook
+ * 路由守卫状态机
  *
- * 用于在用户有未保存的内容时，阻止离开并显示确认对话框
+ * 状态转换：
+ * idle → pending → idle (via confirm/cancel)
+ */
+type GuardState
+  = | { status: 'idle' }
+    | { status: 'pending', route: RouteLocationRaw }
+
+/**
+ * 未保存内容警告 Hook（状态机模式 + flag 方案）
+ *
+ * 使用显式状态机管理路由守卫逻辑，配合 skipNextGuard flag 简化实现
  *
  * @param hasUnsavedChanges - 计算属性或 ref，判断是否有未保存的内容
  * @returns 对话框状态和操作函数
@@ -12,67 +23,65 @@ import { onBeforeRouteLeave } from 'vue-router'
  * @example
  * ```ts
  * const hasUnsavedChanges = computed(() => content.value !== initialContent.value)
- * const { showConfirmDialog, confirmLeave, cancelLeave } = useUnsavedChangesWarning(hasUnsavedChanges)
+ * const { showConfirmDialog, confirmLeave, cancelLeave, skipGuard } = useUnsavedChangesWarning(hasUnsavedChanges)
  * ```
  */
 export function useUnsavedChangesWarning(hasUnsavedChanges: () => boolean) {
-  const showConfirmDialog = ref(false)
-  const pendingLeaveAction = ref<(() => void) | null>(null)
+  const router = useRouter()
+
+  // 状态机：单一状态源，状态转换明确
+  const state = ref<GuardState>({ status: 'idle' })
+
+  // Flag 方案：跳过下一次路由守卫检查（用于保存后跳转场景）
   const skipNextGuard = ref(false)
+
+  // 计算属性：对话框是否显示（基于状态机）
+  const showConfirmDialog = computed(() => state.value.status === 'pending')
 
   // 浏览器关闭/刷新警告
   function handleBeforeUnload(e: BeforeUnloadEvent) {
     if (hasUnsavedChanges()) {
       e.preventDefault()
+      // returnValue 虽然 deprecated，但仍然是触发浏览器原生确认对话框的标准方式
+      // @ts-expect-error - returnValue is deprecated but still the standard way to trigger browser confirmation
       e.returnValue = ''
     }
   }
 
-  // 路由跳转警告
-  onBeforeRouteLeave((to, from, next) => {
-    // 如果设置了跳过标志，直接放行
+  // 路由跳转警告（Vue Router 4.x API）
+  onBeforeRouteLeave((to) => {
+    // Flag 方案：如果设置了 skipNextGuard，跳过检查并重置 flag
     if (skipNextGuard.value) {
       skipNextGuard.value = false
-      next()
-      return
+      return true // 放行
     }
 
+    // 状态：idle → pending（检测到未保存内容，阻止导航）
     if (hasUnsavedChanges()) {
-      pendingLeaveAction.value = () => next(true)
-      showConfirmDialog.value = true
-      next(false) // 先阻止跳转
+      state.value = { status: 'pending', route: to }
+      return false // 阻止跳转
     }
-    else {
-      next()
-    }
+
+    // 状态：idle（没有未保存内容，允许导航）
+    return true
   })
 
-  // 确认离开
+  // 确认离开：pending → idle → 触发路由跳转
   function confirmLeave() {
-    showConfirmDialog.value = false
-    if (pendingLeaveAction.value) {
-      pendingLeaveAction.value()
-      pendingLeaveAction.value = null
+    if (state.value.status === 'pending') {
+      const route = state.value.route
+      // 重置状态
+      state.value = { status: 'idle' }
+      // 设置 skipNextGuard，因为用户已经确认离开，即使有未保存内容也应该允许跳转
+      skipNextGuard.value = true
+      router.push(route)
     }
   }
 
-  // 取消离开
+  // 取消离开：pending → idle
   function cancelLeave() {
-    showConfirmDialog.value = false
-    pendingLeaveAction.value = null
-  }
-
-  /**
-   * 触发确认对话框（用于自定义操作，如"返回"按钮）
-   * @param onConfirm - 用户确认后执行的回调
-   */
-  function triggerConfirm(onConfirm: () => void) {
-    if (hasUnsavedChanges()) {
-      pendingLeaveAction.value = onConfirm
-      showConfirmDialog.value = true
-    }
-    else {
-      onConfirm()
+    if (state.value.status === 'pending') {
+      state.value = { status: 'idle' }
     }
   }
 
@@ -88,6 +97,14 @@ export function useUnsavedChangesWarning(hasUnsavedChanges: () => boolean) {
   /**
    * 跳过下一次路由守卫检查
    * 用于成功保存后的跳转场景
+   *
+   * Flag 方案：设置 skipNextGuard = true，守卫会在下一次检查时放行
+   *
+   * @example
+   * ```ts
+   * skipGuard()
+   * router.push({ name: 'ArticleDetail', params: { articleId: 123 } })
+   * ```
    */
   function skipGuard() {
     skipNextGuard.value = true
@@ -97,7 +114,6 @@ export function useUnsavedChangesWarning(hasUnsavedChanges: () => boolean) {
     showConfirmDialog,
     confirmLeave,
     cancelLeave,
-    triggerConfirm,
     skipGuard,
   }
 }
