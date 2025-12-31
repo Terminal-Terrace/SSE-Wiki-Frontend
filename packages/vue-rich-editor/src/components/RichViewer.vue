@@ -10,10 +10,9 @@ import Typography from '@tiptap/extension-typography'
 import StarterKit from '@tiptap/starter-kit'
 import { EditorContent, useEditor } from '@tiptap/vue-3'
 import { common, createLowlight } from 'lowlight'
-import { toRef, watch } from 'vue'
+import { toRef } from 'vue'
 import { useContentHydration } from '../composables'
 import { FileCard } from '../extensions/FileCardExtension'
-import { hydrateContent } from '../utils/hydrateContent'
 
 const props = defineProps<RichViewerProps>()
 
@@ -41,34 +40,11 @@ const editor = useEditor({
   ],
 })
 
-// 内容水合
+// 内容水合 - 使用 composable 统一处理初始化和后续变化
 useContentHydration({
   editor,
   initialContent: toRef(props, 'content'),
   getFileInfo: props.fileHandlers?.getFileInfo,
-})
-
-// 监听 content 变化
-watch(() => props.content, async (newContent) => {
-  if (!editor.value || !newContent)
-    return
-
-  try {
-    if (props.fileHandlers?.getFileInfo) {
-      const hydratedHtml = await hydrateContent(newContent, props.fileHandlers.getFileInfo)
-      if (hydratedHtml !== editor.value.getHTML()) {
-        editor.value.commands.setContent(hydratedHtml)
-      }
-    }
-    else {
-      editor.value.commands.setContent(newContent)
-    }
-  }
-  catch (error) {
-    console.error('Failed to hydrate content:', error)
-    // 如果水合失败，直接设置原始内容
-    editor.value.commands.setContent(newContent)
-  }
 })
 </script>
 

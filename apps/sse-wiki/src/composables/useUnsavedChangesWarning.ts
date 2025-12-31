@@ -43,7 +43,6 @@ export function useUnsavedChangesWarning(hasUnsavedChanges: () => boolean) {
     if (hasUnsavedChanges()) {
       e.preventDefault()
       // returnValue 虽然 deprecated，但仍然是触发浏览器原生确认对话框的标准方式
-      // @ts-expect-error - returnValue is deprecated but still the standard way to trigger browser confirmation
       e.returnValue = ''
     }
   }

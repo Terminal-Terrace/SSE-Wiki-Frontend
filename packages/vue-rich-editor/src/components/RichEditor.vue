@@ -13,9 +13,8 @@ import StarterKit from '@tiptap/starter-kit'
 import { EditorContent, useEditor } from '@tiptap/vue-3'
 import { common, createLowlight } from 'lowlight'
 import { computed, ref, toRef, watch } from 'vue'
-import { useFileUpload } from '../composables'
+import { useContentHydration, useFileUpload } from '../composables'
 import { FileCard } from '../extensions/FileCardExtension'
-import { hydrateContent } from '../utils/hydrateContent'
 import EditorToolbar from './EditorToolbar.vue'
 import UploadProgress from './UploadProgress.vue'
 
@@ -33,7 +32,6 @@ const emit = defineEmits<RichEditorEmits>()
 
 const readonlyRef = toRef(props, 'readonly')
 const isInternalChange = ref(false)
-const lastRawContent = ref('')
 const lowlight = createLowlight(common)
 
 // 检测是否启用文件功能
@@ -99,45 +97,12 @@ watch(readonlyRef, (val) => {
   editor.value?.setEditable(!val)
 })
 
-// 监听外部 modelValue 变化
-watch(() => props.modelValue, async (newValue) => {
-  if (isInternalChange.value) {
-    isInternalChange.value = false
-    return
-  }
-  const raw = newValue || ''
-  if (raw === lastRawContent.value)
-    return
-  lastRawContent.value = raw
-  if (editor.value && props.fileHandlers?.getFileInfo) {
-    const hydrated = await hydrateContent(raw, props.fileHandlers.getFileInfo)
-    editor.value.commands.setContent(hydrated || '')
-  }
-  else if (editor.value) {
-    editor.value.commands.setContent(raw)
-  }
+// 内容水合：处理初始内容加载和外部内容变化
+useContentHydration({
+  editor,
+  initialContent: toRef(props, 'modelValue'),
+  getFileInfo: props.fileHandlers?.getFileInfo,
 })
-
-// 初始水合（只执行一次）
-const hasInitialized = ref(false)
-watch(editor, async (ed) => {
-  if (!ed || hasInitialized.value)
-    return
-  hasInitialized.value = true
-
-  const raw = props.modelValue || ''
-  if (!raw || raw === lastRawContent.value)
-    return
-
-  lastRawContent.value = raw
-  if (props.fileHandlers?.getFileInfo) {
-    const hydrated = await hydrateContent(raw, props.fileHandlers.getFileInfo)
-    ed.commands.setContent(hydrated || '')
-  }
-  else {
-    ed.commands.setContent(raw)
-  }
-}, { immediate: true })
 
 // 文件上传
 const { uploadQueue, addFiles, retryTask, removeTask } = useFileUpload({
@@ -169,13 +134,6 @@ watch(uploadQueue, (queue) => {
     }
   })
 })
-
-// 注释掉重复的水合逻辑，已由上面的 watch(editor) 处理
-// useContentHydration({
-//   editor,
-//   initialContent: toRef(props, 'modelValue'),
-//   getFileInfo: props.fileHandlers?.getFileInfo,
-// })
 
 function handleFileDrop(files: File[], position: number) {
   if (!editor.value || !files.length || !fileEnabled.value)
