@@ -1,12 +1,21 @@
 <!doctype html>
-<html lang="">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>软工智库</title>
-    <!-- TODO: 缺少icons -->
     <link rel="manifest" href="/manifest.json" />
+
+    <!-- DNS 预解析和预连接，优化 API 请求性能 -->
+    <link rel="dns-prefetch" href="//localhost:3002" />
+    <link rel="dns-prefetch" href="//localhost:3003" />
+    <link rel="preconnect" href="http://localhost:3002" crossorigin />
+    <link rel="preconnect" href="http://localhost:3003" crossorigin />
+
+    <!-- 预加载关键资源 -->
+    <link rel="modulepreload" href="/src/main.ts" />
+    <link rel="modulepreload" href="/src/router/index.ts" />
   </head>
 
   <body>

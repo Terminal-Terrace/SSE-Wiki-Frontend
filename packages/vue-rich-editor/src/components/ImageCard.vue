@@ -215,6 +215,8 @@ function handleAlignChange(align: any) {
           :style="displayStyle"
           class="rounded-lg border bg-muted object-contain"
           :class="{ 'pointer-events-none': isResizing }"
+          loading="lazy"
+          decoding="async"
           @load="handleImageLoad"
         >
 

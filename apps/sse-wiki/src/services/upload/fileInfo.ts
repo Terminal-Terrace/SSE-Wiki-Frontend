@@ -11,6 +11,33 @@ export interface FileInfo {
   missing?: boolean // 文件是否已失效/删除
 }
 
+// 后端返回的文件信息结构
+interface BackendFileInfo {
+  id: string
+  name: string
+  size: number
+  mimeType: string
+  url: string
+  category: FileInfo['category']
+  missing: boolean
+}
+
+/**
+ * 将后端返回的字段映射为前端 FileInfo 格式
+ */
+function mapBackendFileInfo(item: BackendFileInfo): FileInfo {
+  return {
+    fileId: item.id,
+    fileName: item.name,
+    fileSize: item.size,
+    mimeType: item.mimeType,
+    url: item.url,
+    category: item.category,
+    status: 'uploaded',
+    missing: item.missing,
+  }
+}
+
 /**
  * 批量获取文件信息
  * @param fileIds 文件ID数组
@@ -19,17 +46,17 @@ export interface FileInfo {
 export async function batchGetFileInfo(fileIds: string[]): Promise<FileInfo[]> {
   const res = await request.post('/api/v1/files/batch-info', { fileIds }) as any
 
-  // 后端约定：返回结构为 { files: FileInfo[] }
+  // 提取文件数组
+  let files: BackendFileInfo[] = []
   if (Array.isArray(res))
-    return res as FileInfo[]
+    files = res
+  else if (Array.isArray(res?.files))
+    files = res.files
+  else if (Array.isArray(res?.data?.files))
+    files = res.data.files
 
-  if (Array.isArray(res?.files))
-    return res.files as FileInfo[]
-
-  if (Array.isArray(res?.data?.files))
-    return res.data.files as FileInfo[]
-
-  return []
+  // 映射字段名
+  return files.map(mapBackendFileInfo)
 }
 
 /**

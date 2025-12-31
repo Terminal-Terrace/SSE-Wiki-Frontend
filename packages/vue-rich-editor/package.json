@@ -1,0 +1,50 @@
+{
+  "name": "@sse-wiki/vue-rich-editor",
+  "type": "module",
+  "version": "0.0.1",
+  "description": "Vue 3 rich text editor component based on TipTap",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./styles": "./dist/style.css"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "type-check": "vue-tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@sse-wiki/ui": "workspace:*",
+    "@tiptap/core": "^3.7.0",
+    "@tiptap/vue-3": "^3.7.0",
+    "vue": "^3.5.0"
+  },
+  "dependencies": {
+    "@tiptap/extension-code-block-lowlight": "^3.7.2",
+    "@tiptap/extension-link": "^3.7.2",
+    "@tiptap/extension-placeholder": "^3.7.2",
+    "@tiptap/extension-typography": "^3.7.2",
+    "@tiptap/pm": "^3.7.0",
+    "@tiptap/starter-kit": "^3.7.0",
+    "highlight.js": "^11.11.1",
+    "lowlight": "^3.3.0",
+    "lucide-vue-next": "^0.544.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.3",
+    "@vitejs/plugin-vue": "^5.1.1",
+    "typescript": "^5.9.2",
+    "vite": "^5.4.2",
+    "vite-plugin-dts": "^3.9.1",
+    "vue": "^3.5.18",
+    "vue-tsc": "^3.0.4"
+  }
+}

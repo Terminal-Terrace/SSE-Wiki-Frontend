@@ -5,8 +5,8 @@
 import type { Component } from 'vue'
 import { Node } from '@tiptap/core'
 import { VueNodeViewRenderer } from '@tiptap/vue-3'
-import { createPlaceholder } from '@/utils/editor/filePlaceholder'
 import FileCardComponent from '../components/FileCard.vue'
+import { createPlaceholder } from '../utils/filePlaceholder'
 
 export interface FileCardAttrs {
   fileId: string

@@ -2,16 +2,45 @@
  * 内容水合工具
  * 将包含占位符的纯文本内容转换为包含完整文件卡片的富文本
  */
-import type { FileInfo } from '@/services/upload/fileInfo'
-import { batchGetFileInfo, getCategoryFromMimeType } from '@/services/upload/fileInfo'
+import type { FileInfo } from '../types'
+import { fileInfoCache } from './fileInfoCache'
 import { extractFileIds, parsePlaceholders } from './filePlaceholder'
 
 /**
+ * 从 MIME 类型获取文件分类
+ */
+function getCategoryFromMimeType(mimeType: string): FileInfo['category'] {
+  if (mimeType.startsWith('image/'))
+    return 'image'
+  if (mimeType.startsWith('video/'))
+    return 'video'
+  if (mimeType.startsWith('audio/'))
+    return 'audio'
+  if (mimeType.includes('pdf') || mimeType.includes('document') || mimeType.includes('word') || mimeType.includes('excel') || mimeType.includes('powerpoint'))
+    return 'document'
+  if (mimeType.includes('zip') || mimeType.includes('rar') || mimeType.includes('tar') || mimeType.includes('gzip'))
+    return 'archive'
+  if (mimeType.includes('javascript') || mimeType.includes('typescript') || mimeType.includes('json') || mimeType.includes('xml') || mimeType.includes('html') || mimeType.includes('css') || mimeType.includes('python') || mimeType.includes('java') || mimeType.includes('c++') || mimeType.includes('c#') || mimeType.includes('go') || mimeType.includes('rust') || mimeType.includes('php') || mimeType.includes('ruby') || mimeType.includes('swift') || mimeType.includes('kotlin') || mimeType.includes('shell') || mimeType.includes('bash') || mimeType.includes('sql'))
+    return 'code'
+  return 'other'
+}
+
+/**
  * 水合内容：将占位符替换为 file-card 节点
+ * 使用缓存避免重复请求已获取的文件信息
  * @param content 包含占位符的内容
+ * @param getFileInfo 批量获取文件信息的函数（可选）
  * @returns 水合后的内容（包含 file-card HTML）
  */
-export async function hydrateContent(content: string): Promise<string> {
+export async function hydrateContent(
+  content: string,
+  getFileInfo?: (fileIds: string[]) => Promise<FileInfo[]>,
+): Promise<string> {
+  // 如果没有提供 getFileInfo，直接返回原始内容
+  if (!getFileInfo) {
+    return content
+  }
+
   // 1. 提取所有文件ID
   const fileIds = extractFileIds(content)
 
@@ -20,21 +49,35 @@ export async function hydrateContent(content: string): Promise<string> {
   }
 
   try {
-    // 2. 批量获取文件信息（已由 batchGetFileInfo 解包为 FileInfo[]）
-    const fileInfoList = await batchGetFileInfo(fileIds)
+    // 2. 检查缓存，找出需要请求的文件ID
+    const cachedInfoMap = fileInfoCache.getMany(fileIds)
+    const uncachedIds = fileIds.filter(id => !cachedInfoMap.has(id))
 
-    // 3. 创建文件ID到文件信息的映射
-    const fileInfoMap = new Map<string, FileInfo>()
-    for (const fileInfo of fileInfoList) {
-      if (!fileInfo?.fileId)
-        continue
-      fileInfoMap.set(fileInfo.fileId, fileInfo)
+    // 3. 只请求缓存中不存在的文件ID
+    let newFileInfoList: FileInfo[] = []
+    if (uncachedIds.length > 0) {
+      newFileInfoList = await getFileInfo(uncachedIds)
+
+      // 4. 将新获取的文件信息存入缓存
+      for (const fileInfo of newFileInfoList) {
+        if (fileInfo?.fileId) {
+          fileInfoCache.set(fileInfo.fileId, fileInfo)
+        }
+      }
     }
 
-    // 4. 解析所有占位符
+    // 5. 合并缓存和新获取的文件信息
+    const fileInfoMap = new Map<string, FileInfo>(cachedInfoMap)
+    for (const fileInfo of newFileInfoList) {
+      if (fileInfo?.fileId) {
+        fileInfoMap.set(fileInfo.fileId, fileInfo)
+      }
+    }
+
+    // 6. 解析所有占位符
     const placeholders = parsePlaceholders(content)
 
-    // 5. 替换占位符为 file-card HTML
+    // 7. 替换占位符为 file-card HTML
     let hydratedContent = content
 
     // 从后往前替换，避免索引偏移问题
@@ -87,7 +130,7 @@ function createFileCard(
   fileInfo: FileInfo,
   layout?: { width?: number | undefined, height?: number | undefined, align?: 'left' | 'center' | 'right' | undefined },
 ): string {
-  const category = getCategoryFromMimeType(fileInfo.mimeType)
+  const category = fileInfo.category || getCategoryFromMimeType(fileInfo.mimeType)
 
   const layoutAttrs: string[] = []
   if (layout?.width)

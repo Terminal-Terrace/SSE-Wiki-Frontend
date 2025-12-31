@@ -110,7 +110,7 @@ export function parsePlaceholders(content: string): FilePlaceholder[] {
       id,
       name,
       match: fullMatch,
-      index: match.index,
+      index: match.index!,
       width,
       height,
       align,

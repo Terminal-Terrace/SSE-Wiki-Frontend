@@ -1,0 +1,73 @@
+/**
+ * @sse-wiki/vue-rich-editor 默认样式
+ * 使用 CSS 变量支持主题定制
+ */
+
+:root {
+  /* 编辑器基础样式 */
+  --vre-editor-bg: #ffffff;
+  --vre-editor-border: #e5e7eb;
+  --vre-editor-border-focus: #3b82f6;
+  --vre-editor-text: #1f2937;
+  --vre-editor-placeholder: #9ca3af;
+
+  /* 工具栏样式 */
+  --vre-toolbar-bg: #f9fafb;
+  --vre-toolbar-border: #e5e7eb;
+  --vre-toolbar-btn-hover: #e5e7eb;
+  --vre-toolbar-btn-active: #dbeafe;
+
+  /* 文件卡片样式 */
+  --vre-file-card-bg: #f3f4f6;
+  --vre-file-card-border: #e5e7eb;
+  --vre-file-card-hover: #e5e7eb;
+
+  /* 上传进度样式 */
+  --vre-upload-progress-bg: #ffffff;
+  --vre-upload-progress-bar: #3b82f6;
+  --vre-upload-error: #ef4444;
+  --vre-upload-success: #22c55e;
+}
+
+/* 编辑器容器 */
+.vre-rich-editor {
+  background-color: var(--vre-editor-bg);
+  border-color: var(--vre-editor-border);
+}
+
+.vre-rich-editor:focus-within {
+  border-color: var(--vre-editor-border-focus);
+}
+
+/* 工具栏 */
+.vre-toolbar {
+  background-color: var(--vre-toolbar-bg);
+  border-bottom-color: var(--vre-toolbar-border);
+}
+
+/* 文件卡片 */
+.vre-file-card {
+  background-color: var(--vre-file-card-bg);
+  border-color: var(--vre-file-card-border);
+}
+
+.vre-file-card:hover {
+  background-color: var(--vre-file-card-hover);
+}
+
+/* 上传进度 */
+.vre-upload-progress {
+  background-color: var(--vre-upload-progress-bg);
+}
+
+.vre-upload-progress-bar {
+  background-color: var(--vre-upload-progress-bar);
+}
+
+.vre-upload-error {
+  color: var(--vre-upload-error);
+}
+
+.vre-upload-success {
+  color: var(--vre-upload-success);
+}
