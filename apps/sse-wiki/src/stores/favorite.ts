@@ -30,7 +30,7 @@ export const useFavoriteStore = defineStore('favorite', () => {
 
     try {
       const resp = await articleApi.getUserFavourites(authStore.user.id)
-      const ids = resp.article_id || []
+      const ids = resp.articleId || []
       favoriteIds.value = new Set(ids)
       initialized.value = true
     }

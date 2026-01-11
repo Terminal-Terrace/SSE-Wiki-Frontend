@@ -4,8 +4,15 @@ import type { Page } from '@/types'
 // 模拟数据：添加多个示例文章用于本地开发和测试
 const mockPages: Record<string, Page> = {
   1: {
-    id: '1',
+    id: 1,
+    currentVersionId: 1,
     title: '示例文章 — 欢迎页',
+    moduleId: 1,
+    createdBy: 1,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
+    updatedAt: new Date().toISOString(),
+    isReviewRequired: false,
+    viewCount: 123,
     content: `# 欢迎使用 SSE Wiki
 
 这是一个示例文章页面，用于展示文章详情页的渲染效果。
@@ -26,16 +33,11 @@ const mockPages: Record<string, Page> = {
 ### 更多功能
 
 待完善...`,
-    lastEditedAt: new Date().toISOString(),
     editor: {
       id: '1',
       username: '管理员',
     },
-    viewCount: 123,
-    tags: [
-      { id: '1', name: '示例' },
-      { id: '2', name: '文档' },
-    ],
+    tags: ['示例', '文档'],
     versions: [
       {
         id: '1',
@@ -48,8 +50,15 @@ const mockPages: Record<string, Page> = {
   },
 
   2: {
-    id: '2',
+    id: 2,
+    currentVersionId: 1,
     title: '部署指南 — 将 SSE 部署到 Cloudflare Workers',
+    moduleId: 1,
+    createdBy: 2,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 14).toISOString(),
+    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+    isReviewRequired: false,
+    viewCount: 452,
     content: `# 部署指南
 
 本文档介绍如何将 SSE Wiki 前端部署到 Cloudflare Workers（Pages/Workers）或其他静态托管服务。
@@ -71,18 +80,23 @@ const mockPages: Record<string, Page> = {
 ## 注意事项
 
 - 请确保正确设置环境变量，例如 API 地址和 Auth 配置。`,
-    lastEditedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
     editor: { id: '2', username: 'devops' },
-    viewCount: 452,
-    tags: [{ id: '3', name: '部署' }, { id: '4', name: '运维' }],
+    tags: ['部署', '运维'],
     versions: [
       { id: '1', commitMessage: '添加部署说明', editor: 'devops', timestamp: new Date().toISOString(), content: '初始部署文档' },
     ],
   },
 
   3: {
-    id: '3',
+    id: 3,
+    currentVersionId: null,
     title: 'Markdown 使用指南',
+    moduleId: 1,
+    createdBy: 3,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
+    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
+    isReviewRequired: false,
+    viewCount: 980,
     content: `# Markdown 使用指南
 
 本文汇总常用的 Markdown 语法示例，便于在编辑器中撰写文档。
@@ -107,16 +121,21 @@ console.log('hello')
 [SSE Wiki](https://example.com)
 
 ![示例图片](https://via.placeholder.com/300)`,
-    lastEditedAt: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
     editor: { id: '3', username: 'writer' },
-    viewCount: 980,
-    tags: [{ id: '5', name: '写作' }, { id: '6', name: 'Markdown' }],
+    tags: ['写作', 'Markdown'],
     versions: [],
   },
 
   4: {
-    id: '4',
+    id: 4,
+    currentVersionId: null,
     title: '示例：算法笔记 — 二分查找',
+    moduleId: 2,
+    createdBy: 4,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
+    updatedAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
+    isReviewRequired: true,
+    viewCount: 204,
     content: `# 二分查找
 
 二分查找是一种在有序数组中查找目标值的算法，时间复杂度为 $O(\log n)$。
@@ -137,16 +156,21 @@ function binarySearch(arr, target) {
 }
 \`\`\`
 `,
-    lastEditedAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
     editor: { id: '4', username: 'algo' },
-    viewCount: 204,
-    tags: [{ id: '7', name: '算法' }],
+    tags: ['算法'],
     versions: [],
   },
 
   5: {
-    id: '5',
+    id: 5,
+    currentVersionId: null,
     title: '产品设计 — 用户体验要点',
+    moduleId: 2,
+    createdBy: 5,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString(),
+    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
+    isReviewRequired: false,
+    viewCount: 76,
     content: `# 用户体验要点
 
 本文总结一些常见的 UX 原则，帮助编写文档和设计页面时的决策。
@@ -161,10 +185,8 @@ function binarySearch(arr, target) {
 
 - 表单校验应在用户离开输入框或提交时给出清晰提示
 `,
-    lastEditedAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
     editor: { id: '5', username: 'designer' },
-    viewCount: 76,
-    tags: [{ id: '8', name: '设计' }, { id: '9', name: 'UX' }],
+    tags: ['设计', 'UX'],
     versions: [],
   },
 }
@@ -197,7 +219,7 @@ export const mockApi = {
 
     // 更新页面内容
     page.content = content
-    page.lastEditedAt = new Date().toISOString()
+    page.updatedAt = new Date().toISOString()
 
     // 添加新版本
     if (!page.versions) {
@@ -206,7 +228,7 @@ export const mockApi = {
     page.versions.unshift({
       id: String(page.versions.length + 1),
       commitMessage,
-      editor: page.editor.username,
+      editor: page.editor?.username || 'unknown',
       timestamp: new Date().toISOString(),
       content,
     })

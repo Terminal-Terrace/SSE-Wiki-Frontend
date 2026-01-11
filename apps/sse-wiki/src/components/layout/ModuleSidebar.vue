@@ -96,7 +96,7 @@ async function enterEditMode() {
     }
     else {
       // 锁被其他用户占用
-      const lockedBy = response.locked_by?.username || '其他用户'
+      const lockedBy = response.lockedBy?.username || '其他用户'
       toast({
         title: '无法进入编辑模式',
         description: `当前导航栏正在被 ${lockedBy} 编辑中，请稍后再试。`,

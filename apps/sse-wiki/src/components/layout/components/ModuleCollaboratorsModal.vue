@@ -6,7 +6,6 @@
 import type { ModuleModalState } from '@/types/module'
 import { computed } from 'vue'
 import CollaboratorsModal from '@/components/common/CollaboratorsModal.vue'
-import { moduleApi } from '@/services/moduleApi'
 
 interface Props {
   modalState: ModuleModalState
@@ -32,29 +31,7 @@ const isOpen = computed({
 const targetModule = computed(() => props.modalState.targetModule)
 
 const moduleId = computed(() => targetModule.value?.id || 0)
-const moduleName = computed(() => targetModule.value?.name || targetModule.value?.module_name || '')
-
-// API 方法
-async function fetchCollaborators() {
-  if (!moduleId.value)
-    return []
-  return moduleApi.getModerators(moduleId.value)
-}
-
-async function addCollaborator(userId: number, role: string) {
-  if (!moduleId.value)
-    throw new Error('模块ID无效')
-  await moduleApi.addModerator(moduleId.value, {
-    user_id: userId,
-    role: role as 'admin' | 'moderator',
-  })
-}
-
-async function removeCollaborator(userId: number) {
-  if (!moduleId.value)
-    throw new Error('模块ID无效')
-  await moduleApi.removeModerator(moduleId.value, userId)
-}
+const moduleName = computed(() => targetModule.value?.moduleName || '')
 
 function handleSuccess() {
   emit('success')
@@ -67,9 +44,6 @@ function handleSuccess() {
     resource-type="module"
     :resource-id="moduleId"
     :resource-name="moduleName"
-    :fetch-collaborators="fetchCollaborators"
-    :add-collaborator="addCollaborator"
-    :remove-collaborator="removeCollaborator"
     @success="handleSuccess"
   />
 </template>

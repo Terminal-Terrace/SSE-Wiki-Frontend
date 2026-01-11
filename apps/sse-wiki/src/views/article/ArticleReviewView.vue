@@ -54,8 +54,8 @@ const canReview = computed(() => {
     return false
   }
 
-  // 从 article.current_user_role 读取用户角色
-  const userRole = reviewData.value.article?.current_user_role
+  // 从 article.currentUserRole 读取用户角色
+  const userRole = reviewData.value.article?.currentUserRole
   return userRole === 'admin' || userRole === 'moderator'
 })
 
@@ -78,27 +78,27 @@ const isReadOnly = computed(() => {
 
 // 提交者信息
 const submitterName = computed(() => {
-  return reviewData.value?.submission?.submitter?.username || `用户${reviewData.value?.submission?.submitted_by || '未知'}`
+  return reviewData.value?.submission?.submitter?.username || `用户${reviewData.value?.submission?.submittedBy || '未知'}`
 })
 
 // 提交说明
 const commitMessage = computed(() => {
-  return reviewData.value?.proposed_version?.commit_message || '未命名提交'
+  return reviewData.value?.proposedVersion?.commitMessage || '未命名提交'
 })
 
 // 提交时间
 const createdAt = computed(() => {
-  return reviewData.value?.submission?.created_at || ''
+  return reviewData.value?.submission?.createdAt || ''
 })
 
 // 基础版本号
 const baseVersionNumber = computed(() => {
-  return reviewData.value?.base_version?.version_number || 0
+  return reviewData.value?.baseVersion?.versionNumber || 0
 })
 
 // 当前版本号
 const currentVersionNumber = computed(() => {
-  return reviewData.value?.current_version?.version_number || 0
+  return reviewData.value?.currentVersion?.versionNumber || 0
 })
 
 // 状态Badge
@@ -136,29 +136,25 @@ async function loadReviewData() {
     const data = await articleApi.getReview(props.submissionId)
     reviewData.value = data
 
-    // 如果检测到冲突，直接显示 ThreeWayMerge（不管是否已有 conflict_data）
-    const hasConflict = data.submission?.has_conflict || data.conflict_data
+    // 如果检测到冲突，从版本对象获取内容构建三路合并数据
+    const hasConflict = data.submission?.hasConflict || data.conflictData?.hasConflict
     if (hasConflict) {
-      // 如果后端已经返回了 conflict_data，直接使用
-      if (data.conflict_data) {
-        conflictData.value = data.conflict_data
-      }
-      else {
-        // 如果只有 has_conflict 标记但没有 conflict_data，手动构建
-        // 这种情况下后端应该总是返回 conflict_data，但为了兼容性保留构建逻辑
+      // 从版本对象获取内容，从 conflictData 获取元数据
+      const conflictMeta = data.conflictData
+      if (conflictMeta) {
         conflictData.value = {
-          has_conflict: true,
-          base_content: data.base_version?.content || '',
-          their_content: data.proposed_version?.content || '',
-          our_content: data.current_version?.content || '',
-          merged_content: undefined,
-          base_version_number: data.base_version?.version_number,
-          their_version_number: data.proposed_version?.version_number,
-          our_version_number: data.current_version?.version_number,
-          submitter_name: data.submission?.submitter?.username,
+          hasConflict: true,
+          baseContent: data.baseVersion?.content || '',
+          theirContent: data.proposedVersion?.content || '',
+          ourContent: data.currentVersion?.content || '',
+          mergedContent: undefined,
+          baseVersionNumber: conflictMeta.baseVersionNumber || data.baseVersion?.versionNumber,
+          theirVersionNumber: data.proposedVersion?.versionNumber,
+          ourVersionNumber: conflictMeta.currentVersionNumber || data.currentVersion?.versionNumber,
+          submitterName: conflictMeta.submitterName || data.submission?.submitter?.username,
         }
+        showConflict.value = true
       }
-      showConflict.value = true
     }
   }
   catch (error: any) {
@@ -201,9 +197,20 @@ async function handleApprove() {
   catch (error: any) {
     // 检查是否为冲突错误（409）
     if (error.response?.status === 409) {
-      const conflictDataFromError = error.response?.data?.data?.conflict_data
-      if (conflictDataFromError) {
-        conflictData.value = conflictDataFromError
+      const conflictMeta = error.response?.data?.data?.conflictData
+      if (conflictMeta && reviewData.value) {
+        // 从版本对象获取内容，从 conflictData 获取元数据
+        conflictData.value = {
+          hasConflict: true,
+          baseContent: reviewData.value.baseVersion?.content || '',
+          theirContent: reviewData.value.proposedVersion?.content || '',
+          ourContent: reviewData.value.currentVersion?.content || '',
+          mergedContent: undefined,
+          baseVersionNumber: conflictMeta.baseVersionNumber || reviewData.value.baseVersion?.versionNumber,
+          theirVersionNumber: reviewData.value.proposedVersion?.versionNumber,
+          ourVersionNumber: conflictMeta.currentVersionNumber || reviewData.value.currentVersion?.versionNumber,
+          submitterName: conflictMeta.submitterName || reviewData.value.submission?.submitter?.username,
+        }
         showConflict.value = true
         toast({
           title: '检测到冲突',
@@ -300,7 +307,7 @@ async function handleConflictResolve(mergedContent: string, notes?: string) {
     // 使用解决后的内容重新提交审核
     await articleApi.reviewSubmission(props.submissionId, {
       action: 'approve',
-      merged_content: mergedContent,
+      mergedContent,
       notes: notes || reviewNotes.value || undefined,
     })
 
@@ -417,17 +424,17 @@ onMounted(() => {
             </TooltipWrapper>
           </div>
 
-          <div v-if="reviewData.submission?.has_conflict" class="flex items-center gap-2 text-destructive text-sm">
+          <div v-if="reviewData.submission?.hasConflict" class="flex items-center gap-2 text-destructive text-sm">
             <XCircle class="h-4 w-4" />
             <span>检测到冲突，需要手动解决</span>
           </div>
 
-          <div v-if="reviewData.submission?.review_notes" class="pt-3 border-t">
+          <div v-if="reviewData.submission?.reviewNotes" class="pt-3 border-t">
             <p class="text-sm text-muted-foreground mb-1">
               审核备注
             </p>
             <p class="text-sm">
-              {{ reviewData.submission.review_notes }}
+              {{ reviewData.submission.reviewNotes }}
             </p>
           </div>
         </div>
@@ -444,13 +451,13 @@ onMounted(() => {
         />
       </div>
 
-      <div v-else-if="reviewData.base_version && reviewData.proposed_version" class="bg-muted/50 border border-border rounded-lg p-6">
+      <div v-else-if="reviewData.baseVersion && reviewData.proposedVersion" class="bg-muted/50 border border-border rounded-lg p-6">
         <h2 class="text-lg font-semibold mb-4">
           内容对比
         </h2>
         <ComparisonPanel
-          :old-content="reviewData.base_version.content"
-          :new-content="reviewData.proposed_version.content"
+          :old-content="reviewData.baseVersion.content"
+          :new-content="reviewData.proposedVersion.content"
           :old-label="`Base v${baseVersionNumber}`"
           new-label="提交版本"
         />

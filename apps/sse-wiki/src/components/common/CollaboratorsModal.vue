@@ -32,16 +32,18 @@ import {
 } from '@sse-wiki/ui'
 import { Loader2, Plus, Search, Trash2, User, Users, X } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
+import { articleApi } from '@/services/articleApi'
+import { moduleApi } from '@/services/moduleApi'
 import { userApi } from '@/services/userApi'
 import { formatSimpleDate, getAvatarFallback, getRoleLabel, useDebounceFn } from '@/utils/format'
 
 // 协作者信息接口
 export interface Collaborator {
-  user_id: number
+  userId: number
   username?: string
   avatar?: string
   role: string
-  created_at: string
+  createdAt: string
 }
 
 // 角色选项接口
@@ -65,12 +67,6 @@ interface Props {
   roleOptions?: RoleOption[]
   /** 文章创建者ID（仅文章类型使用，用于标识作者） */
   createdBy?: number | null
-  /** 获取协作者列表的函数 */
-  fetchCollaborators: () => Promise<Collaborator[]>
-  /** 添加协作者的函数 */
-  addCollaborator: (userId: number, role: string) => Promise<void>
-  /** 移除协作者的函数 */
-  removeCollaborator: (userId: number) => Promise<void>
 }
 
 interface Emits {
@@ -157,7 +153,7 @@ const debouncedSearch = useDebounceFn(async (keyword: string) => {
     const response = await userApi.searchUsers({
       keyword: keyword.trim(),
       page: 1,
-      page_size: 10,
+      pageSize: 10,
     })
     searchResults.value = response.users || []
     showSearchResults.value = true
@@ -199,10 +195,37 @@ watch(availableRoles, (roles) => {
 
 // 加载协作者列表
 async function loadCollaborators() {
+  if (!props.resourceId) {
+    collaborators.value = []
+    return
+  }
+
   try {
     isLoadingCollaborators.value = true
-    const data = await props.fetchCollaborators()
-    collaborators.value = data || []
+    let data: Collaborator[] = []
+
+    if (props.resourceType === 'article') {
+      const collaborators = await articleApi.getCollaborators(props.resourceId)
+      data = (collaborators || []).map(c => ({
+        userId: c.userId,
+        username: c.username,
+        avatar: c.avatar,
+        role: c.role,
+        createdAt: c.createdAt,
+      }))
+    }
+    else if (props.resourceType === 'module') {
+      const moderators = await moduleApi.getModerators(props.resourceId)
+      data = (moderators || []).map(m => ({
+        userId: m.userId,
+        username: m.username,
+        avatar: m.avatar,
+        role: m.role,
+        createdAt: m.createdAt,
+      }))
+    }
+
+    collaborators.value = data
   }
   catch (error) {
     console.error('加载协作者列表失败:', error)
@@ -236,11 +259,17 @@ function openRemoveDialog(collaborator: Collaborator) {
 
 // 移除协作者
 async function confirmRemoveCollaborator() {
-  if (!collaboratorToRemove.value)
+  if (!collaboratorToRemove.value || !props.resourceId)
     return
 
   try {
-    await props.removeCollaborator(collaboratorToRemove.value.user_id)
+    if (props.resourceType === 'article') {
+      await articleApi.removeCollaborator(props.resourceId, collaboratorToRemove.value.userId)
+    }
+    else if (props.resourceType === 'module') {
+      await moduleApi.removeModerator(props.resourceId, collaboratorToRemove.value.userId)
+    }
+
     await loadCollaborators()
 
     toast({
@@ -271,7 +300,7 @@ async function handleAddCollaborator() {
 
   // 检查是否已经是协作者
   const existingCollaborator = collaborators.value.find(
-    c => c.user_id === selectedUser.value!.id,
+    c => c.userId === selectedUser.value!.id,
   )
   if (existingCollaborator) {
     addError.value = '该用户已是协作者'
@@ -281,7 +310,18 @@ async function handleAddCollaborator() {
   try {
     isAddingCollaborator.value = true
 
-    await props.addCollaborator(selectedUser.value.id, newCollaboratorRole.value)
+    if (props.resourceType === 'article') {
+      await articleApi.addCollaborator(props.resourceId, {
+        userId: selectedUser.value.id,
+        role: newCollaboratorRole.value as 'admin' | 'moderator',
+      })
+    }
+    else if (props.resourceType === 'module') {
+      await moduleApi.addModerator(props.resourceId, {
+        userId: selectedUser.value.id,
+        role: newCollaboratorRole.value as 'admin' | 'moderator',
+      })
+    }
 
     resetForm()
     await loadCollaborators()
@@ -327,7 +367,7 @@ function canRemove(_collaborator: Collaborator) {
 
 // 判断协作者是否是作者
 function isAuthor(collaborator: Collaborator): boolean {
-  return props.resourceType === 'article' && props.createdBy != null && collaborator.user_id === props.createdBy
+  return props.resourceType === 'article' && props.createdBy != null && collaborator.userId === props.createdBy
 }
 
 // 获取协作者的显示角色标签
@@ -492,7 +532,7 @@ function getCollaboratorRoleLabel(collaborator: Collaborator): string {
             <div v-else class="space-y-2">
               <div
                 v-for="collaborator in collaborators"
-                :key="collaborator.user_id"
+                :key="collaborator.userId"
                 class="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
               >
                 <div class="flex items-center gap-3">
@@ -504,7 +544,7 @@ function getCollaboratorRoleLabel(collaborator: Collaborator): string {
                   </Avatar>
                   <div>
                     <p class="font-medium">
-                      {{ collaborator.username || `用户 ${collaborator.user_id}` }}
+                      {{ collaborator.username || `用户 ${collaborator.userId}` }}
                     </p>
                     <div class="flex items-center gap-2">
                       <span
@@ -518,7 +558,7 @@ function getCollaboratorRoleLabel(collaborator: Collaborator): string {
                         {{ getCollaboratorRoleLabel(collaborator) }}
                       </span>
                       <span class="text-xs text-muted-foreground">
-                        {{ formatSimpleDate(collaborator.created_at) }}
+                        {{ formatSimpleDate(collaborator.createdAt) }}
                       </span>
                     </div>
                   </div>

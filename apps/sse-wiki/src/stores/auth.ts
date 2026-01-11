@@ -40,9 +40,9 @@ export const useAuthStore = defineStore('auth', () => {
   async function checkLoginStatus() {
     try {
       const userInfo = await AuthAPI.getMe()
-      // 将后端返回的 user_id 转换为 id
+      // userInfo 已经通过 toCamelCase 转换，使用 userId
       user.value = {
-        id: userInfo.user_id,
+        id: userInfo.userId,
         username: userInfo.username,
         email: userInfo.email,
         role: userInfo.role,

@@ -56,7 +56,7 @@ function formatDate(date: string) {
  * @returns 提交信息或默认文本
  */
 function getTitle(entry: HistoryEntry): string {
-  return entry.commit_message || '未命名修改'
+  return entry.commitMessage || '未命名修改'
 }
 
 /**
@@ -65,8 +65,8 @@ function getTitle(entry: HistoryEntry): string {
  * @returns 格式化的作者和操作类型文本
  */
 function getSubtitle(entry: HistoryEntry): string {
-  const author = entry.author?.username || `用户${entry.author_id}`
-  return `由 ${author} ${entry.entry_type === 'submission' ? '提交' : '编辑'}`
+  const author = entry.author?.username || `用户${entry.authorId}`
+  return `由 ${author} ${entry.entryType === 'submission' ? '提交' : '编辑'}`
 }
 
 /**
@@ -75,7 +75,7 @@ function getSubtitle(entry: HistoryEntry): string {
  * @returns 如果是当前版本返回 true
  */
 function isCurrent(entry: HistoryEntry): boolean {
-  return entry.entry_type === 'version' && entry.version_id === currentVersionId.value
+  return entry.entryType === 'version' && entry.versionId === currentVersionId.value
 }
 
 /**
@@ -84,10 +84,10 @@ function isCurrent(entry: HistoryEntry): boolean {
  * @returns Badge 配置对象或 null
  */
 function getBadgeConfig(entry: HistoryEntry) {
-  if (entry.entry_type === 'submission' && entry.submission_status) {
-    return getSubmissionStatusConfig(entry.submission_status)
+  if (entry.entryType === 'submission' && entry.submissionStatus) {
+    return getSubmissionStatusConfig(entry.submissionStatus)
   }
-  if (entry.entry_type === 'version' && entry.status) {
+  if (entry.entryType === 'version' && entry.status) {
     return getVersionStatusConfig(entry.status)
   }
   return null
@@ -99,7 +99,7 @@ function getBadgeConfig(entry: HistoryEntry) {
  * @returns Tooltip 文本
  */
 function getStatusTooltip(entry: HistoryEntry): string {
-  if (entry.entry_type === 'submission' && entry.submission_status) {
+  if (entry.entryType === 'submission' && entry.submissionStatus) {
     const tooltips: Record<string, string> = {
       pending: '等待管理员审核通过',
       conflict_detected: '与当前版本存在冲突，需要手动解决',
@@ -107,9 +107,9 @@ function getStatusTooltip(entry: HistoryEntry): string {
       rejected: '审核未通过',
       auto_published: '自动发布（作者有直接发布权限）',
     }
-    return tooltips[entry.submission_status] || '未知状态'
+    return tooltips[entry.submissionStatus] || '未知状态'
   }
-  if (entry.entry_type === 'version' && entry.status) {
+  if (entry.entryType === 'version' && entry.status) {
     const tooltips: Record<string, string> = {
       published: '已发布的正式版本',
       draft: '草稿状态',
@@ -127,13 +127,13 @@ function getStatusTooltip(entry: HistoryEntry): string {
  */
 function getActionButton(entry: HistoryEntry): { text: string, variant: 'default' | 'outline' } {
   // 提交类型
-  if (entry.entry_type === 'submission') {
+  if (entry.entryType === 'submission') {
     // 有审核权限
     if (canReview.value) {
-      if (entry.submission_status === 'pending') {
+      if (entry.submissionStatus === 'pending') {
         return { text: '审核', variant: 'default' }
       }
-      if (entry.submission_status === 'conflict_detected') {
+      if (entry.submissionStatus === 'conflict_detected') {
         return { text: '继续审核', variant: 'default' }
       }
     }
@@ -160,15 +160,17 @@ async function loadHistory() {
     const article = await articleApi.getArticle(props.pageId)
 
     // 保存当前用户角色和当前版本ID
-    currentUserRole.value = article.current_user_role || null
-    currentVersionId.value = article.current_version_id
+    currentUserRole.value = article.currentUserRole || null
+    currentVersionId.value = article.currentVersionId ?? null
 
     // 使用统一的 history 字段
     if (article.history && article.history.length > 0) {
       // 按时间倒序排序（最新的在前）
-      historyItems.value = [...article.history].sort((a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      )
+      historyItems.value = [...article.history].sort((a, b) => {
+        const timeA = new Date(a.createdAt || '').getTime()
+        const timeB = new Date(b.createdAt || '').getTime()
+        return timeB - timeA
+      })
     }
     else {
       historyItems.value = []
@@ -189,12 +191,12 @@ async function loadHistory() {
  * @param entry - 被点击的历史条目
  */
 function handleAction(entry: HistoryEntry) {
-  if (entry.entry_type === 'submission' && entry.submission_id) {
+  if (entry.entryType === 'submission' && entry.submissionId) {
     // 审核或查看提交
-    if (canReview.value && (entry.submission_status === 'pending' || entry.submission_status === 'conflict_detected')) {
+    if (canReview.value && (entry.submissionStatus === 'pending' || entry.submissionStatus === 'conflict_detected')) {
       // 跳转到审核页面
       router.push({
-        path: `/articles/${props.pageId}/review/${entry.submission_id}`,
+        path: `/articles/${props.pageId}/review/${entry.submissionId}`,
       })
     }
     else {
@@ -202,17 +204,17 @@ function handleAction(entry: HistoryEntry) {
       router.push({
         path: `/articles/${props.pageId}/version`,
         query: {
-          submissionId: String(entry.submission_id),
+          submissionId: String(entry.submissionId),
         },
       })
     }
   }
-  else if (entry.entry_type === 'version' && entry.version_id) {
+  else if (entry.entryType === 'version' && entry.versionId) {
     // 查看版本
     router.push({
       path: `/articles/${props.pageId}/version`,
       query: {
-        versionId: String(entry.version_id),
+        versionId: String(entry.versionId),
       },
     })
   }
@@ -267,7 +269,7 @@ watch(() => props.pageId, () => {
       <div v-else class="space-y-3">
         <Card
           v-for="entry in historyItems"
-          :key="`${entry.entry_type}-${entry.entry_id}`"
+          :key="`${entry.entryType}-${entry.entryId}`"
           class="hover:shadow-md transition-shadow cursor-pointer"
           @click="handleAction(entry)"
         >
@@ -292,14 +294,14 @@ watch(() => props.pageId, () => {
                     </Badge>
                   </TooltipWrapper>
 
-                  <TooltipWrapper v-if="entry.has_conflict" tooltip="此提交与当前版本存在内容冲突，需要审核时手动合并">
+                  <TooltipWrapper v-if="entry.hasConflict" tooltip="此提交与当前版本存在内容冲突，需要审核时手动合并">
                     <Badge variant="destructive" class="cursor-help">
                       有冲突
                     </Badge>
                   </TooltipWrapper>
                 </div>
                 <CardDescription>
-                  {{ getSubtitle(entry) }} 于 {{ formatDate(entry.created_at) }}
+                  {{ getSubtitle(entry) }} 于 {{ formatDate(entry.createdAt) }}
                 </CardDescription>
               </div>
 

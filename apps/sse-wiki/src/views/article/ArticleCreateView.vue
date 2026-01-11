@@ -28,10 +28,10 @@ const { startLogin } = useLoginRedirect()
 // 表单数据
 const EMPTY_FORM: CreateArticleRequest = {
   title: '',
-  module_id: 0,
+  moduleId: 0,
   content: '',
-  commit_message: '',
-  is_review_required: false,
+  commitMessage: '',
+  isReviewRequired: false,
   tags: [],
 }
 
@@ -40,7 +40,7 @@ const formData = ref<CreateArticleRequest>({ ...EMPTY_FORM })
 // 模块信息
 const moduleInfo = ref<Module | null>(null)
 
-const pageTitle = computed(() => moduleInfo.value?.module_name || moduleInfo.value?.name || '未知模块')
+const pageTitle = computed(() => moduleInfo.value?.moduleName || '未知模块')
 
 // 标签输入
 const tagInput = ref('')
@@ -52,13 +52,13 @@ const isLoadingModule = ref(true)
 // 验证
 const trimmedTitle = computed(() => formData.value.title.trim())
 const trimmedContent = computed(() => formData.value.content.trim())
-const trimmedCommitMessage = computed(() => formData.value.commit_message.trim())
+const trimmedCommitMessage = computed(() => formData.value.commitMessage.trim())
 
 const canSubmit = computed(() => (
   trimmedTitle.value !== ''
   && trimmedContent.value !== ''
   && trimmedCommitMessage.value !== ''
-  && formData.value.module_id > 0
+  && formData.value.moduleId > 0
 ))
 
 // 检测是否有未保存的内容
@@ -117,7 +117,7 @@ onMounted(async () => {
     return
   }
 
-  formData.value.module_id = resolvedModuleId
+  formData.value.moduleId = resolvedModuleId
 
   // 加载模块信息
   try {
@@ -307,7 +307,7 @@ function cancelGoBack() {
             </Label>
             <Input
               id="commit-message"
-              v-model="formData.commit_message"
+              v-model="formData.commitMessage"
               placeholder="简要说明本次创建的内容"
               required
               :disabled="isLoading"
@@ -318,7 +318,7 @@ function cancelGoBack() {
           <div class="flex items-center space-x-2">
             <input
               id="review-required"
-              v-model="formData.is_review_required"
+              v-model="formData.isReviewRequired"
               type="checkbox"
               :disabled="isLoading"
               class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
@@ -330,7 +330,7 @@ function cancelGoBack() {
               启用审核流程（勾选后，其他用户的修改需要管理员审核；不勾选则所有修改自动发布）
             </Label>
           </div>
-          <div v-if="!formData.is_review_required" class="text-xs text-amber-600 ml-6">
+          <div v-if="!formData.isReviewRequired" class="text-xs text-amber-600 ml-6">
             ⚠️ 未启用审核，所有用户的修改将自动发布
           </div>
         </CardContent>

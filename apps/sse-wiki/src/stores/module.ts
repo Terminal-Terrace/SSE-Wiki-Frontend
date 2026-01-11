@@ -70,7 +70,7 @@ export const useModuleStore = defineStore('module', () => {
   /**
    * 创建模块
    */
-  async function createModule(data: { name: string, description: string, parent_id?: number }) {
+  async function createModule(data: { name: string, description: string, parentId?: number }) {
     try {
       const newModule = await moduleApi.createModule(data)
 
@@ -87,7 +87,7 @@ export const useModuleStore = defineStore('module', () => {
   /**
    * 更新模块
    */
-  async function updateModule(id: number, data: { name?: string, description?: string, parent_id?: number }) {
+  async function updateModule(id: number, data: { name?: string, description?: string, parentId?: number }) {
     try {
       const updatedModule = await moduleApi.updateModule(id, data)
 
@@ -187,8 +187,8 @@ export const useModuleStore = defineStore('module', () => {
       if (result.success) {
         isEditMode.value = true
         lockInfo.value = {
-          locked_by: result.locked_by,
-          locked_at: result.locked_at,
+          lockedBy: result.lockedBy,
+          lockedAt: result.lockedAt,
         }
       }
 
@@ -208,8 +208,8 @@ export const useModuleStore = defineStore('module', () => {
 
       isEditMode.value = false
       lockInfo.value = {
-        locked_by: null,
-        locked_at: null,
+        lockedBy: null,
+        lockedAt: null,
       }
     }
     catch (err) {
@@ -233,7 +233,7 @@ export const useModuleStore = defineStore('module', () => {
   /**
    * 添加模块协作者
    */
-  async function addModerator(moduleId: number, data: { user_id: number, role: 'admin' | 'moderator' }) {
+  async function addModerator(moduleId: number, data: { userId: number, role: 'admin' | 'moderator' }) {
     try {
       const result = await moduleApi.addModerator(moduleId, data)
       return result

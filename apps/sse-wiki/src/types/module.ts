@@ -1,18 +1,96 @@
 // 模块相关类型定义
 
-export interface Module {
+// ========== BFF 返回的 snake_case 类型（后端契约） ==========
+
+export interface ModuleDTO {
   id: number
   module_name: string
-  name?: string // 用于兼容性，实际使用 module_name
   description: string
   parent_id: number | null
   owner_id: number
   created_at: string
   updated_at: string
+  children?: ModuleDTO[]
+  is_moderator?: boolean
+}
+
+export interface ModuleTreeNodeDTO {
+  id: number
+  name: string
+  module_name?: string
+  description?: string
+  owner_id: number
+  parent_id?: number | null
+  created_at?: string
+  updated_at?: string
+  children: ModuleTreeNodeDTO[]
+  is_moderator?: boolean
+  role?: string
+}
+
+export interface UserDTO {
+  id: number
+  username: string
+  email?: string
+  avatar?: string
+  role?: string
+}
+
+export interface ArticleDTO {
+  id: number
+  module_id: number
+  title: string
+  summary: string
+  content?: string
+  author_id: number
+  author?: UserDTO
+  created_at: string
+  updated_at: string
+  tags?: string[]
+  view_count?: number
+}
+
+export interface ArticleListResponseDTO {
+  total: number
+  page: number
+  page_size: number
+  articles: ArticleDTO[]
+}
+
+export interface BreadcrumbItemDTO {
+  id: number
+  name: string
+}
+
+export interface ModuleModeratorDTO {
+  user_id: number
+  username: string
+  avatar?: string
+  role: 'admin' | 'moderator'
+  created_at: string
+}
+
+export interface NavigationLockDTO {
+  id: number
+  locked_by: number | null
+  locked_at: string | null
+  locked_by_user?: UserDTO
+}
+
+// ========== 前端使用的 camelCase 类型 ==========
+
+export interface Module {
+  id: number
+  moduleName: string
+  description: string
+  parentId: number | null
+  ownerId: number
+  createdAt: string
+  updatedAt: string
   children?: Module[]
 
   // 权限相关
-  isModerator?: boolean // 当前用户是否为该模块的协作者或管理员
+  isModerator?: boolean
 
   // 前端计算的权限
   canEdit?: boolean
@@ -23,17 +101,17 @@ export interface Module {
 export interface ModuleTreeNode {
   id: number
   name: string
-  module_name?: string
+  moduleName?: string
   description?: string
-  owner_id: number
-  parent_id?: number | null
-  created_at?: string
-  updated_at?: string
+  ownerId: number
+  parentId?: number | null
+  createdAt?: string
+  updatedAt?: string
   children: ModuleTreeNode[]
 
   // 权限相关
-  isModerator?: boolean // 当前用户是否为该模块的协作者或管理员
-  role?: string // 当前用户在该模块的角色: owner, admin, moderator, 空字符串表示无权限
+  isModerator?: boolean
+  role?: string
 
   // 前端计算的权限
   canEdit?: boolean
@@ -51,16 +129,16 @@ export interface User {
 
 export interface Article {
   id: number
-  module_id: number
+  moduleId: number
   title: string
   summary: string
   content?: string
-  author_id: number
+  authorId: number
   author?: User
-  created_at: string
-  updated_at: string
-  tags?: string[] // 文章标签
-  view_count?: number // 浏览次数
+  createdAt: string
+  updatedAt: string
+  tags?: string[]
+  viewCount?: number
 }
 
 export interface ArticleListResponse {
@@ -76,31 +154,31 @@ export interface BreadcrumbItem {
 }
 
 export interface ModuleModerator {
-  user_id: number
+  userId: number
   username: string
   avatar?: string
   role: 'admin' | 'moderator'
-  created_at: string
+  createdAt: string
 }
 
 export interface NavigationLock {
   id: number
-  locked_by: number | null
-  locked_at: string | null
-  locked_by_user?: User
+  lockedBy: number | null
+  lockedAt: string | null
+  lockedByUser?: User
 }
 
 // API 请求/响应类型
 export interface CreateModuleRequest {
   name: string
   description?: string
-  parent_id?: number | null
+  parentId?: number | null
 }
 
 export interface UpdateModuleRequest {
   name?: string
   description?: string
-  parent_id?: number | null
+  parentId?: number | null
 }
 
 export interface LockRequest {
@@ -109,19 +187,19 @@ export interface LockRequest {
 
 export interface LockResponse {
   success: boolean
-  locked_by?: User | null
-  locked_at?: string | null
+  lockedBy?: User | null
+  lockedAt?: string | null
 }
 
 export interface AddModeratorRequest {
-  user_id: number
+  userId: number
   role: 'admin' | 'moderator'
 }
 
 export interface DeleteModuleResponse {
   success: boolean
-  deleted_modules: number
-  deleted_articles: number
+  deletedModules: number
+  deletedArticles: number
 }
 
 // 模态框状态

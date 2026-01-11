@@ -32,16 +32,16 @@ interface Emits {
  * 生成合并内容（带文本冲突标记）
  */
 function generateMergedContent(data: ThreeWayMergeData): string {
-  if (data.merged_content) {
-    return data.merged_content
+  if (data.mergedContent) {
+    return data.mergedContent
   }
 
   try {
     // 尝试使用智能三方合并算法
     const mergeResult = threeWayMerge(
-      data.base_content,
-      data.their_content,
-      data.our_content,
+      data.baseContent,
+      data.theirContent,
+      data.ourContent,
     )
 
     return mergeResult.merged
@@ -51,9 +51,9 @@ function generateMergedContent(data: ThreeWayMergeData): string {
 
     // 如果智能合并失败，使用简单的整体冲突标记
     return simpleThreeWayMerge(
-      data.base_content,
-      data.their_content,
-      data.our_content,
+      data.baseContent,
+      data.theirContent,
+      data.ourContent,
     )
   }
 }
@@ -83,16 +83,39 @@ function toggleEditorMode(mode: any) {
   }
 }
 
-// 检查是否已解决所有冲突标记
+// 检查是否已解决所有冲突标记（需要处理 HTML 转义的情况）
 const conflictResolved = computed(() => {
-  return !mergedContent.value.includes('<<<<<<<')
-    && !mergedContent.value.includes('=======')
-    && !mergedContent.value.includes('>>>>>>>')
+  // 如果内容包含 HTML 转义的冲突标记，先解码
+  let content = mergedContent.value
+  // 处理 HTML 转义：&lt; 变成 <，&gt; 变成 >
+  content = content.replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+  // 如果内容包含 HTML 标签，提取纯文本
+  if (content.includes('<')) {
+    // 创建一个临时 DOM 元素来提取文本内容
+    const tempDiv = document.createElement('div')
+    tempDiv.innerHTML = content
+    content = tempDiv.textContent || ''
+  }
+  return !content.includes('<<<<<<<')
+    && !content.includes('=======')
+    && !content.includes('>>>>>>>')
 })
 
-// 统计冲突数量
+// 统计冲突数量（需要处理 HTML 转义的情况）
 const conflictCount = computed(() => {
-  const matches = mergedContent.value.match(/<<<<<<</g)
+  // 如果内容包含 HTML 转义的冲突标记，先解码
+  let content = mergedContent.value
+  // 处理 HTML 转义：&lt; 变成 <，&gt; 变成 >
+  content = content.replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+  // 如果内容包含 HTML 标签，提取纯文本
+  if (content.includes('<')) {
+    // 创建一个临时 DOM 元素来提取文本内容
+    const tempDiv = document.createElement('div')
+    tempDiv.innerHTML = content
+    content = tempDiv.textContent || ''
+  }
+  // 匹配冲突标记
+  const matches = content.match(/<<<<<<</g)
   return matches ? matches.length : 0
 })
 
@@ -173,7 +196,7 @@ function togglePreview() {
           </span>
         </div>
         <div class="text-xs text-gray-600">
-          {{ conflictData.submitter_name || '提交者' }} 的修改 vs 当前版本 v{{ conflictData.our_version_number || '?' }}
+          {{ conflictData.submitterName || '提交者' }} 的修改 vs 当前版本 v{{ conflictData.ourVersionNumber || '?' }}
         </div>
       </div>
       <div class="flex gap-2">
@@ -192,8 +215,8 @@ function togglePreview() {
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <!-- 提交者版本 -->
         <ComparisonPanel
-          :old-content="conflictData.base_content"
-          :new-content="conflictData.their_content"
+          :old-content="conflictData.baseContent"
+          :new-content="conflictData.theirContent"
           old-label="Base"
           new-label="提交版本"
           height="400px"
@@ -201,8 +224,8 @@ function togglePreview() {
 
         <!-- 当前版本 -->
         <ComparisonPanel
-          :old-content="conflictData.base_content"
-          :new-content="conflictData.our_content"
+          :old-content="conflictData.baseContent"
+          :new-content="conflictData.ourContent"
           old-label="Base"
           new-label="当前版本"
           height="400px"

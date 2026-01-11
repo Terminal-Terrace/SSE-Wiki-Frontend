@@ -1,30 +1,35 @@
 // Article/Page types
-export interface Page {
-  id: string | number
-  title: string
-  content: string
-  lastEditedAt: string
-  editor: {
-    id: string | number
+import type { ArticleDetailResponse } from './article'
+
+export interface Page extends Omit<ArticleDetailResponse, 'currentVersion' | 'currentUserRole' | 'createdBy' | 'createdAt' | 'updatedAt' | 'currentVersionId' | 'isReviewRequired' | 'viewCount'> {
+  createdAt?: string
+  updatedAt?: string
+  viewCount?: number
+  currentUserRole?: string | null
+  isReviewRequired?: boolean
+  isAuthor?: boolean
+  canDelete?: boolean
+  createdBy?: number
+  editor?: {
+    id: number | string
     username: string
   }
-  viewCount: number
-  tags: Tag[]
   versions?: PageVersion[]
-  currentVersionId?: number | null // 当前版本ID，用于提交时指定 base_version_id
-}
-
-export interface Tag {
-  id: string | number
-  name: string
+  currentVersionId?: number | null
+  currentVersion?: ArticleDetailResponse['currentVersion']
 }
 
 export interface PageVersion {
   id: string | number
-  commitMessage: string
-  editor: string
-  timestamp: string
-  content: string
+  commitMessage?: string
+  editor?: string
+  timestamp?: string
+  content?: string
+  author?: {
+    id: number
+    username: string
+  }
+  createdAt?: string
 }
 
 // Re-export module types
