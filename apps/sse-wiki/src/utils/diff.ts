@@ -70,7 +70,17 @@ export function formatHTMLForDiff(html: string): string {
  * 保留冲突标记的换行
  */
 export function unformatHTMLFromDiff(html: string, preserveConflictMarkers: boolean = false): string {
-  if (!html || html.trim() === '') {
+  if (!html) {
+    return html
+  }
+
+  // 如果只包含换行符，移除后返回空字符串
+  if (html.trim() === '' && html.includes('\n')) {
+    return ''
+  }
+
+  // 如果只包含空格（没有换行），保持原样
+  if (html.trim() === '' && !html.includes('\n')) {
     return html
   }
 
@@ -143,21 +153,26 @@ function computeLCS(oldLines: string[], newLines: string[]): number[][] {
 }
 
 /**
- * 使用 LCS 算法计算两个文本的 diff
- * 这是一个类似 Myers diff 的实现
- * 对于 HTML 内容，会先进行格式化以便进行行级比较
+ * 内部版本的 computeDiff，跳过格式化步骤（用于 threeWayMerge）
  */
-export function computeDiff(oldContent: string | null, newContent: string): DiffResult[] {
-  // 检测是否为 HTML 内容（简单判断：包含 HTML 标签）
-  const isHTML = /<[^>]+>/.test(newContent) || (oldContent && /<[^>]+>/.test(oldContent))
-
-  // 如果是 HTML，先格式化
+function computeDiffInternal(
+  oldContent: string | null,
+  newContent: string,
+  skipFormatting: boolean,
+): DiffResult[] {
+  // 如果跳过格式化，直接使用传入的内容
   let processedOldContent = oldContent
   let processedNewContent = newContent
 
-  if (isHTML) {
-    processedOldContent = oldContent ? formatHTMLForDiff(oldContent) : null
-    processedNewContent = formatHTMLForDiff(newContent)
+  if (!skipFormatting) {
+    // 检测是否为 HTML 内容（简单判断：包含 HTML 标签）
+    const isHTML = /<[^>]+>/.test(newContent) || (oldContent && /<[^>]+>/.test(oldContent))
+
+    // 如果是 HTML，先格式化
+    if (isHTML) {
+      processedOldContent = oldContent ? formatHTMLForDiff(oldContent) : null
+      processedNewContent = formatHTMLForDiff(newContent)
+    }
   }
 
   // 如果没有旧内容，所有新内容都是新增
@@ -224,6 +239,15 @@ export function computeDiff(oldContent: string | null, newContent: string): Diff
 }
 
 /**
+ * 使用 LCS 算法计算两个文本的 diff
+ * 这是一个类似 Myers diff 的实现
+ * 对于 HTML 内容，会先进行格式化以便进行行级比较
+ */
+export function computeDiff(oldContent: string | null, newContent: string): DiffResult[] {
+  return computeDiffInternal(oldContent, newContent, false)
+}
+
+/**
  * 三方合并算法（简化版）
  * 逐行比较，识别冲突
  * @param base 基础版本
@@ -236,6 +260,30 @@ export function threeWayMerge(
   theirs: string,
   ours: string,
 ): ThreeWayMergeResult {
+  // 如果输入存在缺失/空内容，避免行级合并产生大量伪冲突，直接回退为整体冲突块
+  const safeBase = base ?? ''
+  const safeTheirs = theirs ?? ''
+  const safeOurs = ours ?? ''
+  const hasEmptyInput = [safeBase, safeTheirs, safeOurs].some(v => v.trim() === '')
+  // 如果任何输入为空（trim后），且不是所有输入都为空，则回退到简单合并
+  if (hasEmptyInput && !(safeBase.trim() === '' && safeTheirs.trim() === '' && safeOurs.trim() === '')) {
+    const merged = simpleThreeWayMerge(safeBase, safeTheirs, safeOurs)
+    return {
+      merged,
+      hasConflict: merged.includes('<<<<<<<'),
+      conflicts: [],
+    }
+  }
+  // 如果所有输入都为空，也回退到简单合并
+  if (safeBase.trim() === '' && safeTheirs.trim() === '' && safeOurs.trim() === '') {
+    const merged = simpleThreeWayMerge(safeBase, safeTheirs, safeOurs)
+    return {
+      merged,
+      hasConflict: merged.includes('<<<<<<<'),
+      conflicts: [],
+    }
+  }
+
   // 检测是否为 HTML 内容
   const isHTML = /<[^>]+>/.test(base) || /<[^>]+>/.test(theirs) || /<[^>]+>/.test(ours)
 
@@ -251,10 +299,9 @@ export function threeWayMerge(
   }
 
   // 计算 base -> theirs 的变更
-  const theirsDiff = computeDiff(processedBase, processedTheirs)
-
-  // 计算 base -> ours 的变更
-  const oursDiff = computeDiff(processedBase, processedOurs)
+  // 注意：我们已经格式化过了，所以跳过 computeDiff 内部的格式化
+  const theirsDiff = computeDiffInternal(processedBase, processedTheirs, isHTML)
+  const oursDiff = computeDiffInternal(processedBase, processedOurs, isHTML)
 
   const baseLines = processedBase.split('\n')
   const mergedLines: string[] = []
@@ -264,33 +311,212 @@ export function threeWayMerge(
   // 建立行号映射：记录每个 base 行在 theirs 和 ours 中的对应行
   const theirsMap = new Map<number, string>() // baseLineNum -> theirsContent
   const oursMap = new Map<number, string>() // baseLineNum -> oursContent
+  const theirsDeleted = new Set<number>() // baseLineNum -> deleted
+  const oursDeleted = new Set<number>() // baseLineNum -> deleted
 
   // 处理 theirs 的映射
-  for (const diff of theirsDiff) {
-    if (diff.oldLine && diff.type !== 'add') {
-      theirsMap.set(diff.oldLine, diff.newContent)
+  // 先识别修改操作（delete 后紧跟 add，且位置对应）
+  const theirsModifications = new Map<number, string>() // oldLine -> newContent
+  for (let i = 0; i < theirsDiff.length; i++) {
+    const diff = theirsDiff[i]
+    if (!diff)
+      continue
+    if (diff.type === 'delete' && diff.oldLine) {
+      // 检查下一个是否是 add，且位置对应（这是修改操作）
+      const nextDiff = theirsDiff[i + 1]
+      if (nextDiff && nextDiff.type === 'add') {
+        // 这是修改操作，不是真正的删除
+        theirsModifications.set(diff.oldLine, nextDiff.newContent)
+        i++ // 跳过下一个 add
+        continue
+      }
+      // 真正的删除
+      theirsDeleted.add(diff.oldLine)
     }
+    // unchanged 操作不添加到 Map 中，因为表示没有修改
+  }
+
+  // 将修改操作添加到映射中
+  for (const [oldLine, newContent] of theirsModifications) {
+    theirsMap.set(oldLine, newContent)
   }
 
   // 处理 ours 的映射
-  for (const diff of oursDiff) {
-    if (diff.oldLine && diff.type !== 'add') {
-      oursMap.set(diff.oldLine, diff.newContent)
+  const oursModifications = new Map<number, string>() // oldLine -> newContent
+  for (let i = 0; i < oursDiff.length; i++) {
+    const diff = oursDiff[i]
+    if (!diff)
+      continue
+    if (diff.type === 'delete' && diff.oldLine) {
+      // 检查下一个是否是 add，且位置对应（这是修改操作）
+      const nextDiff = oursDiff[i + 1]
+      if (nextDiff && nextDiff.type === 'add') {
+        // 这是修改操作，不是真正的删除
+        oursModifications.set(diff.oldLine, nextDiff.newContent)
+        i++ // 跳过下一个 add
+        continue
+      }
+      // 真正的删除
+      oursDeleted.add(diff.oldLine)
+    }
+    // unchanged 操作不添加到 Map 中，因为表示没有修改
+  }
+
+  // 将修改操作添加到映射中
+  for (const [oldLine, newContent] of oursModifications) {
+    oursMap.set(oldLine, newContent)
+  }
+
+  // 收集新增的行（在 base 之后插入）
+  // 只收集那些不是修改操作一部分的 add
+  const theirsAdditions: Array<{ afterLine: number, content: string }> = []
+  const oursAdditions: Array<{ afterLine: number, content: string }> = []
+
+  let currentBaseLine = 0
+  for (let i = 0; i < theirsDiff.length; i++) {
+    const diff = theirsDiff[i]
+    if (!diff)
+      continue
+    if (diff.type === 'add') {
+      // 检查这是否是修改操作的一部分
+      const prevDiff = i > 0 ? theirsDiff[i - 1] : undefined
+      if (prevDiff && prevDiff.type === 'delete' && prevDiff.oldLine) {
+        // 这是修改操作的一部分，跳过
+        continue
+      }
+      // 真正的新增行
+      theirsAdditions.push({ afterLine: currentBaseLine, content: diff.newContent })
+    }
+    else if (diff.type === 'unchanged' && diff.oldLine) {
+      currentBaseLine = diff.oldLine
+    }
+    else if (diff.type === 'delete' && diff.oldLine) {
+      // 检查下一个是否是 add（修改操作）
+      const nextDiff = theirsDiff[i + 1]
+      if (nextDiff && nextDiff.type === 'add') {
+        // 这是修改操作，跳过 add
+        i++
+      }
+      currentBaseLine = diff.oldLine
     }
   }
 
-  // 逐行合并
+  currentBaseLine = 0
+  for (let i = 0; i < oursDiff.length; i++) {
+    const diff = oursDiff[i]
+    if (!diff)
+      continue
+    if (diff.type === 'add') {
+      // 检查这是否是修改操作的一部分
+      const prevDiff = i > 0 ? oursDiff[i - 1] : undefined
+      if (prevDiff && prevDiff.type === 'delete' && prevDiff.oldLine) {
+        // 这是修改操作的一部分，跳过
+        continue
+      }
+      // 真正的新增行
+      oursAdditions.push({ afterLine: currentBaseLine, content: diff.newContent })
+    }
+    else if (diff.type === 'unchanged' && diff.oldLine) {
+      currentBaseLine = diff.oldLine
+    }
+    else if (diff.type === 'delete' && diff.oldLine) {
+      // 检查下一个是否是 add（修改操作）
+      const nextDiff = oursDiff[i + 1]
+      if (nextDiff && nextDiff.type === 'add') {
+        // 这是修改操作，跳过 add
+        i++
+      }
+      currentBaseLine = diff.oldLine
+    }
+  }
+
+  // 逐行合并 base 中的行
   for (let i = 0; i < baseLines.length; i++) {
     const lineNum = i + 1
     const baseLine = baseLines[i]
 
+    // 检查是否有新增的行需要插入
+    const theirsAddsHere = theirsAdditions.filter(a => a.afterLine === lineNum - 1)
+    const oursAddsHere = oursAdditions.filter(a => a.afterLine === lineNum - 1)
+
+    // 处理新增行的冲突
+    if (theirsAddsHere.length > 0 && oursAddsHere.length > 0) {
+      // 两边都在这里新增，需要检查是否相同
+      const theirsContent = theirsAddsHere.map(a => a.content).join('\n')
+      const oursContent = oursAddsHere.map(a => a.content).join('\n')
+      if (theirsContent === oursContent) {
+        // 新增内容相同，无冲突
+        mergedLines.push(...theirsAddsHere.map(a => a.content))
+      }
+      else {
+        // 新增内容不同，冲突
+        hasConflict = true
+        const conflictStart = mergedLines.length
+        mergedLines.push('<<<<<<< THEIRS (提交者的修改)')
+        mergedLines.push(...theirsAddsHere.map(a => a.content))
+        mergedLines.push('=======')
+        mergedLines.push(...oursAddsHere.map(a => a.content))
+        mergedLines.push('>>>>>>> OURS (当前线上版本)')
+        conflicts.push({ start: conflictStart, end: mergedLines.length - 1 })
+      }
+    }
+    else if (theirsAddsHere.length > 0) {
+      // 只有 theirs 新增
+      mergedLines.push(...theirsAddsHere.map(a => a.content))
+    }
+    else if (oursAddsHere.length > 0) {
+      // 只有 ours 新增
+      mergedLines.push(...oursAddsHere.map(a => a.content))
+    }
+
+    // 处理当前 base 行
     const theirsLine = theirsMap.get(lineNum)
     const oursLine = oursMap.get(lineNum)
-    const theirsChanged = theirsLine !== undefined
-    const oursChanged = oursLine !== undefined
+    const theirsDeletedThis = theirsDeleted.has(lineNum)
+    const oursDeletedThis = oursDeleted.has(lineNum)
 
     // 检查是否有冲突
-    if (theirsChanged && oursChanged) {
+    if (theirsDeletedThis && oursDeletedThis) {
+      // 两边都删除，不添加该行
+      continue
+    }
+    else if (theirsDeletedThis && !oursDeletedThis) {
+      // 只有 theirs 删除
+      if (oursLine !== undefined) {
+        // ours 修改了该行，产生冲突（一边删除，一边修改）
+        hasConflict = true
+        const conflictStart = mergedLines.length
+        mergedLines.push('<<<<<<< THEIRS (提交者的修改)')
+        // theirs 删除，所以这里是空的
+        mergedLines.push('=======')
+        mergedLines.push(oursLine)
+        mergedLines.push('>>>>>>> OURS (当前线上版本)')
+        conflicts.push({ start: conflictStart, end: mergedLines.length - 1 })
+      }
+      else {
+        // ours 没有修改，采用删除操作
+        continue
+      }
+    }
+    else if (!theirsDeletedThis && oursDeletedThis) {
+      // 只有 ours 删除
+      if (theirsLine !== undefined) {
+        // theirs 修改了该行，产生冲突（一边删除，一边修改）
+        hasConflict = true
+        const conflictStart = mergedLines.length
+        mergedLines.push('<<<<<<< THEIRS (提交者的修改)')
+        mergedLines.push(theirsLine)
+        mergedLines.push('=======')
+        // ours 删除，所以这里是空的
+        mergedLines.push('>>>>>>> OURS (当前线上版本)')
+        conflicts.push({ start: conflictStart, end: mergedLines.length - 1 })
+      }
+      else {
+        // theirs 没有修改，采用删除操作
+        continue
+      }
+    }
+    else if (theirsLine !== undefined && oursLine !== undefined) {
       // 两边都修改了同一行
       if (theirsLine === oursLine) {
         // 修改相同，不是冲突，使用共同的修改
@@ -310,11 +536,11 @@ export function threeWayMerge(
         conflicts.push({ start: conflictStart, end: mergedLines.length - 1 })
       }
     }
-    else if (theirsChanged) {
+    else if (theirsLine !== undefined) {
       // 只有 theirs 修改了
       mergedLines.push(theirsLine)
     }
-    else if (oursChanged) {
+    else if (oursLine !== undefined) {
       // 只有 ours 修改了
       mergedLines.push(oursLine)
     }
@@ -324,6 +550,34 @@ export function threeWayMerge(
         mergedLines.push(baseLine)
       }
     }
+  }
+
+  // 处理在 base 末尾之后的新增行
+  const theirsAddsAfterEnd = theirsAdditions.filter(a => a.afterLine >= baseLines.length)
+  const oursAddsAfterEnd = oursAdditions.filter(a => a.afterLine >= baseLines.length)
+
+  if (theirsAddsAfterEnd.length > 0 && oursAddsAfterEnd.length > 0) {
+    const theirsContent = theirsAddsAfterEnd.map(a => a.content).join('\n')
+    const oursContent = oursAddsAfterEnd.map(a => a.content).join('\n')
+    if (theirsContent === oursContent) {
+      mergedLines.push(...theirsAddsAfterEnd.map(a => a.content))
+    }
+    else {
+      hasConflict = true
+      const conflictStart = mergedLines.length
+      mergedLines.push('<<<<<<< THEIRS (提交者的修改)')
+      mergedLines.push(...theirsAddsAfterEnd.map(a => a.content))
+      mergedLines.push('=======')
+      mergedLines.push(...oursAddsAfterEnd.map(a => a.content))
+      mergedLines.push('>>>>>>> OURS (当前线上版本)')
+      conflicts.push({ start: conflictStart, end: mergedLines.length - 1 })
+    }
+  }
+  else if (theirsAddsAfterEnd.length > 0) {
+    mergedLines.push(...theirsAddsAfterEnd.map(a => a.content))
+  }
+  else if (oursAddsAfterEnd.length > 0) {
+    mergedLines.push(...oursAddsAfterEnd.map(a => a.content))
   }
 
   const mergedText = mergedLines.join('\n')
@@ -348,18 +602,31 @@ export function simpleThreeWayMerge(
   theirs: string,
   ours: string,
 ): string {
-  // 如果 theirs === base，说明提交者没有修改，使用 ours
-  if (theirs === base) {
-    return ours
-  }
-
-  // 如果 ours === base，说明当前版本没有修改，使用 theirs
-  if (ours === base) {
-    return theirs
+  // 如果所有输入都为空，返回空字符串（无冲突）
+  if (base === '' && theirs === '' && ours === '') {
+    return ''
   }
 
   // 如果 theirs === ours，说明两边修改相同，没有冲突
   if (theirs === ours) {
+    return theirs
+  }
+
+  // 如果 base 不为空，但 theirs 和 ours 都为空，说明两边都删除了相同内容，无冲突
+  if (base !== '' && theirs === '' && ours === '') {
+    return ''
+  }
+
+  // 如果 base 为空，且 theirs 和 ours 不同，产生冲突
+  if (base === '' && theirs !== ours) {
+    // 继续到冲突标记生成
+  }
+  // 如果 theirs === base，说明提交者没有修改，使用 ours
+  else if (theirs === base) {
+    return ours
+  }
+  // 如果 ours === base，说明当前版本没有修改，使用 theirs
+  else if (ours === base) {
     return theirs
   }
 
