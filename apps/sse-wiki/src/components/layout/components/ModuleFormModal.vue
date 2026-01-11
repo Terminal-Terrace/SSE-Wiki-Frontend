@@ -43,7 +43,7 @@ const isCreateModal = computed(() => props.modalState.type === 'create')
 
 const targetModule = computed(() => props.modalState.targetModule)
 
-const parentModuleName = computed(() => props.modalState.parentModule?.name)
+const parentModuleName = computed(() => props.modalState.parentModule?.moduleName)
 
 const canSubmit = computed(() => {
   return formData.value.name.trim().length > 0 && !isSubmitting.value
@@ -58,7 +58,7 @@ watch(
 
       // 如果是编辑模式，填充现有数据
       if (newState.type === 'edit' && newState.targetModule) {
-        formData.value.name = newState.targetModule.name || newState.targetModule.module_name || ''
+        formData.value.name = newState.targetModule.moduleName || ''
         formData.value.description = newState.targetModule.description || ''
       }
 
@@ -119,7 +119,7 @@ async function handleSubmit() {
       await moduleStore.createModule({
         name: formData.value.name.trim(),
         description: formData.value.description.trim(),
-        parent_id: props.modalState.parentModule?.id,
+        parentId: props.modalState.parentModule?.id,
       })
     }
     else {

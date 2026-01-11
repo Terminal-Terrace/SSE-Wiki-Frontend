@@ -53,22 +53,20 @@ const canReview = computed(() => {
     return false
   }
   // 从 article.currentUserRole 读取用户角色
-  const userRole = (reviewData.value.article as any)?.currentUserRole || reviewData.value.article?.current_user_role
+  const userRole = reviewData.value.article?.currentUserRole
   return userRole === 'admin' || userRole === 'moderator'
 })
 
 // 页面标题
 const pageTitle = computed(() => {
   if (isSubmission.value) {
-    if (reviewData.value?.proposed_version) {
-      const version = reviewData.value.proposed_version as any
-      return version.commitMessage || version.commit_message || '未命名提交'
+    if (reviewData.value?.proposedVersion) {
+      return reviewData.value.proposedVersion.commitMessage || '未命名提交'
     }
     return '查看提交'
   }
   if (currentVersion.value) {
-    const version = currentVersion.value as any
-    return version.commitMessage || version.commit_message || '未命名版本'
+    return currentVersion.value.commitMessage || '未命名版本'
   }
   return '查看版本'
 })
@@ -89,12 +87,10 @@ const authorName = computed(() => {
 const createdAt = computed(() => {
   // 从 submission.createdAt 读取创建时间
   if (isSubmission.value && reviewData.value?.submission) {
-    const submission = reviewData.value.submission as any
-    return submission.createdAt || submission.created_at || ''
+    return reviewData.value.submission.createdAt || ''
   }
   if (currentVersion.value) {
-    const version = currentVersion.value as any
-    return version.createdAt || version.created_at || ''
+    return currentVersion.value.createdAt || ''
   }
   return ''
 })
@@ -145,8 +141,8 @@ async function loadVersionData() {
       const versionId = Number(versionIdFromQuery.value)
       const diffData = await articleApi.getVersionDiff(versionId)
 
-      baseVersion.value = diffData.base_version
-      currentVersion.value = diffData.current_version
+      baseVersion.value = diffData.baseVersion
+      currentVersion.value = diffData.currentVersion
     }
     else if (submissionIdFromQuery.value) {
       // 加载提交审核数据
@@ -155,28 +151,26 @@ async function loadVersionData() {
       reviewData.value = data
 
       // 设置版本数据用于diff显示
-      baseVersion.value = data.base_version || null
-      currentVersion.value = data.proposed_version || null
+      baseVersion.value = data.baseVersion || null
+      currentVersion.value = data.proposedVersion || null
 
       // 如果检测到冲突，从版本对象获取内容构建三路合并数据（只读查看模式）
-      const submission = data.submission as any
-      const hasConflict = submission?.hasConflict || submission?.has_conflict || data.conflict_data?.has_conflict
+      const hasConflict = data.submission?.hasConflict || data.conflictData?.hasConflict
       if (hasConflict) {
-        // 从版本对象获取内容，从 conflict_data 获取元数据
-        const conflictMeta = data.conflict_data || {}
-        conflictData.value = {
-          hasConflict: true,
-          has_conflict: true,
-          baseContent: data.base_version?.content || '',
-          base_content: data.base_version?.content || '',
-          theirContent: data.proposed_version?.content || '',
-          their_content: data.proposed_version?.content || '',
-          our_content: data.current_version?.content || '',
-          merged_content: undefined,
-          base_version_number: conflictMeta.base_version_number || data.base_version?.version_number,
-          their_version_number: data.proposed_version?.version_number,
-          our_version_number: conflictMeta.current_version_number || data.current_version?.version_number,
-          submitter_name: conflictMeta.submitter_name || data.submission?.submitter?.username,
+        // 从版本对象获取内容，从 conflictData 获取元数据
+        const conflictMeta = data.conflictData
+        if (conflictMeta) {
+          conflictData.value = {
+            hasConflict: true,
+            baseContent: data.baseVersion?.content || '',
+            theirContent: data.proposedVersion?.content || '',
+            ourContent: data.currentVersion?.content || '',
+            mergedContent: undefined,
+            baseVersionNumber: conflictMeta.baseVersionNumber || data.baseVersion?.versionNumber,
+            theirVersionNumber: data.proposedVersion?.versionNumber,
+            ourVersionNumber: conflictMeta.currentVersionNumber || data.currentVersion?.versionNumber,
+            submitterName: conflictMeta.submitterName || data.submission?.submitter?.username,
+          }
         }
       }
     }
@@ -266,19 +260,19 @@ onMounted(() => {
         <div v-if="isSubmission && reviewData" class="border-t pt-4 space-y-2">
           <div v-if="baseVersion" class="text-sm">
             <span class="text-muted-foreground">基于版本:</span>
-            <span class="ml-2 font-mono">v{{ baseVersion.version_number }}</span>
+            <span class="ml-2 font-mono">v{{ baseVersion.versionNumber }}</span>
           </div>
           <div v-else class="text-sm">
             <span class="text-muted-foreground">基于版本:</span>
             <span class="ml-2 font-mono">初始版本</span>
           </div>
-          <div v-if="(reviewData.submission as any)?.hasConflict || reviewData.submission?.has_conflict" class="text-sm text-destructive">
+          <div v-if="reviewData.submission?.hasConflict" class="text-sm text-destructive">
             <span class="font-semibold">检测到冲突</span>
             <span class="ml-2">此提交与当前版本存在冲突</span>
           </div>
-          <div v-if="(reviewData.submission as any)?.reviewNotes || reviewData.submission?.review_notes" class="text-sm">
+          <div v-if="reviewData.submission?.reviewNotes" class="text-sm">
             <span class="text-muted-foreground">审核备注:</span>
-            <span class="ml-2">{{ (reviewData.submission as any)?.reviewNotes || reviewData.submission?.review_notes }}</span>
+            <span class="ml-2">{{ reviewData.submission.reviewNotes }}</span>
           </div>
         </div>
 
@@ -302,8 +296,8 @@ onMounted(() => {
         <ComparisonPanel
           :old-content="baseVersion?.content || null"
           :new-content="currentVersion.content"
-          :old-label="baseVersion ? `Base v${baseVersion.version_number}` : undefined"
-          :new-label="`${isSubmission ? '提交版本' : `v${currentVersion.version_number}`}`"
+          :old-label="baseVersion ? `Base v${baseVersion.versionNumber}` : undefined"
+          :new-label="`${isSubmission ? '提交版本' : `v${currentVersion.versionNumber}`}`"
         />
       </div>
 

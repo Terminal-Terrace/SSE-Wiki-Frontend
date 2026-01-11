@@ -207,8 +207,8 @@ async function handleSave(updatedPage: Partial<Page> & { commitMessage?: string 
     // 使用创建提交的方式保存修改（后端会返回 ReviewSubmission）
     const submission = await articleApi.createSubmission(pageId, {
       content,
-      commit_message: commitMessage,
-      base_version_id: baseVersionId,
+      commitMessage,
+      baseVersionId,
     })
 
     if (submission) {
@@ -233,17 +233,17 @@ async function handleSave(updatedPage: Partial<Page> & { commitMessage?: string 
   catch (error: any) {
     // 检查是否为冲突错误（409）
     if (error.response?.status === 409) {
-      const conflictMeta = error.response?.data?.data?.conflict_data
+      const conflictMeta = error.response?.data?.data?.conflictData
       if (conflictMeta && page.value && pendingSubmissionData.value) {
-        // 从版本对象获取内容，从 conflict_data 获取元数据
+        // 从版本对象获取内容，从 conflictData 获取元数据
         const theirContent = pendingSubmissionData.value.content
         const ourContent = page.value.content || page.value.currentVersion?.content || ''
 
         // 查找 base version 的内容
         let baseContent = ourContent // 默认使用当前版本内容
-        if (pendingSubmissionData.value.baseVersionId && page.value.versions) {
+        if (pendingSubmissionData.value && pendingSubmissionData.value.baseVersionId && page.value.versions) {
           const baseVersion = page.value.versions.find(
-            v => Number(v.id) === pendingSubmissionData.value.baseVersionId,
+            v => Number(v.id) === pendingSubmissionData.value!.baseVersionId,
           )
           if (baseVersion?.content) {
             baseContent = baseVersion.content
@@ -253,17 +253,14 @@ async function handleSave(updatedPage: Partial<Page> & { commitMessage?: string 
         // 构建完整的三路合并数据
         currentConflictData.value = {
           hasConflict: true,
-          has_conflict: true,
           baseContent,
-          base_content: baseContent,
           theirContent,
-          their_content: theirContent,
-          our_content: ourContent,
-          merged_content: undefined,
-          base_version_number: conflictMeta.base_version_number,
-          their_version_number: undefined, // 创建提交时还没有版本号
-          our_version_number: conflictMeta.current_version_number,
-          submitter_name: conflictMeta.submitter_name || authStore.user?.username,
+          ourContent,
+          mergedContent: undefined,
+          baseVersionNumber: conflictMeta.baseVersionNumber,
+          theirVersionNumber: undefined, // 创建提交时还没有版本号
+          ourVersionNumber: conflictMeta.currentVersionNumber,
+          submitterName: conflictMeta.submitterName || authStore.user?.username,
         }
         showConflictDialog.value = true
         toast({
@@ -306,8 +303,8 @@ async function handleConflictResolve(mergedContent: string) {
     // 使用解决后的内容重新提交
     await articleApi.createSubmission(pageId, {
       content: mergedContent,
-      commit_message: pendingSubmissionData.value.commitMessage,
-      base_version_id: pendingSubmissionData.value.baseVersionId,
+      commitMessage: pendingSubmissionData.value.commitMessage,
+      baseVersionId: pendingSubmissionData.value.baseVersionId,
     })
 
     toast({
@@ -405,7 +402,7 @@ async function saveBasicInfo() {
     await articleApi.updateBasicInfo(pageId.value, {
       title,
       tags: basicInfoForm.value.tags,
-      is_review_required: basicInfoForm.value.isReviewRequired,
+      isReviewRequired: basicInfoForm.value.isReviewRequired,
     })
 
     toast({

@@ -42,7 +42,7 @@ const isOpen = computed(() =>
 const targetModule = computed(() => props.modalState.targetModule)
 
 const canDelete = computed(() => {
-  return confirmationName.value === targetModule.value?.name && !isSubmitting.value
+  return confirmationName.value === targetModule.value?.moduleName && !isSubmitting.value
 })
 
 // 监听模态框状态变化
@@ -72,7 +72,7 @@ function clearError(field: string) {
 function validateDelete() {
   errors.value = {}
 
-  if (confirmationName.value !== targetModule.value?.name) {
+  if (confirmationName.value !== targetModule.value?.moduleName) {
     errors.value.confirmation = '模块名称不匹配'
   }
 
@@ -108,7 +108,7 @@ async function handleDelete() {
           删除模块
         </DialogTitle>
         <DialogDescription>
-          确定要删除模块「{{ targetModule?.name }}」吗？此操作将同时删除该模块下的所有子模块和文章，且不可撤销。
+          确定要删除模块「{{ targetModule?.moduleName }}」吗？此操作将同时删除该模块下的所有子模块和文章，且不可撤销。
         </DialogDescription>
       </DialogHeader>
 
@@ -125,7 +125,7 @@ async function handleDelete() {
 
         <div class="space-y-2">
           <Label for="confirm-name">
-            请输入模块名称「<strong>{{ targetModule?.name }}</strong>」以确认删除：
+            请输入模块名称「<strong>{{ targetModule?.moduleName }}</strong>」以确认删除：
           </Label>
           <Input
             id="confirm-name"

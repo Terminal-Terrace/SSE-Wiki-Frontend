@@ -70,7 +70,7 @@ const moduleInfo = ref<Module | null>(null)
 const articles = ref<Article[]>([])
 const breadcrumbs = ref<BreadcrumbItem[]>([])
 const viewMode = ref<'grid' | 'list'>('grid')
-const sortBy = ref<'created_at' | 'updated_at' | 'title'>('created_at')
+const sortBy = ref<'createdAt' | 'updatedAt' | 'title'>('createdAt')
 
 // 分页状态
 const currentPage = ref(1)
@@ -127,11 +127,11 @@ const sortedArticles = computed(() => {
     switch (sortBy.value) {
       case 'title':
         return a.title.localeCompare(b.title)
-      case 'updated_at':
-        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-      case 'created_at':
+      case 'updatedAt':
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      case 'createdAt':
       default:
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     }
   })
   return sorted
@@ -199,15 +199,14 @@ async function fetchModuleInfo(moduleId: string) {
     const foundModule = findModuleInTree(moduleStore.moduleTree, targetModuleId)
 
     if (foundModule) {
-      // 使用找到的模块数据
       moduleInfo.value = {
         id: foundModule.id,
-        module_name: foundModule.name,
+        moduleName: foundModule.name,
         description: foundModule.description ?? '',
-        parent_id: 1, // TODO: 从模块树结构中获取正确的parent_id
-        owner_id: foundModule.owner_id,
-        created_at: '2024-01-15T08:00:00Z', // TODO: 从API获取实际时间
-        updated_at: '2024-01-15T08:00:00Z', // TODO: 从API获取实际时间
+        parentId: foundModule.parentId ?? null,
+        ownerId: foundModule.ownerId,
+        createdAt: foundModule.createdAt ?? '',
+        updatedAt: foundModule.updatedAt ?? '',
       }
     }
     else {
@@ -344,7 +343,7 @@ function editModule() {
 
   const moduleForModal = {
     ...moduleInfo.value,
-    name: moduleInfo.value.module_name || moduleInfo.value.name,
+    name: moduleInfo.value.moduleName,
   }
 
   modalState.value = {
@@ -361,7 +360,7 @@ function manageCollaborators() {
   // 确保模块对象有 name 字段（ModuleCollaboratorsModal 需要）
   const moduleForModal = {
     ...moduleInfo.value,
-    name: moduleInfo.value.module_name || moduleInfo.value.name,
+    name: moduleInfo.value.moduleName,
   }
 
   modalState.value = {
@@ -377,7 +376,7 @@ function deleteModule() {
 
   const moduleForModal = {
     ...moduleInfo.value,
-    name: moduleInfo.value.module_name || moduleInfo.value.name,
+    name: moduleInfo.value.moduleName,
   }
 
   modalState.value = {
@@ -513,7 +512,7 @@ watch(
         <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div class="flex-1">
             <h1 class="text-3xl font-bold text-gray-900 mb-3">
-              {{ moduleInfo?.module_name }}
+              {{ moduleInfo?.moduleName }}
             </h1>
 
             <p v-if="moduleInfo?.description" class="text-gray-700 mb-4">
@@ -526,7 +525,7 @@ watch(
               </div>
               <div class="flex items-center gap-2">
                 <Calendar class="w-4 h-4" />
-                <span>创建于 {{ formatDate(moduleInfo.created_at) }}</span>
+                <span>创建于 {{ formatDate(moduleInfo.createdAt) }}</span>
               </div>
             </div>
           </div>
@@ -596,10 +595,10 @@ watch(
                 <SelectValue placeholder="排序方式" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="created_at">
+                <SelectItem value="createdAt">
                   按创建时间
                 </SelectItem>
-                <SelectItem value="updated_at">
+                <SelectItem value="updatedAt">
                   按更新时间
                 </SelectItem>
                 <SelectItem value="title">
@@ -646,16 +645,7 @@ watch(
           <ArticleCard
             v-for="article in sortedArticles"
             :key="article.id"
-            :article="{
-              id: article.id,
-              title: article.title,
-              summary: article.summary,
-              tags: article.tags,
-              createdAt: article.created_at,
-              updatedAt: article.updated_at,
-              viewCount: article.view_count,
-              author: article.author,
-            }"
+            :article="article"
             :show-view-count="true"
             :show-tags="true"
             :show-author="true"
@@ -666,16 +656,7 @@ watch(
           <ArticleCard
             v-for="article in sortedArticles"
             :key="article.id"
-            :article="{
-              id: article.id,
-              title: article.title,
-              summary: article.summary,
-              tags: article.tags,
-              createdAt: article.created_at,
-              updatedAt: article.updated_at,
-              viewCount: article.view_count,
-              author: article.author,
-            }"
+            :article="article"
             :show-view-count="true"
             :show-tags="true"
             :show-author="true"
