@@ -11,7 +11,7 @@ import type {
   ModuleTreeNode,
   UpdateModuleRequest,
 } from '@/types/module'
-// 模块管理 API 服务
+import { toCamelCase } from '@/utils/convert'
 import request from '@/utils/request'
 
 /**
@@ -19,7 +19,7 @@ import request from '@/utils/request'
  * 包含所有模块相关的API接口调用方法
  */
 export class ModuleAPI {
-  private baseURL = '/api/v1/modules'
+  private readonly baseURL = '/api/v1/modules'
 
   /**
    * 获取完整的模块层级树
@@ -28,23 +28,8 @@ export class ModuleAPI {
    * @returns Promise<ModuleTreeNode[]> 模块树数组
    */
   async getModuleTree(): Promise<ModuleTreeNode[]> {
-    const data: any[] = await request.get(this.baseURL)
-    // 转换字段名：is_moderator -> isModerator（后端返回 snake_case，前端使用 camelCase）
-    return this.transformModuleTree(data || [])
-  }
-
-  /**
-   * 递归转换模块树字段名
-   */
-  private transformModuleTree(nodes: any[]): ModuleTreeNode[] {
-    return nodes.map((node) => {
-      const { is_moderator, children, ...rest } = node
-      return {
-        ...rest,
-        isModerator: is_moderator,
-        children: children ? this.transformModuleTree(children) : [],
-      }
-    })
+    const data = await request.get(this.baseURL)
+    return toCamelCase<ModuleTreeNode[]>(data || [])
   }
 
   /**
@@ -55,7 +40,8 @@ export class ModuleAPI {
    * @returns Promise<Module> 模块详细信息
    */
   async getModule(moduleId: number | string): Promise<Module> {
-    return request.get(`${this.baseURL}/${moduleId}`)
+    const data = await request.get(`${this.baseURL}/${moduleId}`)
+    return toCamelCase<Module>(data)
   }
 
   /**
@@ -66,7 +52,8 @@ export class ModuleAPI {
    * @returns Promise<BreadcrumbItem[]> 面包屑路径
    */
   async getBreadcrumbs(moduleId: number | string): Promise<BreadcrumbItem[]> {
-    return request.get(`${this.baseURL}/${moduleId}/breadcrumbs`)
+    const data = await request.get(`${this.baseURL}/${moduleId}/breadcrumbs`)
+    return toCamelCase<BreadcrumbItem[]>(data || [])
   }
 
   /**
@@ -84,7 +71,8 @@ export class ModuleAPI {
     moduleId: number | string,
     params?: { page?: number, pageSize?: number },
   ): Promise<ArticleListResponse> {
-    return request.get(`${this.baseURL}/${moduleId}/articles`, { params })
+    const data = await request.get(`${this.baseURL}/${moduleId}/articles`, { params })
+    return toCamelCase<ArticleListResponse>(data)
   }
 
   /**
@@ -95,7 +83,14 @@ export class ModuleAPI {
    * @returns Promise<Module> 创建的模块信息
    */
   async createModule(data: CreateModuleRequest): Promise<Module> {
-    return request.post(this.baseURL, data)
+    // 将 camelCase 转换为 snake_case 以匹配 BFF 期望
+    const requestData = {
+      name: data.name,
+      description: data.description,
+      parent_id: data.parentId ?? undefined,
+    }
+    const response = await request.post(this.baseURL, requestData)
+    return toCamelCase<Module>(response)
   }
 
   /**
@@ -107,7 +102,21 @@ export class ModuleAPI {
    * @returns Promise<Module> 更新后的模块信息
    */
   async updateModule(id: number | string, data: UpdateModuleRequest): Promise<Module> {
-    return request.put(`${this.baseURL}/${id}`, data)
+    // 确保 id 是数字类型
+    const moduleId = typeof id === 'string' ? Number(id) : id
+    if (Number.isNaN(moduleId)) {
+      throw new TypeError(`Invalid module ID: ${id}`)
+    }
+    // 将 camelCase 转换为 snake_case 以匹配 BFF 期望
+    const requestData: any = {}
+    if (data.name !== undefined)
+      requestData.name = data.name
+    if (data.description !== undefined)
+      requestData.description = data.description
+    if (data.parentId !== undefined)
+      requestData.parent_id = data.parentId
+    const response = await request.put(`${this.baseURL}/${moduleId}`, requestData)
+    return toCamelCase<Module>(response)
   }
 
   /**
@@ -118,7 +127,13 @@ export class ModuleAPI {
    * @returns Promise<DeleteModuleResponse> 删除操作结果
    */
   async deleteModule(id: number | string): Promise<DeleteModuleResponse> {
-    return request.delete(`${this.baseURL}/${id}`)
+    // 确保 id 是数字类型
+    const moduleId = typeof id === 'string' ? Number(id) : id
+    if (Number.isNaN(moduleId)) {
+      throw new TypeError(`Invalid module ID: ${id}`)
+    }
+    const data = await request.delete(`${this.baseURL}/${moduleId}`)
+    return toCamelCase<DeleteModuleResponse>(data)
   }
 
   /**
@@ -129,9 +144,8 @@ export class ModuleAPI {
    * @returns Promise<LockResponse> 锁操作结果
    */
   async manageLock(data: LockRequest): Promise<LockResponse> {
-    // 后端返回格式：{ code: 100, message: 'success', data: { success: true, locked_by, locked_at } }
-    // request.ts 已处理，直接返回 data 部分
-    return request.post(`${this.baseURL}/lock`, data)
+    const response = await request.post(`${this.baseURL}/lock`, data)
+    return toCamelCase<LockResponse>(response)
   }
 
   /**
@@ -142,7 +156,8 @@ export class ModuleAPI {
    * @returns Promise<LockResponse> 当前锁状态
    */
   async getLockStatus(): Promise<LockResponse> {
-    return request.get(`${this.baseURL}/lock`)
+    const data = await request.get(`${this.baseURL}/lock`)
+    return toCamelCase<LockResponse>(data)
   }
 
   /**
@@ -153,7 +168,8 @@ export class ModuleAPI {
    * @returns Promise<ModuleModerator[]> 协作者列表
    */
   async getModerators(moduleId: number | string): Promise<ModuleModerator[]> {
-    return request.get(`${this.baseURL}/${moduleId}/moderators`)
+    const data = await request.get(`${this.baseURL}/${moduleId}/moderators`)
+    return toCamelCase<ModuleModerator[]>(data || [])
   }
 
   /**
@@ -165,7 +181,8 @@ export class ModuleAPI {
    * @returns Promise<ModuleModerator> 添加的协作者信息
    */
   async addModerator(moduleId: number | string, data: AddModeratorRequest): Promise<ModuleModerator> {
-    return request.post(`${this.baseURL}/${moduleId}/moderators`, data)
+    const response = await request.post(`${this.baseURL}/${moduleId}/moderators`, data)
+    return toCamelCase<ModuleModerator>(response)
   }
 
   /**

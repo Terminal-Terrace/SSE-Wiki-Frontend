@@ -1,9 +1,9 @@
+import type { Page } from '@/types'
 // 文章管理 API 服务
 import type {
   AddCollaboratorRequest,
   Article,
   ArticleCollaborator,
-  ArticleDetailResponse,
   ArticleListQuery,
   ArticleVersion,
   BatchReviewRequest,
@@ -18,6 +18,7 @@ import type {
   SubmissionRequest,
   VersionDiffResponse,
 } from '@/types/article'
+import { toCamelCase } from '@/utils/convert'
 import request from '@/utils/request'
 
 /**
@@ -36,15 +37,17 @@ export class ArticleAPI {
    * GET /api/v1/articles
    */
   async getArticles(params?: ArticleListQuery): Promise<PaginatedResponse<Article>> {
-    return request.get(this.baseURL, { params })
+    const data = await request.get(this.baseURL, { params })
+    return toCamelCase<PaginatedResponse<Article>>(data)
   }
 
   /**
    * 获取文章详情
    * GET /api/v1/articles/:id
    */
-  async getArticle(id: number | string): Promise<ArticleDetailResponse> {
-    return request.get(`${this.baseURL}/${id}`)
+  async getArticle(id: number | string): Promise<Page> {
+    const resp = await request.get(`${this.baseURL}/${id}`)
+    return toCamelCase<Page>(resp)
   }
 
   /**
@@ -52,7 +55,8 @@ export class ArticleAPI {
    * POST /api/v1/articles
    */
   async createArticle(data: CreateArticleRequest): Promise<Article> {
-    return request.post(this.baseURL, data)
+    const resp = await request.post(this.baseURL, data)
+    return toCamelCase<Article>(resp)
   }
 
   /**
@@ -86,7 +90,8 @@ export class ArticleAPI {
    * GET /api/v1/articles/:id/versions
    */
   async getVersions(articleId: number | string): Promise<ArticleVersion[]> {
-    return request.get(`${this.baseURL}/${articleId}/versions`)
+    const data = await request.get(`${this.baseURL}/${articleId}/versions`)
+    return toCamelCase<ArticleVersion[]>(data || [])
   }
 
   /**
@@ -94,7 +99,8 @@ export class ArticleAPI {
    * GET /api/v1/versions/:id
    */
   async getVersion(versionId: number | string): Promise<ArticleVersion> {
-    return request.get(`${this.versionURL}/${versionId}`)
+    const resp = await request.get(`${this.versionURL}/${versionId}`)
+    return toCamelCase<ArticleVersion>(resp)
   }
 
   /**
@@ -106,7 +112,8 @@ export class ArticleAPI {
     againstVersionId?: number | string,
   ): Promise<VersionDiffResponse> {
     const params = againstVersionId ? { against: againstVersionId } : {}
-    return request.get(`${this.versionURL}/${versionId}/diff`, { params })
+    const resp = await request.get(`${this.versionURL}/${versionId}/diff`, { params })
+    return toCamelCase<VersionDiffResponse>(resp)
   }
 
   // ========== 提交和审核 ==========
@@ -119,7 +126,8 @@ export class ArticleAPI {
     articleId: number | string,
     data: SubmissionRequest,
   ): Promise<ReviewSubmission> {
-    return request.post(`${this.baseURL}/${articleId}/submissions`, data)
+    const resp = await request.post(`${this.baseURL}/${articleId}/submissions`, data)
+    return toCamelCase<ReviewSubmission>(resp)
   }
 
   /**
@@ -127,7 +135,8 @@ export class ArticleAPI {
    * GET /api/v1/reviews
    */
   async getReviews(params?: ReviewListQuery): Promise<PaginatedResponse<ReviewSubmission>> {
-    return request.get(this.reviewURL, { params })
+    const data = await request.get(this.reviewURL, { params })
+    return toCamelCase<PaginatedResponse<ReviewSubmission>>(data)
   }
 
   /**
@@ -135,7 +144,8 @@ export class ArticleAPI {
    * GET /api/v1/reviews/:id
    */
   async getReview(reviewId: number | string): Promise<ReviewDetailResponse> {
-    return request.get(`${this.reviewURL}/${reviewId}`)
+    const resp = await request.get(`${this.reviewURL}/${reviewId}`)
+    return toCamelCase<ReviewDetailResponse>(resp)
   }
 
   /**
@@ -149,26 +159,8 @@ export class ArticleAPI {
     reviewId: number | string,
     data: ReviewActionRequest,
   ): Promise<ReviewActionResponse> {
-    return request.post(`${this.reviewURL}/${reviewId}/action`, data)
-  }
-
-  /**
-   * 获取审核详情（别名方法，符合联调文档术语）
-   * GET /api/v1/reviews/:id
-   */
-  async getReviewDetail(reviewId: number | string): Promise<ReviewSubmission> {
-    return this.getReview(reviewId)
-  }
-
-  /**
-   * 审核操作（别名方法，符合联调文档术语）
-   * POST /api/v1/reviews/:id/action
-   */
-  async reviewAction(
-    reviewId: number | string,
-    data: ReviewActionRequest,
-  ): Promise<ReviewActionResponse> {
-    return this.reviewSubmission(reviewId, data)
+    const resp = await request.post(`${this.reviewURL}/${reviewId}/action`, data)
+    return toCamelCase<ReviewActionResponse>(resp)
   }
 
   /**
@@ -182,7 +174,8 @@ export class ArticleAPI {
    * 3. 显示批量操作结果（成功/失败列表）
    */
   async batchReview(data: BatchReviewRequest): Promise<{ success: boolean, results: any[] }> {
-    return request.post(`${this.reviewURL}/batch-action`, data)
+    const resp = await request.post(`${this.reviewURL}/batch-action`, data)
+    return toCamelCase<{ success: boolean, results: any[] }>(resp)
   }
 
   /**
@@ -192,8 +185,9 @@ export class ArticleAPI {
   async resolveConflict(
     reviewId: number | string,
     data: ResolveConflictRequest,
-  ): Promise<{ success: boolean, new_version_id: number }> {
-    return request.post(`${this.reviewURL}/${reviewId}/resolve`, data)
+  ): Promise<{ success: boolean, newVersionId: number }> {
+    const resp = await request.post(`${this.reviewURL}/${reviewId}/resolve`, data)
+    return toCamelCase<{ success: boolean, newVersionId: number }>(resp)
   }
 
   // ========== 协作者管理 ==========
@@ -203,7 +197,8 @@ export class ArticleAPI {
    * GET /api/v1/articles/:id/collaborators
    */
   async getCollaborators(articleId: number | string): Promise<ArticleCollaborator[]> {
-    return request.get(`${this.baseURL}/${articleId}/collaborators`)
+    const data = await request.get(`${this.baseURL}/${articleId}/collaborators`)
+    return toCamelCase<ArticleCollaborator[]>(data || [])
   }
 
   /**
@@ -214,7 +209,8 @@ export class ArticleAPI {
     articleId: number | string,
     data: AddCollaboratorRequest,
   ): Promise<ArticleCollaborator> {
-    return request.post(`${this.baseURL}/${articleId}/collaborators`, data)
+    const resp = await request.post(`${this.baseURL}/${articleId}/collaborators`, data)
+    return toCamelCase<ArticleCollaborator>(resp)
   }
 
   /**
@@ -237,7 +233,8 @@ export class ArticleAPI {
     userId: number,
     role: string,
   ): Promise<ArticleCollaborator> {
-    return request.patch(`${this.baseURL}/${articleId}/collaborators/${userId}`, { role })
+    const resp = await request.patch(`${this.baseURL}/${articleId}/collaborators/${userId}`, { role })
+    return toCamelCase<ArticleCollaborator>(resp)
   }
 
   // ========== 标签管理 ==========
@@ -255,7 +252,8 @@ export class ArticleAPI {
     incoming: Article[] // 引用了本文的文章
     outgoing: Article[] // 本文引用的文章
   }> {
-    return request.get(`${this.baseURL}/${articleId}/references`)
+    const resp = await request.get(`${this.baseURL}/${articleId}/references`)
+    return toCamelCase<{ incoming: Article[], outgoing: Article[] }>(resp)
   }
 
   /**
@@ -286,8 +284,9 @@ export class ArticleAPI {
    * 增加文章阅读量
    * POST /api/v1/articles/:id/view
    */
-  async incrementViewCount(articleId: number | string): Promise<{ view_count: number }> {
-    return request.post(`${this.baseURL}/${articleId}/view`)
+  async incrementViewCount(articleId: number | string): Promise<{ viewCount: number }> {
+    const resp = await request.post(`${this.baseURL}/${articleId}/view`)
+    return toCamelCase<{ viewCount: number }>(resp)
   }
 
   /**
@@ -301,7 +300,8 @@ export class ArticleAPI {
     page?: number
     page_size?: number
   }): Promise<PaginatedResponse<Article>> {
-    return request.get(`${this.baseURL}/search`, { params })
+    const data = await request.get(`${this.baseURL}/search`, { params })
+    return toCamelCase<PaginatedResponse<Article>>(data)
   }
 
   /**
@@ -312,7 +312,8 @@ export class ArticleAPI {
     moduleId: number | string,
     params?: { page?: number, page_size?: number },
   ): Promise<PaginatedResponse<Article>> {
-    return request.get(`/api/v1/modules/${moduleId}/articles`, { params })
+    const data = await request.get(`/api/v1/modules/${moduleId}/articles`, { params })
+    return toCamelCase<PaginatedResponse<Article>>(data)
   }
 
   // ========== 用户收藏 ==========
@@ -323,45 +324,41 @@ export class ArticleAPI {
    */
   async getUserFavourites(userId: number | string): Promise<{
     articles: Article[]
-    article_id?: number[]
+    articleId?: number[]
   }> {
-    const resp: any = await request.get(`${this.baseURL}/${userId}/user-favour`)
-    const articles = Array.isArray(resp?.articles) ? resp.articles : []
-    const articleIds = Array.isArray(resp?.article_id) ? resp.article_id : []
-    return { articles, article_id: articleIds }
+    const resp = await request.get(`${this.baseURL}/${userId}/user-favour`)
+    return toCamelCase<{ articles: Article[], articleId?: number[] }>(resp)
   }
 
   /**
    * 添加文章到收藏
    * POST /api/v1/articles/update-user-favour
    */
-  async addFavorite(userId: number, articleId: number): Promise<{ status: string }> {
-    const resp = await request.post(`${this.baseURL}/update-user-favour`, {
+  async addFavorite(userId: number, articleId: number): Promise<{ success: boolean }> {
+    return request.post(`${this.baseURL}/update-user-favour`, {
       user_id: userId,
       article_id: articleId,
       is_added: true,
     })
-    return { status: resp?.data || resp?.status || 'success' }
   }
 
   /**
    * 从收藏中移除文章
    * POST /api/v1/articles/update-user-favour
    */
-  async removeFavorite(userId: number, articleId: number): Promise<{ status: string }> {
-    const resp = await request.post(`${this.baseURL}/update-user-favour`, {
+  async removeFavorite(userId: number, articleId: number): Promise<{ success: boolean }> {
+    return request.post(`${this.baseURL}/update-user-favour`, {
       user_id: userId,
       article_id: articleId,
       is_added: false,
     })
-    return { status: resp?.data || resp?.status || 'success' }
   }
 
   /**
    * 切换文章收藏状态
    * POST /api/v1/articles/update-user-favour
    */
-  async toggleFavorite(userId: number, articleId: number, isFavorited: boolean): Promise<{ status: string }> {
+  async toggleFavorite(userId: number, articleId: number, isFavorited: boolean): Promise<{ success: boolean }> {
     return isFavorited
       ? this.removeFavorite(userId, articleId)
       : this.addFavorite(userId, articleId)

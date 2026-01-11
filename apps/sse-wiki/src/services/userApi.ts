@@ -1,3 +1,4 @@
+import { toCamelCase } from '@/utils/convert'
 // 用户管理 API 服务
 import request from '@/utils/request'
 
@@ -17,7 +18,7 @@ export interface SearchUsersResponse {
   users: PublicUserInfo[]
   total: number
   page: number
-  page_size: number
+  pageSize: number
 }
 
 /**
@@ -43,7 +44,8 @@ export class UserAPI {
    * @returns Promise<SearchUsersResponse> 搜索结果
    */
   async searchUsers(params: SearchUsersParams): Promise<SearchUsersResponse> {
-    return request.get(`${this.baseURL}/search`, { params })
+    const resp = await request.get(`${this.baseURL}/search`, { params })
+    return toCamelCase<SearchUsersResponse>(resp)
   }
 
   /**
@@ -54,7 +56,8 @@ export class UserAPI {
    * @returns Promise<PublicUserInfo> 用户公开信息
    */
   async getUserById(userId: number | string): Promise<PublicUserInfo> {
-    return request.get(`${this.baseURL}/${userId}`)
+    const resp = await request.get(`${this.baseURL}/${userId}`)
+    return toCamelCase<PublicUserInfo>(resp)
   }
 }
 

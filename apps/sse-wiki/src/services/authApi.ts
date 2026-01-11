@@ -1,3 +1,4 @@
+import { toCamelCase } from '@/utils/convert'
 import { authHttp } from '../utils/authHttp'
 
 // 类型定义
@@ -17,7 +18,7 @@ export interface ApiResponse<T = any> {
 }
 
 export interface UserInfo {
-  user_id: number
+  userId: number
   username: string
   email?: string
   role?: string
@@ -79,7 +80,7 @@ export class AuthAPI {
       throw new Error(response.data.message || '获取用户信息失败')
     }
 
-    return response.data.data
+    return toCamelCase<UserInfo>(response.data.data)
   }
 
   /**
@@ -136,7 +137,7 @@ export class AuthAPI {
       throw new Error(response.data.message || '更新资料失败')
     }
 
-    return response.data.data
+    return toCamelCase<UserInfo>(response.data.data)
   }
 }
 
