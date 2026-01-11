@@ -52,8 +52,8 @@ const canReview = computed(() => {
   if (!reviewData.value) {
     return false
   }
-  // 从 article.current_user_role 读取用户角色
-  const userRole = reviewData.value.article?.current_user_role
+  // 从 article.currentUserRole 读取用户角色
+  const userRole = (reviewData.value.article as any)?.currentUserRole || reviewData.value.article?.current_user_role
   return userRole === 'admin' || userRole === 'moderator'
 })
 
@@ -61,12 +61,14 @@ const canReview = computed(() => {
 const pageTitle = computed(() => {
   if (isSubmission.value) {
     if (reviewData.value?.proposed_version) {
-      return reviewData.value.proposed_version.commit_message || '未命名提交'
+      const version = reviewData.value.proposed_version as any
+      return version.commitMessage || version.commit_message || '未命名提交'
     }
     return '查看提交'
   }
   if (currentVersion.value) {
-    return currentVersion.value.commit_message || '未命名版本'
+    const version = currentVersion.value as any
+    return version.commitMessage || version.commit_message || '未命名版本'
   }
   return '查看版本'
 })
@@ -85,12 +87,14 @@ const authorName = computed(() => {
 
 // 创建时间
 const createdAt = computed(() => {
-  // 从 submission.created_at 读取创建时间
+  // 从 submission.createdAt 读取创建时间
   if (isSubmission.value && reviewData.value?.submission) {
-    return reviewData.value.submission.created_at
+    const submission = reviewData.value.submission as any
+    return submission.createdAt || submission.created_at || ''
   }
   if (currentVersion.value) {
-    return currentVersion.value.created_at
+    const version = currentVersion.value as any
+    return version.createdAt || version.created_at || ''
   }
   return ''
 })
@@ -154,24 +158,25 @@ async function loadVersionData() {
       baseVersion.value = data.base_version || null
       currentVersion.value = data.proposed_version || null
 
-      // 如果检测到冲突，构建 conflict_data（只读查看模式）
-      if (data.submission?.has_conflict || data.conflict_data) {
-        if (data.conflict_data) {
-          conflictData.value = data.conflict_data
-        }
-        else {
-          // 手动构建 conflict_data
-          conflictData.value = {
-            has_conflict: true,
-            base_content: data.base_version?.content || '',
-            their_content: data.proposed_version?.content || '',
-            our_content: data.current_version?.content || '',
-            merged_content: undefined,
-            base_version_number: data.base_version?.version_number,
-            their_version_number: data.proposed_version?.version_number,
-            our_version_number: data.current_version?.version_number,
-            submitter_name: data.submission?.submitter?.username,
-          }
+      // 如果检测到冲突，从版本对象获取内容构建三路合并数据（只读查看模式）
+      const submission = data.submission as any
+      const hasConflict = submission?.hasConflict || submission?.has_conflict || data.conflict_data?.has_conflict
+      if (hasConflict) {
+        // 从版本对象获取内容，从 conflict_data 获取元数据
+        const conflictMeta = data.conflict_data || {}
+        conflictData.value = {
+          hasConflict: true,
+          has_conflict: true,
+          baseContent: data.base_version?.content || '',
+          base_content: data.base_version?.content || '',
+          theirContent: data.proposed_version?.content || '',
+          their_content: data.proposed_version?.content || '',
+          our_content: data.current_version?.content || '',
+          merged_content: undefined,
+          base_version_number: conflictMeta.base_version_number || data.base_version?.version_number,
+          their_version_number: data.proposed_version?.version_number,
+          our_version_number: conflictMeta.current_version_number || data.current_version?.version_number,
+          submitter_name: conflictMeta.submitter_name || data.submission?.submitter?.username,
         }
       }
     }
@@ -267,13 +272,13 @@ onMounted(() => {
             <span class="text-muted-foreground">基于版本:</span>
             <span class="ml-2 font-mono">初始版本</span>
           </div>
-          <div v-if="reviewData.submission?.has_conflict" class="text-sm text-destructive">
+          <div v-if="(reviewData.submission as any)?.hasConflict || reviewData.submission?.has_conflict" class="text-sm text-destructive">
             <span class="font-semibold">检测到冲突</span>
             <span class="ml-2">此提交与当前版本存在冲突</span>
           </div>
-          <div v-if="reviewData.submission?.review_notes" class="text-sm">
+          <div v-if="(reviewData.submission as any)?.reviewNotes || reviewData.submission?.review_notes" class="text-sm">
             <span class="text-muted-foreground">审核备注:</span>
-            <span class="ml-2">{{ reviewData.submission.review_notes }}</span>
+            <span class="ml-2">{{ (reviewData.submission as any)?.reviewNotes || reviewData.submission?.review_notes }}</span>
           </div>
         </div>
 

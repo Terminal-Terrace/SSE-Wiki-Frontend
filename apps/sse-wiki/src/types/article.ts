@@ -114,14 +114,6 @@ export interface ArticleReference {
   to_article?: Article
 }
 
-// 标签
-export interface Tag {
-  id: number
-  name: string
-  color: string
-  created_at: string
-}
-
 // 文章-标签关联
 export interface ArticleTag {
   article_id: number
@@ -282,7 +274,15 @@ export interface ArticleDetailResponse extends Article {
   can_delete?: boolean // 当前用户是否可以删除文章（Global_Admin 或 Author/Admin）
 }
 
-// 三路合并冲突数据
+// 冲突检测元数据
+export interface ConflictData {
+  has_conflict: boolean
+  base_version_number?: number
+  current_version_number?: number
+  submitter_name?: string
+}
+
+// 三路合并冲突数据（前端构建的完整版）
 export interface ThreeWayMergeData {
   base_content: string
   their_content: string // 提交者的内容（proposed）
@@ -307,10 +307,9 @@ export interface ReviewDetailResponse {
   submission: ReviewSubmission | null
   proposed_version: ArticleVersion | null
   base_version: ArticleVersion | null
+  current_version?: ArticleVersion // 当前线上版本
   article: Article | null
-  // 便捷访问字段（从嵌套对象中提取）
-  current_version?: ArticleVersion // 当前线上版本（从 article 获取）
-  conflict_data?: ThreeWayMergeData
+  conflict_data?: ConflictData
 }
 
 // 冲突解决请求

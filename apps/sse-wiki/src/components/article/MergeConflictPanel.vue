@@ -83,16 +83,39 @@ function toggleEditorMode(mode: any) {
   }
 }
 
-// 检查是否已解决所有冲突标记
+// 检查是否已解决所有冲突标记（需要处理 HTML 转义的情况）
 const conflictResolved = computed(() => {
-  return !mergedContent.value.includes('<<<<<<<')
-    && !mergedContent.value.includes('=======')
-    && !mergedContent.value.includes('>>>>>>>')
+  // 如果内容包含 HTML 转义的冲突标记，先解码
+  let content = mergedContent.value
+  // 处理 HTML 转义：&lt; 变成 <，&gt; 变成 >
+  content = content.replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+  // 如果内容包含 HTML 标签，提取纯文本
+  if (content.includes('<')) {
+    // 创建一个临时 DOM 元素来提取文本内容
+    const tempDiv = document.createElement('div')
+    tempDiv.innerHTML = content
+    content = tempDiv.textContent || ''
+  }
+  return !content.includes('<<<<<<<')
+    && !content.includes('=======')
+    && !content.includes('>>>>>>>')
 })
 
-// 统计冲突数量
+// 统计冲突数量（需要处理 HTML 转义的情况）
 const conflictCount = computed(() => {
-  const matches = mergedContent.value.match(/<<<<<<</g)
+  // 如果内容包含 HTML 转义的冲突标记，先解码
+  let content = mergedContent.value
+  // 处理 HTML 转义：&lt; 变成 <，&gt; 变成 >
+  content = content.replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+  // 如果内容包含 HTML 标签，提取纯文本
+  if (content.includes('<')) {
+    // 创建一个临时 DOM 元素来提取文本内容
+    const tempDiv = document.createElement('div')
+    tempDiv.innerHTML = content
+    content = tempDiv.textContent || ''
+  }
+  // 匹配冲突标记
+  const matches = content.match(/<<<<<<</g)
   return matches ? matches.length : 0
 })
 

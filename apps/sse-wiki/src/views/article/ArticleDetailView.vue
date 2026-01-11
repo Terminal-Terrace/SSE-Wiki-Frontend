@@ -71,6 +71,23 @@ const newTagInput = ref('')
 const pageId = computed(() => String(props.id ?? props.articleId ?? route.params.articleId ?? ''))
 const currentUserId = computed(() => authStore.user?.id)
 
+// 计算 content（提供默认值）
+const pageContent = computed(() => {
+  if (!page.value)
+    return ''
+
+  // 优先使用便捷字段 content
+  if (page.value.content)
+    return page.value.content
+
+  // 回退到 currentVersion.content
+  if (page.value.currentVersion?.content)
+    return page.value.currentVersion.content
+
+  // 默认空字符串
+  return ''
+})
+
 const tabs = [
   { label: '详情', value: 'content' },
   { label: '编辑', value: 'edit' },
@@ -83,19 +100,19 @@ const canManageBasicInfo = computed(() => {
   if (!page.value || !isAuthenticated.value) {
     return false
   }
-  const role = (page.value as any).current_user_role
-  const isAuthor = (page.value as any).is_author
+  const role = page.value.currentUserRole
+  const isAuthor = page.value.isAuthor
   // 作者或 admin/moderator 协作者可以管理基础信息
-  // 注意：owner 角色已移除，使用 is_author 判断作者身份
+  // 注意：owner 角色已移除，使用 isAuthor 判断作者身份
   return isAuthor || role === 'admin' || role === 'moderator'
 })
 
-// 判断是否可以删除文章（使用后端返回的 can_delete 字段）
+// 判断是否可以删除文章（使用后端返回的 canDelete 字段）
 const canDeleteArticle = computed(() => {
   if (!page.value || !isAuthenticated.value) {
     return false
   }
-  return (page.value as any).can_delete === true
+  return page.value.canDelete === true
 })
 
 // 从 URL 查询参数初始化 activeTab
@@ -125,53 +142,11 @@ watch(() => route.query.tab, (newTab) => {
   }
 })
 
-function mapArticleToPage(article: any): Page {
-  // 将后端 ArticleDetailResponse 映射为本地 Page 结构，兼容现有组件
-  const content = article.content ?? article.current_version?.content ?? article.versions?.[0]?.content ?? ''
-  const lastEditedAt = article.updated_at ?? article.current_version?.created_at ?? new Date().toISOString()
-  const editor = article.current_version?.author ? { id: article.current_version.author.id, username: article.current_version.author.username } : (article.author ? { id: article.author.id, username: article.author.username } : { id: 0, username: 'unknown' })
-  // 处理标签：如果是字符串数组，转换为对象数组
-  const tags = (article.tags ?? []).map((t: any) => {
-    if (typeof t === 'string') {
-      return { id: t, name: t } // 字符串标签，用名称作为ID
-    }
-    return { id: t.id, name: t.name } // 对象标签
-  })
-  const versions = (article.versions ?? []).map((v: any) => ({
-    id: v.id,
-    commitMessage: v.commit_message ?? v.commitMessage ?? '',
-    editor: v.author?.username ?? String(v.author_id ?? ''),
-    timestamp: v.created_at ?? v.timestamp,
-    content: v.content ?? '',
-  }))
-
-  return {
-    id: article.id,
-    title: article.title,
-    content,
-    lastEditedAt,
-    editor,
-    viewCount: article.view_count ?? article.viewCount ?? 0,
-    tags,
-    versions,
-    currentVersionId: article.current_version_id, // 保存当前版本ID
-    // 保留权限和设置信息，用于管理基础信息
-    current_user_role: article.current_user_role,
-    is_review_required: article.is_review_required,
-    // 新增权限字段（后端计算）
-    is_author: article.is_author ?? false, // 当前用户是否是文章作者
-    can_delete: article.can_delete ?? false, // 当前用户是否可以删除文章
-    created_by: article.created_by, // 文章创建者ID
-  } as any // 使用 any 类型避免 Page 接口限制
-}
-
 async function loadPage() {
   loading.value = true
   try {
     const data = await articleApi.getArticle(pageId.value)
-    const mapped = mapArticleToPage(data)
-    // 水合操作由 ArticleContent.vue 组件内部处理，避免重复水合
-    page.value = mapped
+    page.value = data
   }
   catch (error) {
     console.error('Failed to load page:', error)
@@ -210,8 +185,8 @@ async function handleSave(updatedPage: Partial<Page> & { commitMessage?: string 
     const content = updatedPage.content ?? page.value.content ?? ''
     const commitMessage = updatedPage.commitMessage || '内容更新'
 
-    // 获取正确的 base_version_id：优先使用 currentVersionId，回退到第一个版本
-    const baseVersionId = (page.value as any).currentVersionId ?? page.value?.versions?.[0]?.id ?? 0
+    // 获取正确的 currentVersionId：优先使用 currentVersionId，回退到第一个版本
+    const baseVersionId = Number(page.value.currentVersionId ?? page.value?.versions?.[0]?.id ?? 0)
 
     if (!baseVersionId) {
       toast({
@@ -258,10 +233,38 @@ async function handleSave(updatedPage: Partial<Page> & { commitMessage?: string 
   catch (error: any) {
     // 检查是否为冲突错误（409）
     if (error.response?.status === 409) {
-      const conflictDataFromError = error.response?.data?.data?.conflict_data
-      if (conflictDataFromError) {
-        // 显示冲突对话框
-        currentConflictData.value = conflictDataFromError
+      const conflictMeta = error.response?.data?.data?.conflict_data
+      if (conflictMeta && page.value && pendingSubmissionData.value) {
+        // 从版本对象获取内容，从 conflict_data 获取元数据
+        const theirContent = pendingSubmissionData.value.content
+        const ourContent = page.value.content || page.value.currentVersion?.content || ''
+
+        // 查找 base version 的内容
+        let baseContent = ourContent // 默认使用当前版本内容
+        if (pendingSubmissionData.value.baseVersionId && page.value.versions) {
+          const baseVersion = page.value.versions.find(
+            v => Number(v.id) === pendingSubmissionData.value.baseVersionId,
+          )
+          if (baseVersion?.content) {
+            baseContent = baseVersion.content
+          }
+        }
+
+        // 构建完整的三路合并数据
+        currentConflictData.value = {
+          hasConflict: true,
+          has_conflict: true,
+          baseContent,
+          base_content: baseContent,
+          theirContent,
+          their_content: theirContent,
+          our_content: ourContent,
+          merged_content: undefined,
+          base_version_number: conflictMeta.base_version_number,
+          their_version_number: undefined, // 创建提交时还没有版本号
+          our_version_number: conflictMeta.current_version_number,
+          submitter_name: conflictMeta.submitter_name || authStore.user?.username,
+        }
         showConflictDialog.value = true
         toast({
           title: '检测到冲突',
@@ -343,8 +346,8 @@ function enterEditBasicInfo() {
   // 初始化表单数据
   basicInfoForm.value = {
     title: page.value.title || '',
-    tags: (page.value.tags || []).map(t => t.name),
-    isReviewRequired: (page.value as any).is_review_required ?? false,
+    tags: page.value.tags || [],
+    isReviewRequired: page.value.isReviewRequired ?? false,
   }
   newTagInput.value = ''
   isEditingBasicInfo.value = true
@@ -642,22 +645,22 @@ async function handleDeleteArticle() {
                 </div>
 
                 <div class="flex items-center space-x-4 text-sm text-muted-foreground">
-                  <span>最近编辑于 {{ formatDate(page.lastEditedAt) }}</span>
-                  <span>由 {{ page.editor.username }}</span>
-                  <span>{{ page.viewCount }} 次阅读</span>
+                  <span v-if="page.updatedAt">最近编辑于 {{ formatDate(page.updatedAt) }}</span>
+                  <span>由 {{ page.editor?.username || '未知' }}</span>
+                  <span v-if="page.viewCount !== undefined">{{ page.viewCount }} 次阅读</span>
                   <FavoriteButton :article-id="Number(pageId)" />
                 </div>
 
                 <!-- 标签行 -->
-                <div v-if="page.tags?.length || (page as any).is_review_required" class="flex flex-wrap items-center gap-2">
+                <div v-if="page.tags?.length || page.isReviewRequired" class="flex flex-wrap items-center gap-2">
                   <Badge
                     v-for="tag in page.tags"
-                    :key="tag.id"
+                    :key="tag"
                     variant="secondary"
                   >
-                    {{ tag.name }}
+                    {{ tag }}
                   </Badge>
-                  <TooltipWrapper v-if="(page as any).is_review_required">
+                  <TooltipWrapper v-if="page.isReviewRequired">
                     <Badge
                       variant="outline"
                       class="border-amber-500 text-amber-700 cursor-help"
@@ -705,7 +708,7 @@ async function handleDeleteArticle() {
                   <!-- 主要内容区域 -->
                   <div class="flex-1 min-w-0">
                     <div class="py-4">
-                      <ArticleContentCard :content="page.content" />
+                      <ArticleContentCard :content="pageContent" />
                     </div>
                   </div>
 
@@ -713,7 +716,7 @@ async function handleDeleteArticle() {
                   <div v-if="!showAiChat" class="hidden lg:block w-72 flex-shrink-0">
                     <div class="sticky top-4">
                       <OutlineCard
-                        :content="page.content"
+                        :content="pageContent"
                         :is-sidebar="true"
                       />
                     </div>
@@ -776,7 +779,7 @@ async function handleDeleteArticle() {
           <div class="h-[calc(100vh-8rem)] sticky top-4">
             <AiChatSidebar
               :article-title="page.title"
-              :article-content="page.content"
+              :article-content="pageContent"
               @close="toggleAiChat"
             />
           </div>
@@ -824,9 +827,9 @@ async function handleDeleteArticle() {
       v-model:open="showCollaboratorsModal"
       :article-id="Number(page.id)"
       :article-title="page.title"
-      :current-user-role="(page as any).current_user_role"
-      :is-author="(page as any).is_author"
-      :created-by="(page as any).created_by"
+      :current-user-role="(page.currentUserRole as 'admin' | 'moderator' | null) ?? null"
+      :is-author="page.isAuthor"
+      :created-by="page.createdBy"
       @success="loadPage"
     />
 

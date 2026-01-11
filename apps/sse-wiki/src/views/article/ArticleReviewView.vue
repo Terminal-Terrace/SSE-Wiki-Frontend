@@ -54,8 +54,9 @@ const canReview = computed(() => {
     return false
   }
 
-  // 从 article.current_user_role 读取用户角色
-  const userRole = reviewData.value.article?.current_user_role
+  // 从 article.currentUserRole 读取用户角色
+  const article = reviewData.value.article as any
+  const userRole = article?.currentUserRole || reviewData.value.article?.current_user_role
   return userRole === 'admin' || userRole === 'moderator'
 })
 
@@ -83,12 +84,14 @@ const submitterName = computed(() => {
 
 // 提交说明
 const commitMessage = computed(() => {
-  return reviewData.value?.proposed_version?.commit_message || '未命名提交'
+  const version = reviewData.value?.proposed_version as any
+  return version?.commitMessage || version?.commit_message || '未命名提交'
 })
 
 // 提交时间
 const createdAt = computed(() => {
-  return reviewData.value?.submission?.created_at || ''
+  const submission = reviewData.value?.submission as any
+  return submission?.createdAt || submission?.created_at || ''
 })
 
 // 基础版本号
@@ -136,27 +139,25 @@ async function loadReviewData() {
     const data = await articleApi.getReview(props.submissionId)
     reviewData.value = data
 
-    // 如果检测到冲突，直接显示 ThreeWayMerge（不管是否已有 conflict_data）
-    const hasConflict = data.submission?.has_conflict || data.conflict_data
+    // 如果检测到冲突，从版本对象获取内容构建三路合并数据
+    const submission = data.submission as any
+    const hasConflict = submission?.hasConflict || submission?.has_conflict || data.conflict_data?.has_conflict
     if (hasConflict) {
-      // 如果后端已经返回了 conflict_data，直接使用
-      if (data.conflict_data) {
-        conflictData.value = data.conflict_data
-      }
-      else {
-        // 如果只有 has_conflict 标记但没有 conflict_data，手动构建
-        // 这种情况下后端应该总是返回 conflict_data，但为了兼容性保留构建逻辑
-        conflictData.value = {
-          has_conflict: true,
-          base_content: data.base_version?.content || '',
-          their_content: data.proposed_version?.content || '',
-          our_content: data.current_version?.content || '',
-          merged_content: undefined,
-          base_version_number: data.base_version?.version_number,
-          their_version_number: data.proposed_version?.version_number,
-          our_version_number: data.current_version?.version_number,
-          submitter_name: data.submission?.submitter?.username,
-        }
+      // 从版本对象获取内容，从 conflict_data 获取元数据
+      const conflictMeta = data.conflict_data || {}
+      conflictData.value = {
+        hasConflict: true,
+        has_conflict: true,
+        baseContent: data.base_version?.content || '',
+        base_content: data.base_version?.content || '',
+        theirContent: data.proposed_version?.content || '',
+        their_content: data.proposed_version?.content || '',
+        our_content: data.current_version?.content || '',
+        merged_content: undefined,
+        base_version_number: conflictMeta.base_version_number || data.base_version?.version_number,
+        their_version_number: data.proposed_version?.version_number,
+        our_version_number: conflictMeta.current_version_number || data.current_version?.version_number,
+        submitter_name: conflictMeta.submitter_name || data.submission?.submitter?.username,
       }
       showConflict.value = true
     }
@@ -201,9 +202,23 @@ async function handleApprove() {
   catch (error: any) {
     // 检查是否为冲突错误（409）
     if (error.response?.status === 409) {
-      const conflictDataFromError = error.response?.data?.data?.conflict_data
-      if (conflictDataFromError) {
-        conflictData.value = conflictDataFromError
+      const conflictMeta = error.response?.data?.data?.conflict_data
+      if (conflictMeta && reviewData.value) {
+        // 从版本对象获取内容，从 conflict_data 获取元数据
+        conflictData.value = {
+          hasConflict: true,
+          has_conflict: true,
+          baseContent: reviewData.value.base_version?.content || '',
+          base_content: reviewData.value.base_version?.content || '',
+          theirContent: reviewData.value.proposed_version?.content || '',
+          their_content: reviewData.value.proposed_version?.content || '',
+          our_content: reviewData.value.current_version?.content || '',
+          merged_content: undefined,
+          base_version_number: conflictMeta.base_version_number || reviewData.value.base_version?.version_number,
+          their_version_number: reviewData.value.proposed_version?.version_number,
+          our_version_number: conflictMeta.current_version_number || reviewData.value.current_version?.version_number,
+          submitter_name: conflictMeta.submitter_name || reviewData.value.submission?.submitter?.username,
+        }
         showConflict.value = true
         toast({
           title: '检测到冲突',
@@ -417,17 +432,17 @@ onMounted(() => {
             </TooltipWrapper>
           </div>
 
-          <div v-if="reviewData.submission?.has_conflict" class="flex items-center gap-2 text-destructive text-sm">
+          <div v-if="(reviewData.submission as any)?.hasConflict || reviewData.submission?.has_conflict" class="flex items-center gap-2 text-destructive text-sm">
             <XCircle class="h-4 w-4" />
             <span>检测到冲突，需要手动解决</span>
           </div>
 
-          <div v-if="reviewData.submission?.review_notes" class="pt-3 border-t">
+          <div v-if="(reviewData.submission as any)?.reviewNotes || reviewData.submission?.review_notes" class="pt-3 border-t">
             <p class="text-sm text-muted-foreground mb-1">
               审核备注
             </p>
             <p class="text-sm">
-              {{ reviewData.submission.review_notes }}
+              {{ (reviewData.submission as any)?.reviewNotes || reviewData.submission?.review_notes }}
             </p>
           </div>
         </div>
