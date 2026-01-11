@@ -18,7 +18,7 @@ import type {
   SubmissionRequest,
   VersionDiffResponse,
 } from '@/types/article'
-import { toCamelCase } from '@/utils/convert'
+import { toCamelCase, toSnakeCase } from '@/utils/convert'
 import request from '@/utils/request'
 
 /**
@@ -37,7 +37,7 @@ export class ArticleAPI {
    * GET /api/v1/articles
    */
   async getArticles(params?: ArticleListQuery): Promise<PaginatedResponse<Article>> {
-    const data = await request.get(this.baseURL, { params })
+    const data = await request.get(this.baseURL, { params: params ? toSnakeCase(params) : undefined })
     return toCamelCase<PaginatedResponse<Article>>(data)
   }
 
@@ -55,7 +55,7 @@ export class ArticleAPI {
    * POST /api/v1/articles
    */
   async createArticle(data: CreateArticleRequest): Promise<Article> {
-    const resp = await request.post(this.baseURL, data)
+    const resp = await request.post(this.baseURL, toSnakeCase(data))
     return toCamelCase<Article>(resp)
   }
 
@@ -77,10 +77,10 @@ export class ArticleAPI {
     data: {
       title?: string
       tags?: string[]
-      is_review_required?: boolean
+      isReviewRequired?: boolean
     },
   ): Promise<{ success: boolean, message: string }> {
-    return request.patch(`${this.baseURL}/${id}/basic-info`, data)
+    return request.patch(`${this.baseURL}/${id}/basic-info`, toSnakeCase(data))
   }
 
   // ========== 版本管理 ==========
@@ -126,7 +126,7 @@ export class ArticleAPI {
     articleId: number | string,
     data: SubmissionRequest,
   ): Promise<ReviewSubmission> {
-    const resp = await request.post(`${this.baseURL}/${articleId}/submissions`, data)
+    const resp = await request.post(`${this.baseURL}/${articleId}/submissions`, toSnakeCase(data))
     return toCamelCase<ReviewSubmission>(resp)
   }
 
@@ -135,7 +135,7 @@ export class ArticleAPI {
    * GET /api/v1/reviews
    */
   async getReviews(params?: ReviewListQuery): Promise<PaginatedResponse<ReviewSubmission>> {
-    const data = await request.get(this.reviewURL, { params })
+    const data = await request.get(this.reviewURL, { params: params ? toSnakeCase(params) : undefined })
     return toCamelCase<PaginatedResponse<ReviewSubmission>>(data)
   }
 
@@ -159,7 +159,7 @@ export class ArticleAPI {
     reviewId: number | string,
     data: ReviewActionRequest,
   ): Promise<ReviewActionResponse> {
-    const resp = await request.post(`${this.reviewURL}/${reviewId}/action`, data)
+    const resp = await request.post(`${this.reviewURL}/${reviewId}/action`, toSnakeCase(data))
     return toCamelCase<ReviewActionResponse>(resp)
   }
 
@@ -174,7 +174,7 @@ export class ArticleAPI {
    * 3. 显示批量操作结果（成功/失败列表）
    */
   async batchReview(data: BatchReviewRequest): Promise<{ success: boolean, results: any[] }> {
-    const resp = await request.post(`${this.reviewURL}/batch-action`, data)
+    const resp = await request.post(`${this.reviewURL}/batch-action`, toSnakeCase(data))
     return toCamelCase<{ success: boolean, results: any[] }>(resp)
   }
 
@@ -186,7 +186,7 @@ export class ArticleAPI {
     reviewId: number | string,
     data: ResolveConflictRequest,
   ): Promise<{ success: boolean, newVersionId: number }> {
-    const resp = await request.post(`${this.reviewURL}/${reviewId}/resolve`, data)
+    const resp = await request.post(`${this.reviewURL}/${reviewId}/resolve`, toSnakeCase(data))
     return toCamelCase<{ success: boolean, newVersionId: number }>(resp)
   }
 
@@ -209,7 +209,7 @@ export class ArticleAPI {
     articleId: number | string,
     data: AddCollaboratorRequest,
   ): Promise<ArticleCollaborator> {
-    const resp = await request.post(`${this.baseURL}/${articleId}/collaborators`, data)
+    const resp = await request.post(`${this.baseURL}/${articleId}/collaborators`, toSnakeCase(data))
     return toCamelCase<ArticleCollaborator>(resp)
   }
 
@@ -310,9 +310,9 @@ export class ArticleAPI {
    */
   async getArticlesByModule(
     moduleId: number | string,
-    params?: { page?: number, page_size?: number },
+    params?: { page?: number, pageSize?: number },
   ): Promise<PaginatedResponse<Article>> {
-    const data = await request.get(`/api/v1/modules/${moduleId}/articles`, { params })
+    const data = await request.get(`/api/v1/modules/${moduleId}/articles`, { params: params ? toSnakeCase(params) : undefined })
     return toCamelCase<PaginatedResponse<Article>>(data)
   }
 
@@ -396,7 +396,7 @@ export class ArticleAPI {
   ) {
     return this.reviewSubmission(reviewId, {
       action: 'approve',
-      merged_content: mergedContent,
+      mergedContent,
       notes,
     })
   }

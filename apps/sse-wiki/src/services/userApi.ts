@@ -1,4 +1,4 @@
-import { toCamelCase } from '@/utils/convert'
+import { toCamelCase, toSnakeCase } from '@/utils/convert'
 // 用户管理 API 服务
 import request from '@/utils/request'
 
@@ -27,7 +27,7 @@ export interface SearchUsersResponse {
 export interface SearchUsersParams {
   keyword: string
   page?: number
-  page_size?: number
+  pageSize?: number
 }
 
 /**
@@ -44,7 +44,7 @@ export class UserAPI {
    * @returns Promise<SearchUsersResponse> 搜索结果
    */
   async searchUsers(params: SearchUsersParams): Promise<SearchUsersResponse> {
-    const resp = await request.get(`${this.baseURL}/search`, { params })
+    const resp = await request.get(`${this.baseURL}/search`, { params: toSnakeCase(params) })
     return toCamelCase<SearchUsersResponse>(resp)
   }
 

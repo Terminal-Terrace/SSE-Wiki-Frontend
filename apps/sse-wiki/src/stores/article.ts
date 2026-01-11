@@ -1,6 +1,6 @@
+import type { Page } from '@/types'
 // 文章状态管理
 import type {
-  ArticleDetailResponse,
   ArticleVersion,
 } from '@/types/article'
 import { defineStore } from 'pinia'
@@ -11,7 +11,7 @@ export const useArticleStore = defineStore('article', () => {
   // ========== 状态 ==========
 
   // 当前文章详情
-  const currentArticle = ref<ArticleDetailResponse | null>(null)
+  const currentArticle = ref<Page | null>(null)
 
   // 当前文章的版本列表（已废弃，改用 history 字段）
   // TODO: 考虑移除此字段，使用 currentArticle.history 替代
@@ -87,10 +87,10 @@ export const useArticleStore = defineStore('article', () => {
    */
   async function createArticle(data: {
     title: string
-    module_id: number
+    moduleId: number
     content: string
-    commit_message: string
-    is_review_required?: boolean
+    commitMessage: string
+    isReviewRequired?: boolean
     tags?: string[]
   }) {
     try {
@@ -117,8 +117,8 @@ export const useArticleStore = defineStore('article', () => {
     articleId: number | string,
     data: {
       content: string
-      commit_message: string
-      base_version_id: number
+      commitMessage: string
+      baseVersionId: number
     },
   ) {
     try {
@@ -158,7 +158,7 @@ export const useArticleStore = defineStore('article', () => {
       const result = await articleApi.reviewSubmission(reviewId, {
         action,
         notes,
-        merged_content: mergedContent,
+        mergedContent,
       })
 
       // 重新加载当前文章（如果有）
@@ -219,8 +219,8 @@ export const useArticleStore = defineStore('article', () => {
       await articleApi.incrementViewCount(articleId)
 
       // 更新本地状态
-      if (currentArticle.value?.id === articleId) {
-        currentArticle.value.view_count += 1
+      if (currentArticle.value?.id === articleId && currentArticle.value.viewCount !== undefined) {
+        currentArticle.value.viewCount += 1
       }
     }
     catch (err: any) {
@@ -251,23 +251,24 @@ export const useArticleStore = defineStore('article', () => {
    * 获取当前版本内容
    */
   function getCurrentVersionContent(): string {
-    if (!currentArticle.value?.current_version) {
+    if (!currentArticle.value?.currentVersion) {
       return ''
     }
-    return currentArticle.value.current_version.content
+    return currentArticle.value.currentVersion.content
   }
 
   /**
    * 获取当前用户权限
    */
   function getCurrentUserPermissions() {
-    const role = currentArticle.value?.current_user_role
+    const role = currentArticle.value?.currentUserRole
+    const isAuthor = currentArticle.value?.isAuthor || false
 
     return {
-      canEdit: ['owner', 'admin', 'moderator', 'editor'].includes(role || ''),
-      canReview: ['owner', 'admin', 'moderator'].includes(role || ''),
-      canManage: ['owner', 'admin'].includes(role || ''),
-      canDelete: role === 'owner',
+      canEdit: isAuthor || ['admin', 'moderator'].includes(role || ''),
+      canReview: isAuthor || ['admin', 'moderator'].includes(role || ''),
+      canManage: isAuthor || role === 'admin',
+      canDelete: currentArticle.value?.canDelete || false,
     }
   }
 
@@ -282,8 +283,8 @@ export const useArticleStore = defineStore('article', () => {
 
     return currentArticle.value.history.some(
       entry =>
-        entry.entry_type === 'submission'
-        && (entry.submission_status === 'pending' || entry.submission_status === 'conflict_detected'),
+        entry.entryType === 'submission'
+        && (entry.submissionStatus === 'pending' || entry.submissionStatus === 'conflict_detected'),
     )
   }
 

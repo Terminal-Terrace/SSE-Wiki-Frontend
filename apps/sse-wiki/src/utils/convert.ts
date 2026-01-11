@@ -40,3 +40,34 @@ export function toCamelCase<T = any>(data: any): T {
 
   return result as T
 }
+
+/**
+ * 将前端的 camelCase 转换为后端需要的 snake_case
+ * 用于请求参数转换
+ *
+ * @param data 前端的 camelCase 数据
+ * @returns 转换后的 snake_case 数据
+ */
+export function toSnakeCase<T = any>(data: any): T {
+  if (!data || typeof data !== 'object') {
+    return data as T
+  }
+
+  if (Array.isArray(data)) {
+    return data.map(item => toSnakeCase(item)) as T
+  }
+
+  const result: any = {}
+
+  for (const key in data) {
+    if (Object.prototype.hasOwnProperty.call(data, key)) {
+      const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`)
+      result[snakeKey] = toSnakeCase(data[key])
+    }
+    else {
+      result[key] = toSnakeCase(data[key])
+    }
+  }
+
+  return result as T
+}

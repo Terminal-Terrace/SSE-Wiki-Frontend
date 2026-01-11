@@ -10,18 +10,18 @@ export interface User {
 // 文章基础信息
 export interface Article {
   id: number
-  current_version_id: number | null
+  currentVersionId: number | null
   title: string
-  module_id: number
-  created_by: number
-  created_at: string
-  updated_at: string
-  is_review_required: boolean
-  view_count: number
+  moduleId: number
+  createdBy: number
+  createdAt: string
+  updatedAt: string
+  isReviewRequired: boolean
+  viewCount: number
 
   // 扩展字段（前端使用）
-  current_user_role?: ArticleRole | null
-  pending_reviews_count?: number
+  currentUserRole?: ArticleRole | null
+  pendingReviewsCount?: number
   module?: {
     id: number
     name: string
@@ -32,15 +32,15 @@ export interface Article {
 // 文章版本
 export interface ArticleVersion {
   id: number
-  article_id: number
-  version_number: number
+  articleId: number
+  versionNumber: number
   content: string
-  commit_message: string
-  author_id: number
-  base_version_id?: number | null
-  merged_against_version_id?: number | null
+  commitMessage: string
+  authorId: number
+  baseVersionId?: number | null
+  mergedAgainstVersionId?: number | null
   status: VersionStatus
-  created_at: string
+  createdAt: string
 
   // 扩展字段
   author?: User
@@ -49,39 +49,39 @@ export interface ArticleVersion {
 // 审核提交（等同于 Pull Request）
 export interface ReviewSubmission {
   id: number
-  article_id: number
-  proposed_version_id: number
-  base_version_id: number
-  merged_against_version_id?: number | null
-  ai_score: number | null
-  ai_suggestions: string | null
-  submitted_by: number
-  reviewed_by: number | null
+  articleId: number
+  proposedVersionId: number
+  baseVersionId: number
+  mergedAgainstVersionId?: number | null
+  aiScore: number | null
+  aiSuggestions: string | null
+  submittedBy: number
+  reviewedBy: number | null
   status: SubmissionStatus
-  review_notes: string
-  merge_result: string
-  has_conflict: boolean
-  created_at: string
-  reviewed_at: string | null
+  reviewNotes: string
+  mergeResult: string
+  hasConflict: boolean
+  createdAt: string
+  reviewedAt: string | null
 
   // 扩展字段
   submitter?: User
   reviewer?: User
   article?: Article
-  proposed_version?: ArticleVersion
+  proposedVersion?: ArticleVersion
 }
 
 // 版本冲突记录
 export interface VersionConflict {
   id: number
-  submission_id: number
-  conflict_with_version_id: number
+  submissionId: number
+  conflictWithVersionId: number
   status: ConflictStatus
-  resolved_version_id: number | null
-  resolved_by: number | null
-  conflict_details: string
-  created_at: string
-  resolved_at: string | null
+  resolvedVersionId: number | null
+  resolvedBy: number | null
+  conflictDetails: string
+  createdAt: string
+  resolvedAt: string | null
 
   // 扩展字段
   resolver?: User
@@ -89,10 +89,10 @@ export interface VersionConflict {
 
 // 文章协作者
 export interface ArticleCollaborator {
-  article_id: number
-  user_id: number
+  articleId: number
+  userId: number
   role: ArticleRole
-  created_at: string
+  createdAt: string
 
   // API 直接返回的用户信息字段
   username: string
@@ -104,47 +104,47 @@ export interface ArticleCollaborator {
 
 // 文章引用关系
 export interface ArticleReference {
-  from_article_id: number
-  to_article_id: number
-  reference_type: ReferenceType
-  created_at: string
+  fromArticleId: number
+  toArticleId: number
+  referenceType: ReferenceType
+  createdAt: string
 
   // 扩展字段
-  from_article?: Article
-  to_article?: Article
+  fromArticle?: Article
+  toArticle?: Article
 }
 
 // 文章-标签关联
 export interface ArticleTag {
-  article_id: number
-  tag_id: number
-  created_at: string
+  articleId: number
+  tagId: number
+  createdAt: string
 }
 
 // 讨论主题
 export interface Discussion {
   id: number
-  article_id: number
+  articleId: number
   title: string
   description: string
-  created_by: number
-  created_at: string
-  updated_at: string
+  createdBy: number
+  createdAt: string
+  updatedAt: string
 
   // 扩展字段
   author?: User
-  comments_count?: number
+  commentsCount?: number
 }
 
 // 讨论评论
 export interface DiscussionComment {
   id: number
-  discussion_id: number
-  parent_id: number | null
+  discussionId: number
+  parentId: number | null
   content: string
-  created_by: number
-  created_at: string
-  updated_at: string
+  createdBy: number
+  createdAt: string
+  updatedAt: string
 
   // 扩展字段
   author?: User
@@ -153,9 +153,9 @@ export interface DiscussionComment {
 
 // 收藏
 export interface Favorite {
-  user_id: number
-  article_id: number
-  created_at: string
+  userId: number
+  articleId: number
+  createdAt: string
 }
 
 // ========== 枚举类型 ==========
@@ -179,24 +179,24 @@ export type ReferenceType = 'prerequisite' | 'related' | 'extends'
 
 // 历史条目（统一结构）
 export interface HistoryEntry {
-  entry_type: 'version' | 'submission'
-  entry_id: number
-  version_id: number | null
-  submission_id: number | null
+  entryType: 'version' | 'submission'
+  entryId: number
+  versionId: number | null
+  submissionId: number | null
   status: 'published' | 'rejected' | null // 版本状态
-  submission_status: 'pending' | 'conflict_detected' | 'rejected' | 'auto_published' | 'merged' | null // 提交状态
-  base_version_id: number | null
-  merged_against_version_id: number | null
-  has_conflict: boolean
-  merge_result: string | null
-  commit_message: string
-  author_id: number
+  submissionStatus: 'pending' | 'conflict_detected' | 'rejected' | 'auto_published' | 'merged' | null // 提交状态
+  baseVersionId: number | null
+  mergedAgainstVersionId: number | null
+  hasConflict: boolean
+  mergeResult: string | null
+  commitMessage: string
+  authorId: number
   author?: User
-  reviewed_by?: number | null
+  reviewedBy?: number | null
   reviewer?: User
-  review_notes?: string | null
-  created_at: string
-  reviewed_at?: string | null
+  reviewNotes?: string | null
+  createdAt: string
+  reviewedAt?: string | null
 }
 
 // ========== API 请求/响应类型 ==========
@@ -204,53 +204,53 @@ export interface HistoryEntry {
 // 创建文章请求
 export interface CreateArticleRequest {
   title: string
-  module_id: number
+  moduleId: number
   content: string
-  commit_message: string // 初始版本的提交说明
-  is_review_required?: boolean
+  commitMessage: string // 初始版本的提交说明
+  isReviewRequired?: boolean
   tags?: string[] // 用户自定义标签，字符串数组
 }
 
 // 添加协作者请求
 export interface AddCollaboratorRequest {
-  user_id: number
+  userId: number
   role: ArticleRole
 }
 
 // 提交修改请求
 export interface SubmissionRequest {
   content: string
-  commit_message: string
-  base_version_id: number
+  commitMessage: string
+  baseVersionId: number
 }
 
 // 审核操作请求
 export interface ReviewActionRequest {
   action: 'approve' | 'reject'
   notes?: string
-  merged_content?: string // 仅当手动解决冲突时需要
+  mergedContent?: string // 仅当手动解决冲突时需要
 }
 
 // 批量审核请求
 export interface BatchReviewRequest {
-  submission_ids: number[]
+  submissionIds: number[]
   action: 'approve' | 'reject'
 }
 
 // 文章列表查询参数
 export interface ArticleListQuery {
-  module_id?: number
+  moduleId?: number
   page?: number
-  page_size?: number
+  pageSize?: number
   status?: VersionStatus
 }
 
 // 审核列表查询参数
 export interface ReviewListQuery {
   status?: SubmissionStatus
-  article_id?: number
+  articleId?: number
   page?: number
-  page_size?: number
+  pageSize?: number
 }
 
 // 分页响应
@@ -258,71 +258,71 @@ export interface PaginatedResponse<T> {
   data: T[]
   total: number
   page: number
-  page_size: number
+  pageSize: number
 }
 
 // 文章详情响应
 export interface ArticleDetailResponse extends Article {
-  content?: string // 当前版本的内容（便捷字段，等同于 current_version.content）
-  current_version?: ArticleVersion
+  content?: string // 当前版本的内容（便捷字段，等同于 currentVersion.content）
+  currentVersion?: ArticleVersion
   tags?: string[]
   collaborators?: ArticleCollaborator[]
-  history?: HistoryEntry[] // 统一历史列表（替代 pending_submissions）
+  history?: HistoryEntry[] // 统一历史列表（替代 pendingSubmissions）
   references?: ArticleReference[]
   // 权限相关字段（后端计算）
-  is_author?: boolean // 当前用户是否是文章作者（created_by == userID）
-  can_delete?: boolean // 当前用户是否可以删除文章（Global_Admin 或 Author/Admin）
+  isAuthor?: boolean // 当前用户是否是文章作者（createdBy == userID）
+  canDelete?: boolean // 当前用户是否可以删除文章（Global_Admin 或 Author/Admin）
 }
 
 // 冲突检测元数据
 export interface ConflictData {
-  has_conflict: boolean
-  base_version_number?: number
-  current_version_number?: number
-  submitter_name?: string
+  hasConflict: boolean
+  baseVersionNumber?: number
+  currentVersionNumber?: number
+  submitterName?: string
 }
 
 // 三路合并冲突数据（前端构建的完整版）
 export interface ThreeWayMergeData {
-  base_content: string
-  their_content: string // 提交者的内容（proposed）
-  our_content: string // 当前版本的内容（current）
-  merged_content?: string // 带冲突标记的内容（可选，前端会动态生成）
-  has_conflict: boolean
-  base_version_number?: number
-  their_version_number?: number
-  our_version_number?: number
-  submitter_name?: string
+  baseContent: string
+  theirContent: string // 提交者的内容（proposed）
+  ourContent: string // 当前版本的内容（current）
+  mergedContent?: string // 带冲突标记的内容（可选，前端会动态生成）
+  hasConflict: boolean
+  baseVersionNumber?: number
+  theirVersionNumber?: number
+  ourVersionNumber?: number
+  submitterName?: string
 }
 
 // 版本差异对比响应
 export interface VersionDiffResponse {
-  base_version: ArticleVersion | null
-  current_version: ArticleVersion
+  baseVersion: ArticleVersion | null
+  currentVersion: ArticleVersion
   diff?: string
 }
 
 // 审核详情响应（API 返回的嵌套结构）
 export interface ReviewDetailResponse {
   submission: ReviewSubmission | null
-  proposed_version: ArticleVersion | null
-  base_version: ArticleVersion | null
-  current_version?: ArticleVersion // 当前线上版本
+  proposedVersion: ArticleVersion | null
+  baseVersion: ArticleVersion | null
+  currentVersion?: ArticleVersion // 当前线上版本
   article: Article | null
-  conflict_data?: ConflictData
+  conflictData?: ConflictData
 }
 
 // 冲突解决请求
 export interface ResolveConflictRequest {
-  submission_id: number
-  resolved_content: string
+  submissionId: number
+  resolvedContent: string
 }
 
 // 审核操作成功响应
 export interface ReviewActionResponse {
   success: true
-  published_version?: ArticleVersion
-  new_version_id?: number
+  publishedVersion?: ArticleVersion
+  newVersionId?: number
 }
 
 // 审核操作冲突响应
@@ -330,7 +330,7 @@ export interface ConflictResponse {
   code: 409
   message: string
   data: {
-    conflict_data: ThreeWayMergeData
+    conflictData: ThreeWayMergeData
   }
 }
 
