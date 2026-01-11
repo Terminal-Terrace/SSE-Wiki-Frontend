@@ -1,6 +1,27 @@
 node_modules
 dist
+dist-ssr
 .nx
+build
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing
+coverage
+.nyc_output
 
 # macOS
 .DS_Store
@@ -14,3 +35,4 @@ dist
 *.swp
 *.swo
 *~
+*.swn
