@@ -1,13 +1,18 @@
 <script setup lang="ts">
-
+import { Badge } from '@sse-wiki/ui'
 </script>
 
 <template>
   <section class="space-y-6">
     <header class="space-y-2">
-      <h1 class="text-3xl font-semibold tracking-tight text-foreground">
-        AI 助手
-      </h1>
+      <div class="flex items-center gap-2">
+        <h1 class="text-3xl font-semibold tracking-tight text-foreground">
+          AI 助手
+        </h1>
+        <Badge variant="secondary" class="text-xs">
+          开发中
+        </Badge>
+      </div>
       <p class="text-muted-foreground">
         配置和体验智能助手，为知识空间提供自动化问答与写作能力。
       </p>
