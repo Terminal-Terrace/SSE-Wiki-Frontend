@@ -11,7 +11,7 @@ import type {
   ModuleTreeNode,
   UpdateModuleRequest,
 } from '@/types/module'
-import { toCamelCase } from '@/utils/convert'
+import { toCamelCase, toSnakeCase } from '@/utils/convert'
 import request from '@/utils/request'
 
 /**
@@ -181,7 +181,7 @@ export class ModuleAPI {
    * @returns Promise<ModuleModerator> 添加的协作者信息
    */
   async addModerator(moduleId: number | string, data: AddModeratorRequest): Promise<ModuleModerator> {
-    const response = await request.post(`${this.baseURL}/${moduleId}/moderators`, data)
+    const response = await request.post(`${this.baseURL}/${moduleId}/moderators`, toSnakeCase(data))
     return toCamelCase<ModuleModerator>(response)
   }
 

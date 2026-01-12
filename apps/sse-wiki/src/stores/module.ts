@@ -70,9 +70,15 @@ export const useModuleStore = defineStore('module', () => {
   /**
    * 创建模块
    */
-  async function createModule(data: { name: string, description: string, parentId?: number }) {
+  async function createModule(data: { name: string, description?: string, parentId?: number }) {
     try {
-      const newModule = await moduleApi.createModule(data)
+      const payload = {
+        name: data.name,
+        parentId: data.parentId,
+        description: data.description?.trim() || undefined,
+      }
+
+      const newModule = await moduleApi.createModule(payload)
 
       // 刷新模块树
       await fetchModules(true)
@@ -89,7 +95,12 @@ export const useModuleStore = defineStore('module', () => {
    */
   async function updateModule(id: number, data: { name?: string, description?: string, parentId?: number }) {
     try {
-      const updatedModule = await moduleApi.updateModule(id, data)
+      const payload = {
+        ...data,
+        description: data.description?.trim() || undefined,
+      }
+
+      const updatedModule = await moduleApi.updateModule(id, payload)
 
       // 刷新模块树
       await fetchModules(true)
