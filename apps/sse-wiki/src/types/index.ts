@@ -1,7 +1,7 @@
 // Article/Page types
 import type { ArticleDetailResponse } from './article'
 
-export interface Page extends Omit<ArticleDetailResponse, 'currentVersion' | 'currentUserRole' | 'createdBy' | 'createdAt' | 'updatedAt' | 'currentVersionId' | 'isReviewRequired' | 'viewCount'> {
+export interface Page extends Omit<ArticleDetailResponse, 'currentVersion' | 'currentUserRole' | 'createdBy' | 'createdAt' | 'updatedAt' | 'currentVersionId' | 'isReviewRequired' | 'viewCount' | 'tags'> {
   createdAt?: string
   updatedAt?: string
   viewCount?: number
@@ -17,6 +17,8 @@ export interface Page extends Omit<ArticleDetailResponse, 'currentVersion' | 'cu
   versions?: PageVersion[]
   currentVersionId?: number | null
   currentVersion?: ArticleDetailResponse['currentVersion']
+  tags?: string[]
+  lastEditedAt?: string
 }
 
 export interface PageVersion {

@@ -40,7 +40,7 @@ const formData = ref<CreateArticleRequest>({ ...EMPTY_FORM })
 // 模块信息
 const moduleInfo = ref<Module | null>(null)
 
-const pageTitle = computed(() => moduleInfo.value?.moduleName || '未知模块')
+const pageTitle = computed(() => moduleInfo.value?.name || '未知模块')
 
 // 标签输入
 const tagInput = ref('')
