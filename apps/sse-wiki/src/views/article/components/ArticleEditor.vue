@@ -143,20 +143,23 @@ function handleCancel() {
           <RichEditor
             v-model="formData.content"
             :file-handlers="fileHandlers"
-            min-height="400px"
+            min-height="290px"
+            max-height="300px"
           />
         </div>
       </div>
     </div>
 
-    <!-- 操作按钮 -->
-    <div class="flex justify-end gap-3 pt-4 border-t">
-      <Button variant="outline" size="lg" @click="handleCancel">
-        取消
-      </Button>
-      <Button size="lg" @click="handleSave">
-        提交
-      </Button>
+    <!-- 操作按钮 - sticky 固定在滚动容器底部 -->
+    <div class="sticky bottom-0">
+      <div class="flex justify-end gap-3">
+        <Button variant="outline" size="lg" @click="handleCancel">
+          取消
+        </Button>
+        <Button size="lg" @click="handleSave">
+          提交
+        </Button>
+      </div>
     </div>
 
     <!-- 路由离开确认对话框（由 composable 自动管理） -->
