@@ -81,8 +81,8 @@ export interface NavigationLockDTO {
 
 export interface Module {
   id: number
-  moduleName: string
-  description: string
+  name: string
+  description: string | null
   parentId: number | null
   ownerId: number
   createdAt: string
@@ -101,7 +101,6 @@ export interface Module {
 export interface ModuleTreeNode {
   id: number
   name: string
-  moduleName?: string
   description?: string
   ownerId: number
   parentId?: number | null

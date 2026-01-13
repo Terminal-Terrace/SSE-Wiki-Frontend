@@ -27,7 +27,7 @@ const fileHandlers = createFileHandlers()
     <RichViewer
       :content="props.content"
       :file-handlers="{ getFileInfo: fileHandlers.getFileInfo }"
-      class="prose prose-slate dark:prose-invert max-w-none"
+      class="prose prose-slate dark:prose-invert max-w-none overflow"
     />
   </div>
 </template>

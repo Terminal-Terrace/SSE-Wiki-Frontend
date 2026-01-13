@@ -1,13 +1,18 @@
 <script setup lang="ts">
-
+import { Badge } from '@sse-wiki/ui'
 </script>
 
 <template>
   <section class="space-y-6">
     <header class="space-y-2">
-      <h1 class="text-3xl font-semibold tracking-tight text-foreground">
-        知识空间
-      </h1>
+      <div class="flex items-center gap-2">
+        <h1 class="text-3xl font-semibold tracking-tight text-foreground">
+          知识空间
+        </h1>
+        <Badge variant="secondary" class="text-xs">
+          开发中
+        </Badge>
+      </div>
       <p class="text-muted-foreground">
         集中管理项目文档、知识库与页面的空间，支持权限与协作。
       </p>

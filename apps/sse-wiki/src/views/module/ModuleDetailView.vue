@@ -201,8 +201,8 @@ async function fetchModuleInfo(moduleId: string) {
     if (foundModule) {
       moduleInfo.value = {
         id: foundModule.id,
-        moduleName: foundModule.name,
-        description: foundModule.description ?? '',
+        name: foundModule.name ?? '',
+        description: foundModule.description ?? null,
         parentId: foundModule.parentId ?? null,
         ownerId: foundModule.ownerId,
         createdAt: foundModule.createdAt ?? '',
@@ -341,15 +341,10 @@ function editModule() {
   if (!moduleInfo.value)
     return
 
-  const moduleForModal = {
-    ...moduleInfo.value,
-    name: moduleInfo.value.moduleName,
-  }
-
   modalState.value = {
     type: 'edit',
     isOpen: true,
-    targetModule: moduleForModal,
+    targetModule: moduleInfo.value,
   }
 }
 
@@ -357,16 +352,10 @@ function manageCollaborators() {
   if (!moduleInfo.value)
     return
 
-  // 确保模块对象有 name 字段（ModuleCollaboratorsModal 需要）
-  const moduleForModal = {
-    ...moduleInfo.value,
-    name: moduleInfo.value.moduleName,
-  }
-
   modalState.value = {
     type: 'collaborators',
     isOpen: true,
-    targetModule: moduleForModal,
+    targetModule: moduleInfo.value,
   }
 }
 
@@ -374,15 +363,10 @@ function deleteModule() {
   if (!moduleInfo.value)
     return
 
-  const moduleForModal = {
-    ...moduleInfo.value,
-    name: moduleInfo.value.moduleName,
-  }
-
   modalState.value = {
     type: 'delete',
     isOpen: true,
-    targetModule: moduleForModal,
+    targetModule: moduleInfo.value,
   }
 }
 
@@ -512,7 +496,7 @@ watch(
         <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div class="flex-1">
             <h1 class="text-3xl font-bold text-gray-900 mb-3">
-              {{ moduleInfo?.moduleName }}
+              {{ moduleInfo?.name }}
             </h1>
 
             <p v-if="moduleInfo?.description" class="text-gray-700 mb-4">

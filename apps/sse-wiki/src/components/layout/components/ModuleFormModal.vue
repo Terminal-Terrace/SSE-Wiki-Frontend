@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ModuleModalState } from '@/types/module'
+import type { Module, ModuleModalState, ModuleTreeNode } from '@/types/module'
 import {
   Button,
   Dialog,
@@ -43,7 +43,13 @@ const isCreateModal = computed(() => props.modalState.type === 'create')
 
 const targetModule = computed(() => props.modalState.targetModule)
 
-const parentModuleName = computed(() => props.modalState.parentModule?.moduleName)
+function resolveModuleName(mod?: Module | ModuleTreeNode) {
+  if (!mod)
+    return ''
+  return mod.name ?? ''
+}
+
+const parentModuleName = computed(() => resolveModuleName(props.modalState.parentModule))
 
 const canSubmit = computed(() => {
   return formData.value.name.trim().length > 0 && !isSubmitting.value
@@ -58,7 +64,7 @@ watch(
 
       // 如果是编辑模式，填充现有数据
       if (newState.type === 'edit' && newState.targetModule) {
-        formData.value.name = newState.targetModule.moduleName || ''
+        formData.value.name = resolveModuleName(newState.targetModule)
         formData.value.description = newState.targetModule.description || ''
       }
 
@@ -97,10 +103,7 @@ function validateForm() {
     errors.value.name = '模块名称不能超过100个字符'
   }
 
-  if (!formData.value.description.trim()) {
-    errors.value.description = '模块描述不能为空'
-  }
-  else if (formData.value.description.trim().length > 512) {
+  if (formData.value.description.trim().length > 512) {
     errors.value.description = '模块描述不能超过512个字符'
   }
 
@@ -115,22 +118,33 @@ async function handleSubmit() {
   try {
     isSubmitting.value = true
 
+    const trimmedDescription = formData.value.description.trim()
+    const payloadDescription = trimmedDescription.length > 0 ? trimmedDescription : undefined
+
     if (isCreateModal.value) {
-      await moduleStore.createModule({
+      const payload = {
         name: formData.value.name.trim(),
-        description: formData.value.description.trim(),
         parentId: props.modalState.parentModule?.id,
-      })
+      } as { name: string, description?: string, parentId?: number }
+
+      if (payloadDescription !== undefined)
+        payload.description = payloadDescription
+
+      await moduleStore.createModule(payload)
     }
     else {
       if (!targetModule.value) {
         throw new Error('目标模块不存在')
       }
 
-      await moduleStore.updateModule(targetModule.value.id, {
+      const payload = {
         name: formData.value.name.trim(),
-        description: formData.value.description.trim(),
-      })
+      } as { name?: string, description?: string }
+
+      if (payloadDescription !== undefined)
+        payload.description = payloadDescription
+
+      await moduleStore.updateModule(targetModule.value.id, payload)
     }
 
     emit('success')
@@ -171,11 +185,11 @@ async function handleSubmit() {
           </p>
         </div>
         <div class="space-y-2">
-          <Label for="module-description">模块描述</Label>
+          <Label for="module-description">模块描述（可选）</Label>
           <Textarea
             id="module-description"
             v-model="formData.description"
-            placeholder="请输入模块描述（不超过512字符）"
+            placeholder="请输入模块描述（不超过512字符，可不填）"
             :class="{ 'border-destructive': errors.description }"
             @input="clearError('description')"
           />

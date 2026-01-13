@@ -92,15 +92,45 @@ function getHeadingClass(level: number): string {
   return classes[level as keyof typeof classes] || 'pl-3'
 }
 
-function scrollToHeading(event: Event) {
-  event.preventDefault()
-  const target = event.target as HTMLAnchorElement
-  const id = target.getAttribute('href')?.substring(1)
-  if (id) {
+function scrollToHeading(id: string) {
+  if (!id)
+    return
+
+  // 确保标题 ID 已经添加到 DOM
+  requestAnimationFrame(() => {
     const element = document.getElementById(id)
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    if (!element) {
+      // 如果找不到，尝试重新添加 ID
+      addHeadingIds()
+      const retryElement = document.getElementById(id)
+      if (!retryElement) {
+        console.warn(`Heading element with id "${id}" not found`)
+        return
+      }
+      scrollToElement(retryElement)
+      return
     }
+    scrollToElement(element)
+  })
+}
+
+function scrollToElement(element: HTMLElement) {
+  const container = getScrollContainer()
+
+  if (container instanceof Window) {
+    // 使用 window 滚动
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+  else {
+    // 使用自定义滚动容器
+    const containerRect = container.getBoundingClientRect()
+    const elementRect = element.getBoundingClientRect()
+    const scrollTop = container.scrollTop + (elementRect.top - containerRect.top) - 20 // 20px 偏移
+
+    container.scrollTo({
+      top: scrollTop,
+      behavior: 'smooth',
+    })
   }
 }
 
@@ -246,30 +276,32 @@ onUnmounted(() => {
 <template>
   <div
     v-if="headings.length > 0 && isSidebar"
-    class="h-full bg-background border rounded-lg shadow-sm p-4 overflow-y-auto sticky top-4"
+    class="bg-background border rounded-lg shadow-sm h-full flex flex-col p-4 overflow-hidden"
   >
-    <h3 class="font-semibold text-sm text-foreground mb-3 flex items-center">
+    <h3 class="font-semibold text-sm text-foreground mb-3 flex items-center shrink-0">
       <List class="h-4 w-4 mr-2" />
       目录大纲
     </h3>
 
-    <nav class="space-y-1">
-      <a
-        v-for="heading in headings"
-        :key="heading.id"
-        :href="`#${heading.id}`"
-        class="block text-sm transition-colors hover:text-primary py-1 border-l-2 border-transparent hover:border-primary/50" :class="[
-          getHeadingClass(heading.level),
-          activeHeading === heading.id ? 'text-primary border-primary font-medium' : 'text-muted-foreground',
-        ]"
-        @click="scrollToHeading"
-      >
-        {{ heading.text }}
-      </a>
-    </nav>
+    <div class="max-h-[calc(100%-10rem)] overflow-y-auto">
+      <nav class="space-y-1">
+        <a
+          v-for="heading in headings"
+          :key="heading.id"
+          :href="`#${heading.id}`"
+          class="block text-sm transition-colors hover:text-primary py-1 border-l-2 border-transparent hover:border-primary/50" :class="[
+            getHeadingClass(heading.level),
+            activeHeading === heading.id ? 'text-primary border-primary font-medium' : 'text-muted-foreground',
+          ]"
+          @click.prevent="scrollToHeading(heading.id)"
+        >
+          {{ heading.text }}
+        </a>
+      </nav>
+    </div>
 
     <!-- 进度指示器 -->
-    <div class="mt-4 pt-3 border-t">
+    <div class="mt-4 pt-3 border-t shrink-0">
       <div
         class="flex items-center justify-between text-xs text-muted-foreground cursor-help"
         title="根据页面滚动位置自动计算"
